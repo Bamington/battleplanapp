@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Hide scrollbars but maintain scroll functionality */
+  * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+  }
+  
+  *::-webkit-scrollbar {
+    display: none; /* WebKit browsers (Chrome, Safari, Edge) */
+  }
+  
+  .text-xs,
+  .text-sm,
+  .text-base,
+  .text-xl {
+    font-family: 'Overpass', sans-serif;
+  }
+  
+  .text-lg,
+  .text-2xl,
+  .text-3xl {
+    font-family: 'Overpass', sans-serif;
+    line-height: 1.4;
+  }
+  
+  .text-4xl,
+  .text-5xl,
+  .text-6xl,
+  .text-7xl {
+    font-family: 'Arvo', serif;
+  }
+  
+  :root {
+    --color-title: #1F2937;
+    --color-text: #000000;
+    --color-secondary-text: #6B7280;
+    --color-brand: #F59E0B;
+    --color-button-red: #EF4444;
+    --color-input-label: #1F2937;
+    --color-bg-primary: #FFFFFF;
+    --color-bg-secondary: #F9FAFB;
+    --color-bg-card: #FFFFFF;
+    --color-border: #E5E7EB;
+    --color-modal-bg: #FFFFFF;
+  }
+  
+  .dark {
+    --color-title: #F9FAFB;
+    --color-text: #F9FAFB;
+    --color-secondary-text: #9CA3AF;
+    --color-brand: #F59E0B;
+    --color-button-red: #EF4444;
+    --color-input-label: #F9FAFB;
+    --color-bg-primary: #0F172A;
+    --color-bg-secondary: #1F2937;
+    --color-bg-card: #0F172A;
+    --color-border: #475569;
+    --color-modal-bg: #1F2937;
+  }
+}
+
+@font-face {
+  font-family: 'Colus';
+  src: url('/Colus-Regular.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Custom slider styles */
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #F59E0B;
+  cursor: pointer;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.slider::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #F59E0B;
+  cursor: pointer;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.slider::-webkit-slider-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-border);
+}
+
+.slider::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-border);
+}

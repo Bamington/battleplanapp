@@ -1,0 +1,715 @@
+import React, { useState } from 'react'
+import { Plus } from 'lucide-react'
+import { Header } from './components/Header'
+import { TabBar } from './components/TabBar'
+import { CollectionSubMenu } from './components/CollectionSubMenu'
+import { BattleplanPage } from './components/BattleplanPage'
+import { ModelCard } from './components/ModelCard'
+import { BoxCard } from './components/BoxCard'
+import { Pagination } from './components/Pagination'
+import { AuthModal } from './components/AuthModal'
+import { AddModelModal } from './components/AddModelModal'
+import { AddBoxModal } from './components/AddBoxModal'
+import { AdminPage } from './components/AdminPage'
+import { AboutPage } from './components/AboutPage'
+import { AllBookingsPage } from './components/AllBookingsPage'
+import { ViewModelModal } from './components/ViewModelModal'
+import { ViewBoxModal } from './components/ViewBoxModal'
+import { useAuth } from './hooks/useAuth'
+import { useModels } from './hooks/useModels'
+import { useBoxes } from './hooks/useBoxes'
+import { supabase } from './lib/supabase'
+
+function App() {
+  const [activeTab, setActiveTab] = useState('collection')
+  const [collectionView, setCollectionView] = useState<'recent' | 'boxes' | 'models'>('recent')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [boxCurrentPage, setBoxCurrentPage] = useState(1)
+  const [authModal, setAuthModal] = useState<{ isOpen: boolean; mode: 'login' | 'signup' }>({
+    isOpen: false,
+    mode: 'login'
+  })
+  const [addModelModal, setAddModelModal] = useState(false)
+  const [addBoxModal, setAddBoxModal] = useState(false)
+  const [showAdminPage, setShowAdminPage] = useState(false)
+  const [preselectedBoxId, setPreselectedBoxId] = useState<string | null>(null)
+  const [viewModelModal, setViewModelModal] = useState<{
+    isOpen: boolean
+    model: any | null
+  }>({
+    isOpen: false,
+    model: null
+  })
+  const [viewBoxModal, setViewBoxModal] = useState<{
+    isOpen: boolean
+    box: any | null
+  }>({
+    isOpen: false,
+    box: null
+  })
+  
+  const { user, loading: authLoading } = useAuth()
+  const { models, loading: modelsLoading, refetch: refetchModels } = useModels()
+  const { boxes, loading: boxesLoading, refetch: refetchBoxes } = useBoxes()
+
+  const itemsPerPage = 6
+  const totalPages = Math.ceil(models.length / itemsPerPage)
+  const boxTotalPages = Math.ceil(boxes.length / itemsPerPage)
+
+  const paginatedModels = models.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
+
+  const paginatedBoxes = boxes.slice(
+    (boxCurrentPage - 1) * itemsPerPage,
+    boxCurrentPage * itemsPerPage
+  )
+
+  const handleModelAdded = () => {
+    refetchModels()
+    refetchBoxes()
+    setPreselectedBoxId(null)
+  }
+
+  const handleViewModel = (model: any) => {
+    setViewModelModal({
+      isOpen: true,
+      model
+    })
+  }
+
+  const handleViewBox = (box: any) => {
+    setViewBoxModal({
+      isOpen: true,
+      box
+    })
+  }
+
+  const handleModelDeleted = () => {
+    refetchModels()
+    refetchBoxes()
+  }
+
+  const handleModelUpdated = async () => {
+    await refetchModels()
+    await refetchBoxes()
+  }
+
+  const handleBoxDeleted = () => {
+    refetchBoxes()
+    refetchModels()
+  }
+
+  const handleBoxUpdated = () => {
+    refetchBoxes()
+    refetchModels()
+  }
+
+  const handleAddModelsToBox = (boxId: string) => {
+    setPreselectedBoxId(boxId)
+    setAddModelModal(true)
+  }
+
+  const handleAddNewModelToBox = (boxId: string | null) => {
+    setPreselectedBoxId(boxId)
+    setAddModelModal(true)
+  }
+
+  const handleAdminClick = () => {
+    setShowAdminPage(true)
+  }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-bg-secondary flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
+          <p className="text-base text-secondary-text">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-bg-secondary">
+        <Header />
+        <div className="max-w-4xl mx-auto px-4 py-16 text-center">
+          <div className="bg-bg-card rounded-lg shadow-sm p-8">
+            <h1 className="text-3xl font-bold text-title mb-4">Welcome to the Mini Myths App Beta</h1>
+            <p className="text-base text-secondary-text mb-8">
+              Track your miniatures and book a table at your favourite gaming store.<br /><br />
+              Make sure to report any bugs and issues on the Discord!
+            </p>
+            <div className="space-x-4">
+              <button
+                onClick={() => setAuthModal({ isOpen: true, mode: 'login' })}
+                className="px-6 py-3 text-base font-semibold text-text hover:text-title transition-colors"
+              >
+                Log In
+              </button>
+              <button
+                onClick={() => setAuthModal({ isOpen: true, mode: 'signup' })}
+                className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg transition-colors text-base font-semibold"
+              >
+                Sign Up
+              </button>
+            </div>
+          </div>
+        </div>
+        <AuthModal
+          isOpen={authModal.isOpen}
+          onClose={() => setAuthModal({ isOpen: false, mode: 'login' })}
+          mode={authModal.mode}
+        />
+      </div>
+    )
+  }
+
+  // Show Admin page
+  if (showAdminPage) {
+    return (
+      <div className="min-h-screen bg-bg-secondary">
+        <Header 
+          onAddModel={() => setAddModelModal(true)} 
+          onAdminClick={handleAdminClick}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+        <AdminPage onBack={() => setShowAdminPage(false)} />
+        <TabBar 
+          activeTab={activeTab} 
+          onTabChange={(tab) => {
+            setShowAdminPage(false)
+            setActiveTab(tab)
+          }} 
+        />
+      </div>
+    )
+  }
+
+  // Render About page
+  if (activeTab === 'about') {
+    return (
+      <div className="min-h-screen bg-bg-secondary">
+        <Header 
+          onAddModel={() => setAddModelModal(true)} 
+          onAdminClick={handleAdminClick}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+        <AboutPage onBack={() => setActiveTab('collection')} />
+        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
+    )
+  }
+
+  // Render All Bookings page (Admin only)
+  if (activeTab === 'all-bookings') {
+    return (
+      <div className="min-h-screen bg-bg-secondary">
+        <Header 
+          onAddModel={() => setAddModelModal(true)} 
+          onAdminClick={handleAdminClick}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+        <AllBookingsPage onBack={() => setActiveTab('collection')} />
+        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
+    )
+  }
+
+  // Render Battleplan page
+  if (activeTab === 'battleplan') {
+    return (
+      <div className="min-h-screen bg-bg-secondary">
+        <Header 
+          onAddModel={() => setAddModelModal(true)} 
+          onAdminClick={handleAdminClick}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+        <BattleplanPage />
+        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-bg-secondary">
+      <Header 
+        onAddModel={() => setAddModelModal(true)} 
+        onAdminClick={handleAdminClick}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
+      
+      {/* Collection Sub-menu - only show on collection tab */}
+      {activeTab === 'collection' && (
+        <CollectionSubMenu
+          activeView={collectionView}
+          onViewChange={setCollectionView}
+        />
+      )}
+      
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-title mb-4">YOUR COLLECTION</h1>
+        </div>
+
+        {/* Recent View */}
+        {collectionView === 'recent' && (
+          <>
+            {/* Recent Models Section */}
+            <section className="mb-16">
+              {models.filter(model => model.status === 'Painted').length > 0 && (
+                <div className="flex flex-col items-center mb-8">
+                  <h2 className="text-lg font-bold text-secondary-text text-center mb-4">RECENT MODELS</h2>
+                  <button
+                    onClick={() => setAddModelModal(true)}
+                    className="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg transition-colors text-base font-semibold"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Model</span>
+                  </button>
+                </div>
+              )}
+              
+              {modelsLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden animate-pulse">
+                      <div className="h-48 bg-secondary-text opacity-20"></div>
+                      <div className="p-4 space-y-3">
+                        <div className="h-4 bg-secondary-text opacity-20 rounded"></div>
+                        <div className="h-3 bg-secondary-text opacity-20 rounded w-2/3"></div>
+                        <div className="h-8 bg-secondary-text opacity-20 rounded"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : models.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-base text-secondary-text mb-4">No models in your collection yet.</p>
+                  <button 
+                    onClick={() => setAddModelModal(true)}
+                    className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg transition-colors text-base font-semibold"
+                  >
+                    Add Your First Model
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {paginatedModels.map((model) => (
+                      <ModelCard
+                        key={model.id}
+                        model={model}
+                        name={model.name}
+                        boxName={model.box?.name || 'Unknown Box'}
+                        gameName={model.box?.game?.name || model.game?.name || 'Unknown Game'}
+                        gameIcon={model.box?.game?.icon || model.game?.icon || null}
+                        status={model.status}
+                        count={model.count}
+                        imageUrl={model.image_url}
+                        onViewModel={() => handleViewModel(model)}
+                        onViewBox={handleViewBox}
+                      />
+                    ))}
+                  </div>
+                  
+                  {totalPages > 1 && (
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                    />
+                  )}
+                </>
+              )}
+            </section>
+
+            {/* Recent Boxes Section */}
+            <section>
+              {boxes.length > 0 && (
+                <div className="flex flex-col items-center mb-8">
+                  <h2 className="text-lg font-bold text-secondary-text text-center mb-4">RECENT BOXES</h2>
+                  <button
+                    onClick={() => setAddBoxModal(true)}
+                    className="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg transition-colors text-base font-semibold"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Box</span>
+                  </button>
+                </div>
+              )}
+              
+              {boxesLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden animate-pulse">
+                      <div className="h-48 bg-secondary-text opacity-20"></div>
+                      <div className="p-4 space-y-3">
+                        <div className="h-4 bg-secondary-text opacity-20 rounded"></div>
+                        <div className="h-3 bg-secondary-text opacity-20 rounded w-2/3"></div>
+                        <div className="h-8 bg-secondary-text opacity-20 rounded"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : boxes.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-base text-secondary-text mb-4">No boxes in your collection yet.</p>
+                  <button 
+                    onClick={() => setAddBoxModal(true)}
+                    className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg transition-colors text-base font-semibold"
+                  >
+                    Add Your First Box
+                  </button>
+                </div>
+                ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {paginatedBoxes.map((box) => (
+                      <BoxCard
+                        key={box.id}
+                        name={box.name}
+                        gameName={box.game?.name || 'Unknown Game'}
+                        purchaseDate={box.purchase_date}
+                        imageUrl={box.image_url}
+                        gameImage={box.game?.image}
+                        gameIcon={box.game?.icon}
+                        onViewBox={() => handleViewBox(box)}
+                      />
+                    ))}
+                  </div>
+                  
+                  {boxTotalPages > 1 && (
+                    <Pagination
+                      currentPage={boxCurrentPage}
+                      totalPages={boxTotalPages}
+                      onPageChange={setBoxCurrentPage}
+                    />
+                  )}
+                </>
+              )}
+            </section>
+          </>
+        )}
+
+        {/* Boxes Only View */}
+        {collectionView === 'boxes' && (
+          <section>
+            {boxes.length > 0 && (
+              <div className="flex flex-col items-center mb-8">
+                <button
+                  onClick={() => setAddBoxModal(true)}
+                  className="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg transition-colors text-base font-semibold"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Box</span>
+                </button>
+              </div>
+            )}
+            
+            {boxesLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="bg-bg-card rounded-lg border border-border-custom p-4 animate-pulse">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-16 bg-secondary-text opacity-20 rounded"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-secondary-text opacity-20 rounded w-3/4"></div>
+                        <div className="h-3 bg-secondary-text opacity-20 rounded w-1/2"></div>
+                      </div>
+                      <div className="w-20 h-8 bg-secondary-text opacity-20 rounded"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : models.filter(model => model.status === 'Painted').length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-base text-secondary-text mb-4">No painted models in your collection yet.</p>
+                <button 
+                  onClick={() => setAddBoxModal(true)}
+                  className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg transition-colors text-base font-semibold"
+                >
+                  Add Your First Painted Model
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  {paginatedBoxes.map((box) => (
+                    <div
+                      key={box.id}
+                      className="bg-bg-card rounded-lg border border-border-custom p-4 hover:bg-bg-secondary transition-colors cursor-pointer"
+                      onClick={() => handleViewBox(box)}
+                    >
+                      <div className="flex items-center space-x-4">
+                        <img
+                          src={(() => {
+                            if (box.image_url && 
+                                typeof box.image_url === 'string' &&
+                                box.image_url.trim() !== '' && 
+                                box.image_url !== 'undefined' && 
+                                box.image_url !== 'null' &&
+                                (box.image_url.startsWith('http') || box.image_url.startsWith('/'))) {
+                              return box.image_url
+                            }
+                            
+                            const gameImage = box.game?.image
+                            if (gameImage && 
+                                typeof gameImage === 'string' &&
+                                gameImage.trim() !== '' && 
+                                gameImage !== 'undefined' && 
+                                gameImage !== 'null' &&
+                                gameImage.startsWith('http')) {
+                              return gameImage
+                            }
+                            
+                            return 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                          })()}
+                          alt={box.name}
+                          className="w-16 h-16 object-cover rounded"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            const fallbackUrl = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                            if (target.src !== fallbackUrl) {
+                              target.src = fallbackUrl
+                            }
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-semibold text-title truncate">{box.name}</h3>
+                          <div className="flex items-center space-x-2 mt-1">
+                            {box.game?.icon ? (
+                              <img
+                                src={box.game.icon}
+                                alt={`${box.game.name} icon`}
+                                className="w-4 h-4 object-contain rounded"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement
+                                  target.style.display = 'none'
+                                  const fallback = target.nextElementSibling as HTMLElement
+                                  if (fallback && fallback.classList.contains('icon-fallback')) {
+                                    fallback.style.display = 'flex'
+                                  }
+                                }}
+                              />
+                            ) : null}
+                            <div className="w-4 h-4 bg-red-600 rounded-full flex items-center justify-center icon-fallback" style={{ display: box.game?.icon ? 'none' : 'flex' }}>
+                              <span className="text-white text-xs font-bold">{(box.game?.name || 'Unknown Game').charAt(0)}</span>
+                            </div>
+                            <span className="text-sm text-secondary-text">{box.game?.name || 'Unknown Game'}</span>
+                          </div>
+                          {box.purchase_date && (
+                            <p className="text-xs text-secondary-text mt-1">
+                              Purchased: {new Date(box.purchase_date).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {boxTotalPages > 1 && (
+                  <Pagination
+                    currentPage={boxCurrentPage}
+                    totalPages={boxTotalPages}
+                    onPageChange={setBoxCurrentPage}
+                  />
+                )}
+              </>
+            )}
+          </section>
+        )}
+
+        {/* Models Only View */}
+        {collectionView === 'models' && (
+          <section>
+          {models.length > 0 && (
+            <div className="flex flex-col items-center mb-8">
+              <button
+                onClick={() => setAddModelModal(true)}
+                className="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg transition-colors text-base font-semibold"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Model</span>
+              </button>
+            </div>
+          )}
+          
+          {modelsLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-bg-card rounded-lg border border-border-custom p-4 animate-pulse">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 bg-secondary-text opacity-20 rounded"></div>
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-secondary-text opacity-20 rounded w-3/4"></div>
+                      <div className="h-3 bg-secondary-text opacity-20 rounded w-1/2"></div>
+                    </div>
+                    <div className="w-20 h-8 bg-secondary-text opacity-20 rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : models.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-base text-secondary-text mb-4">No models in your collection yet.</p>
+              <button 
+                onClick={() => setAddModelModal(true)}
+                className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg transition-colors text-base font-semibold"
+              >
+                Add Your First Model
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {paginatedModels.map((model) => (
+                  <div
+                    key={model.id}
+                    className="bg-bg-card rounded-lg border border-border-custom p-4 hover:bg-bg-secondary transition-colors cursor-pointer"
+                    onClick={() => handleViewModel(model)}
+                  >
+                    <div className="flex items-center space-x-4">
+                      <img
+                        src={(() => {
+                          if (model.image_url && 
+                              typeof model.image_url === 'string' &&
+                              model.image_url.trim() !== '' && 
+                              model.image_url !== 'undefined' && 
+                              model.image_url !== 'null' &&
+                              (model.image_url.startsWith('http') || model.image_url.startsWith('/'))) {
+                            return model.image_url
+                          }
+                          
+                          const gameImage = model.box?.game?.image || model.game?.image
+                          if (gameImage && 
+                              typeof gameImage === 'string' &&
+                              gameImage.trim() !== '' && 
+                              gameImage !== 'undefined' && 
+                              gameImage !== 'null' &&
+                              gameImage.startsWith('http')) {
+                            return gameImage
+                          }
+                          
+                          return 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                        })()}
+                        alt={model.name}
+                        className="w-16 h-16 object-cover rounded"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          const fallbackUrl = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                          if (target.src !== fallbackUrl) {
+                            target.src = fallbackUrl
+                          }
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg font-semibold text-title truncate">{model.name}</h3>
+                        <div className="flex items-center space-x-2 mt-1">
+                          {(model.box?.game?.icon || model.game?.icon) ? (
+                            <img
+                              src={model.box?.game?.icon || model.game?.icon}
+                              alt={`${model.box?.game?.name || model.game?.name || 'Unknown Game'} icon`}
+                              className="w-4 h-4 object-contain rounded"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                                const fallback = target.nextElementSibling as HTMLElement
+                                if (fallback && fallback.classList.contains('icon-fallback')) {
+                                  fallback.style.display = 'flex'
+                                }
+                              }}
+                            />
+                          ) : null}
+                          <div className="w-4 h-4 bg-red-600 rounded-full flex items-center justify-center icon-fallback" style={{ display: (model.box?.game?.icon || model.game?.icon) ? 'none' : 'flex' }}>
+                            <span className="text-white text-xs font-bold">{(model.box?.game?.name || model.game?.name || 'Unknown Game').charAt(0)}</span>
+                          </div>
+                          <span className="text-sm text-secondary-text">{model.box?.game?.name || model.game?.name || 'Unknown Game'}</span>
+                        </div>
+                        {model.status !== 'None' && (
+                          <div className="mt-1">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${(() => {
+                              switch (model.status) {
+                                case 'Painted': return 'bg-green-100 text-green-800'
+                                case 'Partially Painted': return 'bg-yellow-100 text-yellow-800'
+                                case 'Primed': return 'bg-blue-100 text-blue-800'
+                                case 'Assembled': return 'bg-yellow-100 text-yellow-800'
+                                default: return 'bg-gray-100 text-gray-800'
+                              }
+                            })()}`}>
+                              {model.status}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {totalPages > 1 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              )}
+            </>
+          )}
+          </section>
+        )}
+      </main>
+
+      <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+
+      <AuthModal
+        isOpen={authModal.isOpen}
+        onClose={() => setAuthModal({ isOpen: false, mode: 'login' })}
+        mode={authModal.mode}
+      />
+
+      <AddModelModal
+        isOpen={addModelModal}
+        onClose={() => setAddModelModal(false)}
+        onSuccess={handleModelAdded}
+        preselectedBoxId={preselectedBoxId}
+      />
+
+      <AddBoxModal
+        isOpen={addBoxModal}
+        onClose={() => setAddBoxModal(false)}
+        onSuccess={handleModelAdded}
+        onAddModelsToBox={handleAddModelsToBox}
+      />
+
+      <ViewModelModal
+        isOpen={viewModelModal.isOpen}
+        onClose={() => setViewModelModal({ isOpen: false, model: null })}
+        onModelDeleted={handleModelDeleted}
+        onModelUpdated={handleModelUpdated}
+        onViewBox={handleViewBox}
+        model={viewModelModal.model}
+      />
+
+      <ViewBoxModal
+        isOpen={viewBoxModal.isOpen}
+        onClose={() => setViewBoxModal({ isOpen: false, box: null })}
+        onBoxDeleted={handleBoxDeleted}
+        onModelsUpdated={handleBoxUpdated}
+        onViewModel={handleViewModel}
+        onAddNewModel={handleAddNewModelToBox}
+        box={viewBoxModal.box}
+      />
+    </div>
+  )
+}
+
+export default App

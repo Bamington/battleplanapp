@@ -1,0 +1,351 @@
+import React, { useState, useEffect } from 'react'
+import { X, Package, Check } from 'lucide-react'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../hooks/useAuth'
+
+interface Model {
+  id: string
+  name: string
+  status: string
+  count: number
+  image_url: string
+  game_id: string | null
+  box_id: string | null
+  game: {
+    id: string
+    name: string
+    icon: string | null
+  } | null
+}
+
+interface AddModelsToBoxModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onModelsAdded: () => void
+  onAddNewModel: () => void
+  box: {
+    id: string
+    name: string
+    game: {
+      id: string
+      name: string
+    } | null
+  }
+}
+
+export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewModel, box }: AddModelsToBoxModalProps) {
+  const [models, setModels] = useState<Model[]>([])
+  const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
+  const [adding, setAdding] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
+
+  useEffect(() => {
+    if (isOpen && user) {
+      fetchModels()
+    }
+  }, [isOpen, user])
+
+  const fetchModels = async () => {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('models')
+        .select(`
+          id,
+          name,
+          status,
+          count,
+          image_url,
+          game_id,
+          box_id,
+          game:games(
+            id,
+            name,
+            icon
+          )
+        `)
+        .eq('user_id', user?.id)
+        .is('box_id', null) // Only show models not already in a box
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      // Sort models: same game first, then others
+      const sortedModels = (data || []).sort((a, b) => {
+        const aIsSameGame = a.game_id === box.game?.id
+        const bIsSameGame = b.game_id === box.game?.id
+        
+        if (aIsSameGame && !bIsSameGame) return -1
+        if (!aIsSameGame && bIsSameGame) return 1
+        
+        // If both are same game or both are different, sort by name
+        return a.name.localeCompare(b.name)
+      })
+
+      setModels(sortedModels)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch models')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleModelToggle = (modelId: string) => {
+    setSelectedModels(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(modelId)) {
+        newSet.delete(modelId)
+      } else {
+        newSet.add(modelId)
+      }
+      return newSet
+    })
+  }
+
+  const handleAddModels = async () => {
+    if (selectedModels.size === 0) return
+
+    setAdding(true)
+    setError(null)
+
+    try {
+      const modelIds = Array.from(selectedModels)
+      
+      const { error } = await supabase
+        .from('models')
+        .update({ box_id: box.id })
+        .in('id', modelIds)
+
+      if (error) throw error
+
+      onModelsAdded()
+      onClose()
+      setSelectedModels(new Set())
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add models to box')
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  const handleAddNewModel = () => {
+    // Store the current box in localStorage for the new model modal
+    try {
+      localStorage.setItem('mini-myths-temp-box-context', JSON.stringify({
+        id: box.id,
+        name: box.name,
+        game: box.game
+      }))
+    } catch (error) {
+      console.error('Error storing box context:', error)
+    }
+    onAddNewModel()
+    onClose()
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Painted': return 'bg-green-100 text-green-800'
+      case 'Partially Painted': return 'bg-yellow-100 text-yellow-800'
+      case 'Primed': return 'bg-blue-100 text-blue-800'
+      case 'Assembled': return 'bg-yellow-100 text-yellow-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const sameGameModels = models.filter(model => model.game_id === box.game?.id)
+  const otherModels = models.filter(model => model.game_id !== box.game?.id)
+
+  if (!isOpen) return null
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose()
+    }
+  }
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]"
+      onClick={handleBackdropClick}
+    >
+      <div className="bg-modal-bg rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-bold text-title">Add Models to {box.name}</h2>
+          <button
+            onClick={onClose}
+            className="text-secondary-text hover:text-text transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-600">{error}</p>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mx-auto mb-4"></div>
+            <p className="text-secondary-text">Loading models...</p>
+          </div>
+        ) : models.length === 0 ? (
+          <div className="text-center py-8">
+            <Package className="w-12 h-12 text-secondary-text mx-auto mb-4" />
+            <p className="text-secondary-text mb-4">No unboxed models found in your collection.</p>
+            <p className="text-sm text-secondary-text mb-6">All your models are already assigned to boxes.</p>
+            <button
+              onClick={handleAddNewModel}
+              className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium"
+            >
+              Add new model to collection
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-secondary-text mb-6">
+              Select models to add to this box. Models will be moved from their current unboxed state.
+            </p>
+
+            <div className="space-y-6 mb-6">
+              {/* Same Game Models */}
+              {sameGameModels.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-title mb-3 uppercase tracking-wide">
+                    {box.game?.name || 'Same Game'} Models
+                  </h3>
+                  <div className="space-y-2">
+                    {sameGameModels.map((model) => (
+                      <div
+                        key={model.id}
+                        className="flex items-center space-x-3 p-3 border border-border-custom rounded-lg hover:bg-bg-secondary transition-colors"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleModelToggle(model.id)}
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                            selectedModels.has(model.id)
+                              ? 'bg-amber-500 border-amber-500 text-white'
+                              : 'border-border-custom hover:border-amber-500'
+                          }`}
+                        >
+                          {selectedModels.has(model.id) && <Check className="w-3 h-3" />}
+                        </button>
+                        
+                        <img
+                          src={model.image_url || 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'}
+                          alt={model.name}
+                          className="w-12 h-12 object-cover rounded"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.src = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                          }}
+                        />
+                        
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-text truncate">{model.name}</h4>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <span className="text-xs text-secondary-text">
+                              {model.count} model{model.count !== 1 ? 's' : ''}
+                            </span>
+                            {model.status !== 'None' && (
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(model.status)}`}>
+                                {model.status}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Other Models */}
+              {otherModels.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-title mb-3 uppercase tracking-wide">
+                    Other Models
+                  </h3>
+                  <div className="space-y-2">
+                    {otherModels.map((model) => (
+                      <div
+                        key={model.id}
+                        className="flex items-center space-x-3 p-3 border border-border-custom rounded-lg hover:bg-bg-secondary transition-colors"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleModelToggle(model.id)}
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                            selectedModels.has(model.id)
+                              ? 'bg-amber-500 border-amber-500 text-white'
+                              : 'border-border-custom hover:border-amber-500'
+                          }`}
+                        >
+                          {selectedModels.has(model.id) && <Check className="w-3 h-3" />}
+                        </button>
+                        
+                        <img
+                          src={model.image_url || 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'}
+                          alt={model.name}
+                          className="w-12 h-12 object-cover rounded"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.src = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                          }}
+                        />
+                        
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-text truncate">{model.name}</h4>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <span className="text-xs text-secondary-text">
+                              {model.game?.name || 'Unknown Game'}
+                            </span>
+                            <span className="text-xs text-secondary-text">•</span>
+                            <span className="text-xs text-secondary-text">
+                              {model.count} model{model.count !== 1 ? 's' : ''}
+                            </span>
+                            {model.status !== 'None' && (
+                              <>
+                                <span className="text-xs text-secondary-text">•</span>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(model.status)}`}>
+                                  {model.status}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-3 pt-4 border-t border-border-custom">
+              <button
+                onClick={onClose}
+                disabled={adding}
+                className="flex-1 px-4 py-2 border border-border-custom text-text rounded-lg hover:bg-bg-secondary transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddModels}
+                disabled={selectedModels.size === 0 || adding}
+                className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+              >
+                {adding ? 'Adding...' : `Add ${selectedModels.size} Model${selectedModels.size !== 1 ? 's' : ''}`}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
