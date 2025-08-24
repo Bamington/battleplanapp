@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { X, Package, Calendar, DollarSign, Image as ImageIcon } from 'lucide-react'
+import { X, Package, Calendar, DollarSign, Image as ImageIcon, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { GameDropdown } from './GameDropdown'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
+import { ImageSearchResults } from './ImageSearchResults'
 
 interface Game {
   id: string
@@ -41,6 +42,13 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
   const [loading, setLoading] = useState(false)
   const [compressing, setCompressing] = useState(false)
   const [error, setError] = useState('')
+  const [deleteImage, setDeleteImage] = useState(false)
+  const [showImageSearch, setShowImageSearch] = useState(false)
+  const [searchingImages, setSearchingImages] = useState(false)
+  const [suggestedImages, setSuggestedImages] = useState<string[]>([])
+  const [selectedImageUrl, setSelectedImageUrl] = useState('')
+  const [previousSearchResults, setPreviousSearchResults] = useState<string[]>([])
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   useEffect(() => {
     if (box) {
@@ -92,6 +100,109 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
     setImageForCropping(null)
   }
 
+  const handleDeleteImage = () => {
+    setDeleteImage(true)
+    setCroppedImageBlob(null)
+    setSelectedImageFile(null)
+  }
+
+  const searchForImages = async () => {
+    if (!formData.name.trim()) return
+
+    setSearchingImages(true)
+    setSuggestedImages([])
+    setPreviousSearchResults([])
+    
+    try {
+      // Get the selected game name for better search context
+      const selectedGameData = games.find(g => g.id === formData.game_id)
+      const gameName = selectedGameData?.name || ''
+      
+      // Create search query combining box name and game
+      const searchQuery = `${formData.name.trim()} ${gameName}`.trim()
+      
+      // Call our edge function to search for images
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-images`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: searchQuery,
+          count: 6
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to search for images')
+      }
+
+      const data = await response.json()
+      const newImages = data.images || []
+      setSuggestedImages(newImages)
+      setPreviousSearchResults(newImages)
+      setShowImageSearch(true)
+    } catch (error) {
+      console.error('Error searching for images:', error)
+      // Fallback to manual upload
+      setShowImageSearch(false)
+    } finally {
+      setSearchingImages(false)
+    }
+  }
+
+  const handleImageSelected = (imageUrl: string) => {
+    // Store the selected URL for use during submission
+    setSelectedImageUrl(imageUrl)
+    setShowImageSearch(false)
+  }
+
+  const findMoreImages = async () => {
+    if (!formData.name.trim()) return
+
+    setIsLoadingMore(true)
+    
+    try {
+      // Get the selected game name for better search context
+      const selectedGameData = games.find(g => g.id === formData.game_id)
+      const gameName = selectedGameData?.name || ''
+      
+      // Create search query combining box name and game
+      const searchQuery = `${formData.name.trim()} ${gameName}`.trim()
+      
+      // Call our edge function to search for images
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-images`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: searchQuery,
+          count: 6,
+          exclude: previousSearchResults
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to search for more images')
+      }
+
+      const data = await response.json()
+      const additionalImages = data.images || []
+      
+      // Combine previous and new results, avoiding duplicates
+      const allImages = [...previousSearchResults, ...additionalImages]
+      setSuggestedImages(allImages)
+      setPreviousSearchResults(allImages)
+    } catch (error) {
+      console.error('Error searching for more images:', error)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }
+
   const uploadFile = async (file: Blob, bucket: string, folder: string) => {
     const fileExt = selectedImageFile?.name.split('.').pop() || 'jpg'
     const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
@@ -117,10 +228,33 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
     setError('')
 
     try {
-      let imageUrl = formData.image_url
+      let imageUrl: string | null = formData.image_url
 
+      // Handle image deletion
+      if (deleteImage) {
+        // Delete the image from storage if it exists and is from our storage
+        if (formData.image_url && formData.image_url.includes('supabase')) {
+          try {
+            const urlParts = formData.image_url.split('/')
+            const bucketIndex = urlParts.findIndex(part => part === 'model-images')
+            if (bucketIndex !== -1) {
+              const filePath = urlParts.slice(bucketIndex + 1).join('/')
+              await supabase.storage
+                .from('model-images')
+                .remove([filePath])
+            }
+          } catch (deleteError) {
+            console.warn('Failed to delete old image:', deleteError)
+          }
+        }
+        imageUrl = null
+      }
+      // Use selected image URL from search results
+      else if (selectedImageUrl) {
+        imageUrl = selectedImageUrl
+      }
       // Upload new image if selected
-      if (croppedImageBlob) {
+      else if (croppedImageBlob) {
         setCompressing(true)
         const compressedFile = await compressImage(croppedImageBlob as File, 1200, 1200, 0.8)
         imageUrl = await uploadFile(compressedFile, 'model-images', 'boxes')
@@ -158,6 +292,11 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
     }
     setSelectedImageFile(null)
     setCroppedImageBlob(null)
+    setDeleteImage(false)
+    setSelectedImageUrl('')
+    setShowImageSearch(false)
+    setSuggestedImages([])
+    setPreviousSearchResults([])
     setError('')
   }
 
@@ -240,6 +379,44 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
               <label htmlFor="boxImage" className="block text-sm font-medium text-input-label font-overpass mb-2">
                 Box Image
               </label>
+              
+              {/* Current Image Display */}
+              {formData.image_url && !deleteImage && (
+                <div className="mb-3 p-3 border border-border-custom rounded-lg bg-bg-secondary">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src={formData.image_url}
+                        alt="Current box image"
+                        className="w-12 h-12 object-cover rounded"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                        }}
+                      />
+                      <span className="text-sm text-secondary-text">Current image</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDeleteImage}
+                      className="text-red-500 hover:text-red-700 transition-colors p-1"
+                      title="Delete current image"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Delete Confirmation */}
+              {deleteImage && (
+                <div className="mb-3 p-3 border border-red-300 rounded-lg bg-red-50">
+                  <p className="text-sm text-red-700">
+                    ✓ Image will be deleted when you save changes
+                  </p>
+                </div>
+              )}
+              
               <div className="relative">
                 <ImageIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
                 <input
@@ -254,6 +431,29 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
                 <p className="text-sm text-green-600 mt-1">
                   ✓ New image ready for upload
                 </p>
+              )}
+              
+              {/* Image Search Button - only show if no current image and no new image selected */}
+              {!formData.image_url && !croppedImageBlob && !selectedImageUrl && formData.name.trim() && (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={searchForImages}
+                    disabled={searchingImages}
+                    className="w-full px-4 py-2 border border-amber-500 text-amber-500 hover:bg-amber-50 rounded-lg transition-colors font-medium disabled:opacity-50"
+                  >
+                    {searchingImages ? 'Searching for images...' : 'Find images for this box'}
+                  </button>
+                </div>
+              )}
+              
+              {/* Show selected image from search */}
+              {selectedImageUrl && (
+                <div className="mt-3 p-3 border border-green-300 rounded-lg bg-green-50">
+                  <p className="text-sm text-green-700">
+                    ✓ Image selected from search results
+                  </p>
+                </div>
               )}
             </div>
 
@@ -294,6 +494,18 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
           }}
           onCrop={handleImageCropped}
           imageFile={imageForCropping}
+        />
+      )}
+      
+      {showImageSearch && (
+        <ImageSearchResults
+          isOpen={showImageSearch}
+          onClose={() => setShowImageSearch(false)}
+          images={suggestedImages}
+          onImageSelect={handleImageSelected}
+          searchQuery={`${formData.name} ${games.find(g => g.id === formData.game_id)?.name || ''}`.trim()}
+          onFindMoreImages={findMoreImages}
+          isLoadingMore={isLoadingMore}
         />
       )}
     </>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Calendar, FileText, Hash, Image as ImageIcon, Package, Gamepad2 } from 'lucide-react';
+import { X, Upload, Calendar, FileText, Hash, Image as ImageIcon, Package, Gamepad2, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { compressImage } from '../utils/imageCompression';
@@ -48,6 +48,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
   const [imageForCropping, setImageForCropping] = useState<string | null>(null);
   const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null);
   const [games, setGames] = useState<Game[]>([]);
+  const [deleteImage, setDeleteImage] = useState(false);
 
   useEffect(() => {
     if (model) {
@@ -114,6 +115,12 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
     }
   };
 
+  const handleDeleteImage = () => {
+    setDeleteImage(true);
+    setCroppedImageBlob(null);
+    setSelectedFile(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -121,9 +128,29 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
     setUploading(true);
 
     try {
-      let imageUrl = model.image_url;
+      let imageUrl: string | null = model.image_url;
 
-      if (croppedImageBlob) {
+      // Handle image deletion
+      if (deleteImage) {
+        // Delete the image from storage if it exists and is from our storage
+        if (model.image_url && model.image_url.includes('supabase')) {
+          try {
+            const urlParts = model.image_url.split('/')
+            const bucketIndex = urlParts.findIndex(part => part === 'model-images')
+            if (bucketIndex !== -1) {
+              const filePath = urlParts.slice(bucketIndex + 1).join('/')
+              await supabase.storage
+                .from('model-images')
+                .remove([filePath])
+            }
+          } catch (deleteError) {
+            console.warn('Failed to delete old image:', deleteError)
+          }
+        }
+        imageUrl = null;
+      }
+      // Upload new image if selected
+      else if (croppedImageBlob) {
         // Delete old image if it exists and is from our storage
         if (model.image_url && model.image_url.includes('supabase')) {
           try {
@@ -185,6 +212,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
       setSelectedFile(null);
       setCroppedImageBlob(null);
       setImageForCropping(null);
+      setDeleteImage(false);
     } catch (error) {
       console.error('Error updating model:', error);
       alert('Failed to update model. Please try again.');
@@ -343,6 +371,44 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                 <ImageIcon className="w-4 h-4 mr-2" />
                 Replace Image
               </label>
+              
+              {/* Current Image Display */}
+              {model.image_url && !deleteImage && (
+                <div className="mb-3 p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src={model.image_url}
+                        alt="Current model image"
+                        className="w-12 h-12 object-cover rounded"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                        }}
+                      />
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Current image</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDeleteImage}
+                      className="text-red-500 hover:text-red-700 transition-colors p-1"
+                      title="Delete current image"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Delete Confirmation */}
+              {deleteImage && (
+                <div className="mb-3 p-3 border border-red-300 rounded-md bg-red-50 dark:bg-red-900/20">
+                  <p className="text-sm text-red-700 dark:text-red-400">
+                    ✓ Image will be deleted when you save changes
+                  </p>
+                </div>
+              )}
+              
               <input
                 type="file"
                 accept="image/*"

@@ -1,5 +1,5 @@
 import React from 'react'
-import { X, Search } from 'lucide-react'
+import { X, Search, RefreshCw } from 'lucide-react'
 
 interface ImageSearchResultsProps {
   isOpen: boolean
@@ -7,9 +7,19 @@ interface ImageSearchResultsProps {
   images: string[]
   onImageSelect: (imageUrl: string) => void
   searchQuery: string
+  onFindMoreImages?: () => void
+  isLoadingMore?: boolean
 }
 
-export function ImageSearchResults({ isOpen, onClose, images, onImageSelect, searchQuery }: ImageSearchResultsProps) {
+export function ImageSearchResults({ 
+  isOpen, 
+  onClose, 
+  images, 
+  onImageSelect, 
+  searchQuery, 
+  onFindMoreImages, 
+  isLoadingMore 
+}: ImageSearchResultsProps) {
   if (!isOpen) return null
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -79,6 +89,29 @@ export function ImageSearchResults({ isOpen, onClose, images, onImageSelect, sea
                 </button>
               ))}
             </div>
+            
+            {/* Find More Images Button */}
+            {onFindMoreImages && (
+              <div className="flex justify-center mb-4">
+                <button
+                  onClick={onFindMoreImages}
+                  disabled={isLoadingMore}
+                  className="flex items-center space-x-2 px-6 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg transition-colors font-medium"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Finding more images...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Find more images</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
             
             <div className="flex justify-center">
               <button

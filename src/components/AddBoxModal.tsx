@@ -39,6 +39,9 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
   const [showImageSearch, setShowImageSearch] = useState(false)
   const [searchingImages, setSearchingImages] = useState(false)
   const [suggestedImages, setSuggestedImages] = useState<string[]>([])
+  const [selectedImageUrl, setSelectedImageUrl] = useState('')
+  const [previousSearchResults, setPreviousSearchResults] = useState<string[]>([])
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   // Store the last created box ID
   let lastCreatedBoxId: string | null = null
@@ -172,6 +175,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
 
     setSearchingImages(true)
     setSuggestedImages([])
+    setPreviousSearchResults([])
     
     try {
       // Get the selected game name for better search context
@@ -190,7 +194,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
         },
         body: JSON.stringify({
           query: searchQuery,
-          count: 5
+          count: 6
         })
       })
 
@@ -199,7 +203,9 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
       }
 
       const data = await response.json()
-      setSuggestedImages(data.images || [])
+      const newImages = data.images || []
+      setSuggestedImages(newImages)
+      setPreviousSearchResults(newImages)
       setShowImageSearch(true)
     } catch (error) {
       console.error('Error searching for images:', error)
@@ -207,6 +213,51 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
       setShowImageSearch(false)
     } finally {
       setSearchingImages(false)
+    }
+  }
+
+  const findMoreImages = async () => {
+    if (!boxName.trim()) return
+
+    setIsLoadingMore(true)
+    
+    try {
+      // Get the selected game name for better search context
+      const selectedGameData = games.find(g => g.id === selectedGame)
+      const gameName = selectedGameData?.name || ''
+      
+      // Create search query combining box name and game
+      const searchQuery = `${boxName.trim()} ${gameName}`.trim()
+      
+      // Call our edge function to search for images
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-images`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: searchQuery,
+          count: 6,
+          exclude: previousSearchResults
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to search for more images')
+      }
+
+      const data = await response.json()
+      const additionalImages = data.images || []
+      
+      // Combine previous and new results, avoiding duplicates
+      const allImages = [...previousSearchResults, ...additionalImages]
+      setSuggestedImages(allImages)
+      setPreviousSearchResults(allImages)
+    } catch (error) {
+      console.error('Error searching for more images:', error)
+    } finally {
+      setIsLoadingMore(false)
     }
   }
 
@@ -220,8 +271,6 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
     // Store the selected URL for use during submission
     setSelectedImageUrl(imageUrl)
   }
-
-  const [selectedImageUrl, setSelectedImageUrl] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -608,6 +657,8 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
           images={suggestedImages}
           onImageSelect={handleImageSelected}
           searchQuery={`${boxName} ${games.find(g => g.id === selectedGame)?.name || ''}`.trim()}
+          onFindMoreImages={findMoreImages}
+          isLoadingMore={isLoadingMore}
         />
       )}
     </div>
