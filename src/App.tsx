@@ -43,10 +43,12 @@ function App() {
   const [modelFilters, setModelFilters] = useState({
     selectedBoxes: [] as string[],
     selectedGames: [] as string[],
-    selectedStatuses: [] as string[]
+    selectedStatuses: [] as string[],
+    searchQuery: ''
   })
   const [boxFilters, setBoxFilters] = useState({
-    selectedGames: [] as string[]
+    selectedGames: [] as string[],
+    searchQuery: ''
   })
   const [games, setGames] = useState<any[]>([])
   const [authModal, setAuthModal] = useState<{ isOpen: boolean; mode: 'login' | 'signup' }>({
@@ -117,7 +119,7 @@ function App() {
   }
 
   const handleModelClearFilters = () => {
-    setModelFilters({ selectedBoxes: [], selectedGames: [], selectedStatuses: [] })
+    setModelFilters({ selectedBoxes: [], selectedGames: [], selectedStatuses: [], searchQuery: '' })
     setCurrentPage(1)
   }
 
@@ -127,29 +129,67 @@ function App() {
   }
 
   const handleBoxClearFilters = () => {
-    setBoxFilters({ selectedGames: [] })
+    setBoxFilters({ selectedGames: [], searchQuery: '' })
+    setBoxCurrentPage(1)
+  }
+
+  // Search handlers
+  const handleModelSearchChange = (query: string) => {
+    setModelFilters(prev => ({ ...prev, searchQuery: query }))
+    setCurrentPage(1)
+  }
+
+  const handleBoxSearchChange = (query: string) => {
+    setBoxFilters(prev => ({ ...prev, searchQuery: query }))
     setBoxCurrentPage(1)
   }
 
   // Filtered data
   const filteredModels = models.filter(model => {
+    // Search filter
+    if (modelFilters.searchQuery && !model.name.toLowerCase().includes(modelFilters.searchQuery.toLowerCase())) {
+      return false
+    }
+    
+    // Box filter
     if (modelFilters.selectedBoxes.length > 0 && !modelFilters.selectedBoxes.includes(model.box?.id || '')) return false
+    
+    // Game filter
     if (modelFilters.selectedGames.length > 0 && 
         !modelFilters.selectedGames.includes(model.box?.game?.id || '') && 
         !modelFilters.selectedGames.includes(model.game?.id || '')) return false
+    
+    // Status filter
     if (modelFilters.selectedStatuses.length > 0 && !modelFilters.selectedStatuses.includes(model.status)) return false
+    
     return true
   })
 
+  // For Recent view, only show painted models
+  const recentModels = models.filter(model => model.status === 'Painted')
+
   const filteredBoxes = boxes.filter(box => {
+    // Search filter
+    if (boxFilters.searchQuery && !box.name.toLowerCase().includes(boxFilters.searchQuery.toLowerCase())) {
+      return false
+    }
+    
+    // Game filter
     if (boxFilters.selectedGames.length > 0 && !boxFilters.selectedGames.includes(box.game?.id || '')) return false
+    
     return true
   })
 
   const totalPages = Math.ceil(filteredModels.length / itemsPerPage)
+  const recentTotalPages = Math.ceil(recentModels.length / itemsPerPage)
   const boxTotalPages = Math.ceil(filteredBoxes.length / itemsPerPage)
 
   const paginatedModels = filteredModels.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
+
+  const paginatedRecentModels = recentModels.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   )
@@ -224,7 +264,7 @@ function App() {
     return (
       <div className="min-h-screen bg-bg-secondary flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)] mx-auto mb-4"></div>
           <p className="text-base text-secondary-text">Loading...</p>
         </div>
       </div>
@@ -248,13 +288,13 @@ function App() {
             <div className="space-x-4">
               <button
                 onClick={() => setAuthModal({ isOpen: true, mode: 'login' })}
-                className="px-6 py-3 text-base font-semibold text-text hover:text-title transition-colors"
+                className="btn-ghost"
               >
                 Log In
               </button>
               <button
                 onClick={() => setAuthModal({ isOpen: true, mode: 'signup' })}
-                className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg transition-colors text-base font-semibold"
+                className="btn-primary"
               >
                 Sign Up
               </button>
@@ -372,7 +412,7 @@ function App() {
                   <h2 className="text-lg font-bold text-secondary-text text-center mb-4">RECENT MODELS</h2>
                   <button
                     onClick={() => setAddModelModal(true)}
-                    className="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg transition-colors text-base font-semibold"
+                    className="btn-primary-sm btn-with-icon-sm"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Add Model</span>
@@ -393,12 +433,12 @@ function App() {
                     </div>
                   ))}
                 </div>
-              ) : models.length === 0 ? (
+              ) : recentModels.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-base text-secondary-text mb-4">No models in your collection yet.</p>
+                  <p className="text-base text-secondary-text mb-4">No painted models in your collection yet.</p>
                   <button 
                     onClick={() => setAddModelModal(true)}
-                    className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg transition-colors text-base font-semibold"
+                    className="btn-primary"
                   >
                     Add Your First Model
                   </button>
@@ -406,7 +446,7 @@ function App() {
               ) : (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {paginatedModels.map((model) => (
+                    {paginatedRecentModels.map((model) => (
                       <ModelCard
                         key={model.id}
                         model={model}
@@ -423,10 +463,10 @@ function App() {
                     ))}
                   </div>
                   
-                  {totalPages > 1 && (
+                  {recentTotalPages > 1 && (
                     <Pagination
                       currentPage={currentPage}
-                      totalPages={totalPages}
+                      totalPages={recentTotalPages}
                       onPageChange={setCurrentPage}
                     />
                   )}
@@ -441,7 +481,7 @@ function App() {
                   <h2 className="text-lg font-bold text-secondary-text text-center mb-4">RECENT BOXES</h2>
                   <button
                     onClick={() => setAddBoxModal(true)}
-                    className="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg transition-colors text-base font-semibold"
+                    className="btn-primary-sm btn-with-icon-sm"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Add Box</span>
@@ -467,7 +507,7 @@ function App() {
                   <p className="text-base text-secondary-text mb-4">No boxes in your collection yet.</p>
                   <button 
                     onClick={() => setAddBoxModal(true)}
-                    className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg transition-colors text-base font-semibold"
+                    className="btn-primary"
                   >
                     Add Your First Box
                   </button>
@@ -509,7 +549,7 @@ function App() {
               <div className="flex flex-col items-center mb-8">
                 <button
                   onClick={() => setAddBoxModal(true)}
-                  className="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg transition-colors text-base font-semibold"
+                  className="btn-primary-sm btn-with-icon-sm"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add Box</span>
@@ -519,13 +559,15 @@ function App() {
 
             {/* Box Filters */}
             {boxes.length > 0 && (
-              <BoxFilters
-                games={games}
-                boxes={boxes}
-                selectedGames={boxFilters.selectedGames}
-                onGamesChange={handleBoxGamesFilter}
-                onClearFilters={handleBoxClearFilters}
-              />
+                           <BoxFilters
+               games={games}
+               boxes={boxes}
+               selectedGames={boxFilters.selectedGames}
+               searchQuery={boxFilters.searchQuery}
+               onGamesChange={handleBoxGamesFilter}
+               onSearchChange={handleBoxSearchChange}
+               onClearFilters={handleBoxClearFilters}
+             />
             )}
             
             {boxesLoading ? (
@@ -548,7 +590,7 @@ function App() {
                 <p className="text-base text-secondary-text mb-4">No painted models in your collection yet.</p>
                 <button 
                   onClick={() => setAddBoxModal(true)}
-                  className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg transition-colors text-base font-semibold"
+                  className="btn-primary"
                 >
                   Add Your First Painted Model
                 </button>
@@ -647,30 +689,32 @@ function App() {
           <section>
           {models.length > 0 && (
             <div className="flex flex-col items-center mb-8">
-              <button
-                onClick={() => setAddModelModal(true)}
-                className="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg transition-colors text-base font-semibold"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Model</span>
-              </button>
+                          <button
+              onClick={() => setAddModelModal(true)}
+              className="btn-primary-sm btn-with-icon-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Model</span>
+            </button>
             </div>
           )}
 
           {/* Model Filters */}
           {models.length > 0 && (
-            <ModelFilters
-              games={games}
-              boxes={boxes}
-              models={models}
-              selectedBoxes={modelFilters.selectedBoxes}
-              selectedGames={modelFilters.selectedGames}
-              selectedStatuses={modelFilters.selectedStatuses}
-              onBoxesChange={handleModelBoxesFilter}
-              onGamesChange={handleModelGamesFilter}
-              onStatusesChange={handleModelStatusesFilter}
-              onClearFilters={handleModelClearFilters}
-            />
+                         <ModelFilters
+               games={games}
+               boxes={boxes}
+               models={models}
+               selectedBoxes={modelFilters.selectedBoxes}
+               selectedGames={modelFilters.selectedGames}
+               selectedStatuses={modelFilters.selectedStatuses}
+               searchQuery={modelFilters.searchQuery}
+               onBoxesChange={handleModelBoxesFilter}
+               onGamesChange={handleModelGamesFilter}
+               onStatusesChange={handleModelStatusesFilter}
+               onSearchChange={handleModelSearchChange}
+               onClearFilters={handleModelClearFilters}
+             />
           )}
           
           {modelsLoading ? (
@@ -693,7 +737,7 @@ function App() {
               <p className="text-base text-secondary-text mb-4">No models in your collection yet.</p>
               <button 
                 onClick={() => setAddModelModal(true)}
-                className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg transition-colors text-base font-semibold"
+                className="btn-primary"
               >
                 Add Your First Model
               </button>

@@ -222,7 +222,7 @@ export function BookingDetailModal({ isOpen, onClose, onBookingCancelled, bookin
           {!showConfirmCancel ? (
             <button
               onClick={() => setShowConfirmCancel(true)}
-              className="w-full flex items-center justify-center space-x-2 px-4 py-3 border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-colors font-medium"
+              className="btn-danger-outline btn-with-icon"
             >
               <Trash2 className="w-4 h-4" />
               <span>Cancel This Booking</span>
@@ -239,14 +239,14 @@ export function BookingDetailModal({ isOpen, onClose, onBookingCancelled, bookin
                 <button
                   onClick={() => setShowConfirmCancel(false)}
                   disabled={cancelling}
-                  className="flex-1 px-4 py-2 border border-border-custom text-text rounded-lg hover:bg-bg-secondary transition-colors font-medium"
+                  className="btn-ghost btn-flex"
                 >
                   Keep Booking
                 </button>
                 <button
                   onClick={handleCancelBooking}
                   disabled={cancelling}
-                  className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white rounded-lg transition-colors font-medium"
+                  className="btn-danger btn-flex"
                 >
                   {cancelling ? 'Cancelling...' : 'Yes, Cancel Booking'}
                 </button>

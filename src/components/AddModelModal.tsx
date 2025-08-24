@@ -447,7 +447,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
             onClick={onClose}
             className="text-secondary-text hover:text-text transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-6 h-6 text-icon" />
           </button>
         </div>
 
@@ -470,7 +470,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
               value={modelName}
               onChange={(e) => setModelName(e.target.value)}
               placeholder='eg. "Space Marine Lieutenant", "Captain America", "US Ranger Squad", etc.'
-              className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-secondary-text bg-bg-primary text-text"
+              className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] placeholder-secondary-text bg-bg-primary text-text"
             />
           </div>
 
@@ -489,7 +489,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
                   setSelectedGame('')
                 }
               }}
-              className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+              className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text"
             >
               <option value="">No Box (Loose Model)</option>
               {getFilteredBoxes().map((box) => (
@@ -505,7 +505,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
             {selectedBox && (() => {
               const selectedBoxData = boxes.find(box => box.id === selectedBox)
               return selectedBoxData && selectedBoxData.game ? (
-                <p className="text-xs text-amber-500 mt-1">
+                <p className="text-xs text-[var(--color-brand)] mt-1">
                   Game will be automatically set to: <strong>{selectedBoxData.game.name}</strong>
                 </p>
               ) : null
@@ -536,7 +536,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
               id="paintedStatus"
               value={paintedStatus}
               onChange={(e) => setPaintedStatus(e.target.value)}
-              className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+              className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text"
             >
               <option value="">Select Status</option>
               <option value="Assembled">Assembled</option>
@@ -552,13 +552,13 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
                 Painted Date
               </label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
                 <input
                   type="date"
                   id="paintedDate"
                   value={paintedDate}
                   onChange={(e) => setPaintedDate(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-text bg-bg-primary"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] text-text bg-bg-primary"
                 />
               </div>
             </div>
@@ -571,13 +571,13 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
                 Purchase Date
               </label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
                 <input
                   type="date"
                   id="purchaseDate"
                   value={purchaseDate}
                   onChange={(e) => setPurchaseDate(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-text bg-bg-primary"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] text-text bg-bg-primary"
                 />
               </div>
             </div>
@@ -590,7 +590,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
                 Purchase Price
               </label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
                 <input
                   type="number"
                   id="purchasePrice"
@@ -599,7 +599,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
                   placeholder="Enter Purchase Price"
                   step="0.01"
                   min="0"
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-secondary-text bg-bg-primary text-text"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] placeholder-secondary-text bg-bg-primary text-text"
                 />
               </div>
             </div>
@@ -610,17 +610,17 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
             <label htmlFor="numberOfModels" className="block text-sm font-medium text-input-label font-overpass mb-2">
               Number of Models
             </label>
-            <div className="relative">
-              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
-              <input
-                type="number"
-                id="numberOfModels"
-                value={numberOfModels}
-                onChange={(e) => setNumberOfModels(e.target.value)}
-                min="1"
-                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
-              />
-            </div>
+                          <div className="relative">
+                <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
+                <input
+                  type="number"
+                  id="numberOfModels"
+                  value={numberOfModels}
+                  onChange={(e) => setNumberOfModels(e.target.value)}
+                  min="1"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text"
+                />
+              </div>
           </div>
 
           {/* Photos */}
@@ -628,16 +628,16 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
             <label htmlFor="image" className="block text-sm font-medium text-input-label font-overpass mb-2">
               Image
             </label>
-            <div className="relative">
-              <Image className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
-              <input
-                type="file"
-                id="image"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 bg-bg-primary text-text"
-              />
-            </div>
+                          <div className="relative">
+                <Image className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
+                <input
+                  type="file"
+                  id="image"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-brand)]/10 file:text-[var(--color-brand)] hover:file:bg-[var(--color-brand)]/20 bg-bg-primary text-text"
+                />
+              </div>
             <p className="text-xs text-secondary-text mt-1">
               You can upload more images later.
             </p>
@@ -666,10 +666,10 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
             <button
               type="submit"
               disabled={!isFormValid || loading}
-              className={`px-8 py-3 rounded-lg font-medium transition-colors text-base font-semibold ${
+              className={`${
                 isFormValid && !loading
-                  ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                  : 'bg-secondary-text opacity-50 text-text cursor-not-allowed'
+                  ? 'btn-primary'
+                  : 'btn-disabled'
               }`}
             >
               {compressing ? 'Compressing Image...' : loading ? 'Adding...' : 'Add to Collection'}

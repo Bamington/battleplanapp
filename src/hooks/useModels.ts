@@ -18,12 +18,14 @@ interface Model {
       id: string
       name: string
       icon: string | null
+      image: string | null
     } | null
   } | null
   game: {
     id: string
     name: string
     icon: string | null
+    image: string | null
   } | null
 }
 
@@ -59,9 +61,9 @@ export function useModels() {
             id,
             name,
             purchase_date,
-            game:games(id, name, icon)
+            game:games(id, name, icon, image)
           ),
-          game:games(id, name, icon)
+          game:games(id, name, icon, image)
         `)
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false })

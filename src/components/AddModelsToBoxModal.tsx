@@ -15,6 +15,7 @@ interface Model {
     id: string
     name: string
     icon: string | null
+    image: string | null
   } | null
 }
 
@@ -63,7 +64,8 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
           game:games(
             id,
             name,
-            icon
+            icon,
+            image
           )
         `)
         .eq('user_id', user?.id)
@@ -155,6 +157,32 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
     }
   }
 
+  const getModelImageSrc = (model: Model) => {
+    // Check if we have a valid model image URL
+    if (model.image_url && 
+        typeof model.image_url === 'string' &&
+        model.image_url.trim() !== '' && 
+        model.image_url !== 'undefined' && 
+        model.image_url !== 'null' &&
+        (model.image_url.startsWith('http') || model.image_url.startsWith('/'))) {
+      return { src: model.image_url, isGameFallback: false }
+    }
+    
+    // Try to use the game's icon as fallback
+    const gameIcon = model.game?.icon
+    if (gameIcon && 
+        typeof gameIcon === 'string' &&
+        gameIcon.trim() !== '' && 
+        gameIcon !== 'undefined' && 
+        gameIcon !== 'null' &&
+        gameIcon.startsWith('http')) {
+      return { src: gameIcon, isGameFallback: true }
+    }
+    
+    // Fallback to default image
+    return { src: 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg', isGameFallback: false }
+  }
+
   const sameGameModels = models.filter(model => model.game_id === box.game?.id)
   const otherModels = models.filter(model => model.game_id !== box.game?.id)
 
@@ -190,7 +218,7 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
 
         {loading ? (
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border---color-brand mx-auto mb-4"></div>
             <p className="text-secondary-text">Loading models...</p>
           </div>
         ) : models.length === 0 ? (
@@ -200,7 +228,7 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
             <p className="text-sm text-secondary-text mb-6">All your models are already assigned to boxes.</p>
             <button
               onClick={handleAddNewModel}
-              className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium"
+              className="btn-primary-sm"
             >
               Add new model to collection
             </button>
@@ -215,36 +243,41 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
               {/* Same Game Models */}
               {sameGameModels.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-title mb-3 uppercase tracking-wide">
-                    {box.game?.name || 'Same Game'} Models
-                  </h3>
-                  <div className="space-y-2">
-                    {sameGameModels.map((model) => (
-                      <div
-                        key={model.id}
-                        className="flex items-center space-x-3 p-3 border border-border-custom rounded-lg hover:bg-bg-secondary transition-colors"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => handleModelToggle(model.id)}
-                          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                            selectedModels.has(model.id)
-                              ? 'bg-amber-500 border-amber-500 text-white'
-                              : 'border-border-custom hover:border-amber-500'
-                          }`}
-                        >
-                          {selectedModels.has(model.id) && <Check className="w-3 h-3" />}
-                        </button>
-                        
-                        <img
-                          src={model.image_url || 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'}
-                          alt={model.name}
-                          className="w-12 h-12 object-cover rounded"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.src = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
-                          }}
-                        />
+                                     <h3 className="text-sm font-semibold text-title mb-3 uppercase tracking-wide">
+                     {box.game?.name || 'Same Game'} Models
+                   </h3>
+                   <div className="space-y-2">
+                     {sameGameModels.map((model) => (
+                       <div
+                         key={model.id}
+                         className="flex items-center space-x-3 p-3 border border-border-custom rounded-lg hover:bg-bg-secondary transition-colors"
+                       >
+                         <button
+                           type="button"
+                           onClick={() => handleModelToggle(model.id)}
+                           className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                             selectedModels.has(model.id)
+                               ? 'bg-brand border---color-brand text-white'
+                               : 'border-border-custom hover:border---color-brand'
+                           }`}
+                         >
+                           {selectedModels.has(model.id) && <Check className="w-3 h-3" />}
+                         </button>
+                         
+                         {(() => {
+                           const imageData = getModelImageSrc(model)
+                           return (
+                             <img
+                               src={imageData.src}
+                               alt={model.name}
+                               className={`w-12 h-12 object-cover rounded ${imageData.isGameFallback ? 'opacity-10' : ''}`}
+                               onError={(e) => {
+                                 const target = e.target as HTMLImageElement
+                                 target.src = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                               }}
+                             />
+                           )
+                         })()}
                         
                         <div className="flex-1 min-w-0">
                           <h4 className="font-medium text-text truncate">{model.name}</h4>
@@ -268,36 +301,41 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
               {/* Other Models */}
               {otherModels.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-title mb-3 uppercase tracking-wide">
-                    Other Models
-                  </h3>
-                  <div className="space-y-2">
-                    {otherModels.map((model) => (
-                      <div
-                        key={model.id}
-                        className="flex items-center space-x-3 p-3 border border-border-custom rounded-lg hover:bg-bg-secondary transition-colors"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => handleModelToggle(model.id)}
-                          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                            selectedModels.has(model.id)
-                              ? 'bg-amber-500 border-amber-500 text-white'
-                              : 'border-border-custom hover:border-amber-500'
-                          }`}
-                        >
-                          {selectedModels.has(model.id) && <Check className="w-3 h-3" />}
-                        </button>
-                        
-                        <img
-                          src={model.image_url || 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'}
-                          alt={model.name}
-                          className="w-12 h-12 object-cover rounded"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.src = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
-                          }}
-                        />
+                                     <h3 className="text-sm font-semibold text-title mb-3 uppercase tracking-wide">
+                     Other Models
+                   </h3>
+                   <div className="space-y-2">
+                     {otherModels.map((model) => (
+                       <div
+                         key={model.id}
+                         className="flex items-center space-x-3 p-3 border border-border-custom rounded-lg hover:bg-bg-secondary transition-colors"
+                       >
+                         <button
+                           type="button"
+                           onClick={() => handleModelToggle(model.id)}
+                           className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                             selectedModels.has(model.id)
+                               ? 'bg-brand border---color-brand text-white'
+                               : 'border-border-custom hover:border---color-brand'
+                           }`}
+                         >
+                           {selectedModels.has(model.id) && <Check className="w-3 h-3" />}
+                         </button>
+                         
+                         {(() => {
+                           const imageData = getModelImageSrc(model)
+                           return (
+                             <img
+                               src={imageData.src}
+                               alt={model.name}
+                               className={`w-12 h-12 object-cover rounded ${imageData.isGameFallback ? 'opacity-10' : ''}`}
+                               onError={(e) => {
+                                 const target = e.target as HTMLImageElement
+                                 target.src = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                               }}
+                             />
+                           )
+                         })()}
                         
                         <div className="flex-1 min-w-0">
                           <h4 className="font-medium text-text truncate">{model.name}</h4>
@@ -331,14 +369,14 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
               <button
                 onClick={onClose}
                 disabled={adding}
-                className="flex-1 px-4 py-2 border border-border-custom text-text rounded-lg hover:bg-bg-secondary transition-colors font-medium"
+                className="btn-ghost btn-flex"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddModels}
                 disabled={selectedModels.size === 0 || adding}
-                className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+                className="btn-primary btn-flex"
               >
                 {adding ? 'Adding...' : `Add ${selectedModels.size} Model${selectedModels.size !== 1 ? 's' : ''}`}
               </button>

@@ -188,13 +188,13 @@ export function EditLocationAdminsModal({ isOpen, onClose, location, onAdminsUpd
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Enter user email address..."
-                className="w-full pl-10 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                className="w-full pl-10 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
               />
             </div>
             <button
               onClick={handleAddAdmin}
               disabled={!searchTerm.trim() || adding}
-              className="px-4 py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium flex items-center space-x-2"
+              className="btn-primary-sm btn-with-icon-sm"
             >
               <Plus className="w-4 h-4" />
               <span>{adding ? 'Adding...' : 'Add'}</span>
@@ -211,7 +211,7 @@ export function EditLocationAdminsModal({ isOpen, onClose, location, onAdminsUpd
           
           {loading ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border---color-brand mx-auto mb-4"></div>
               <p className="text-secondary-text">Loading admins...</p>
             </div>
           ) : adminUsers.length === 0 ? (
@@ -232,7 +232,7 @@ export function EditLocationAdminsModal({ isOpen, onClose, location, onAdminsUpd
                   </div>
                   <button
                     onClick={() => handleRemoveAdmin(user.id)}
-                    className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-2 text-icon hover:text-icon-hover hover:bg-red-50 rounded-lg transition-colors"
                     title="Remove admin"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -247,7 +247,7 @@ export function EditLocationAdminsModal({ isOpen, onClose, location, onAdminsUpd
         <div className="mt-6 pt-4 border-t border-border-custom">
           <button
             onClick={onClose}
-            className="w-full px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium"
+            className="btn-primary btn-full"
           >
             Done
           </button>

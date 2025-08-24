@@ -157,7 +157,7 @@ export function BattleplanPage() {
           {bookings.length > 0 && (
             <button
               onClick={() => setShowNewBookingModal(true)}
-              className="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg transition-colors text-base font-semibold mx-auto"
+              className="btn-primary-sm btn-with-icon-sm"
             >
               <Plus className="w-4 h-4" />
               <span>New Table Booking</span>
@@ -185,7 +185,7 @@ export function BattleplanPage() {
               <p className="text-base text-secondary-text mb-4">No table bookings yet.</p>
               <button 
                 onClick={() => setShowNewBookingModal(true)}
-                className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg transition-colors text-base font-semibold"
+                className="btn-primary"
               >
                 Book Your First Table
               </button>

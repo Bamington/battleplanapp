@@ -57,7 +57,7 @@ export function ImageSearchResults({
             </p>
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors"
+              className="px-4 py-2 bg-brand hover:bg-amber-600 text-white rounded-lg transition-colors"
             >
               Upload My Own Image
             </button>
@@ -73,7 +73,7 @@ export function ImageSearchResults({
                 <button
                   key={index}
                   onClick={() => onImageSelect(imageUrl)}
-                  className="group relative aspect-square overflow-hidden rounded-lg border-2 border-transparent hover:border-amber-500 transition-all duration-200"
+                  className="group relative aspect-square overflow-hidden rounded-lg border-2 border-transparent hover:border---color-brand transition-all duration-200"
                 >
                   <img
                     src={imageUrl}
@@ -96,7 +96,7 @@ export function ImageSearchResults({
                 <button
                   onClick={onFindMoreImages}
                   disabled={isLoadingMore}
-                  className="flex items-center space-x-2 px-6 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg transition-colors font-medium"
+                  className="flex items-center space-x-2 px-6 py-2 bg-brand hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg transition-colors font-medium"
                 >
                   {isLoadingMore ? (
                     <>

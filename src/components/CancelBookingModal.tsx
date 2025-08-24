@@ -43,14 +43,14 @@ export function CancelBookingModal({ isOpen, onClose, onConfirm, loading = false
           <button
             onClick={onClose}
             disabled={loading}
-            className="flex-1 px-4 py-2 border border-border-custom text-text rounded-lg hover:bg-bg-secondary transition-colors font-medium"
+            className="btn-ghost btn-flex"
           >
             No, I'll keep my booking
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+            className="btn-danger btn-flex"
           >
             {loading ? 'Deleting...' : 'Yes, Delete my booking'}
           </button>

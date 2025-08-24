@@ -224,6 +224,32 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
     }
   }
 
+  const getModelImageSrc = (model: any) => {
+    // Check if we have a valid model image URL
+    if (model.image_url && 
+        typeof model.image_url === 'string' &&
+        model.image_url.trim() !== '' && 
+        model.image_url !== 'undefined' && 
+        model.image_url !== 'null' &&
+        (model.image_url.startsWith('http') || model.image_url.startsWith('/'))) {
+      return { src: model.image_url, isGameFallback: false }
+    }
+    
+    // Try to use the game's icon as fallback
+    const gameIcon = model.game?.icon
+    if (gameIcon && 
+        typeof gameIcon === 'string' &&
+        gameIcon.trim() !== '' && 
+        gameIcon !== 'undefined' && 
+        gameIcon !== 'null' &&
+        gameIcon.startsWith('http')) {
+      return { src: gameIcon, isGameFallback: true }
+    }
+    
+    // Fallback to default image
+    return { src: 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg', isGameFallback: false }
+  }
+
   const handleShareBox = async () => {
     if (!box) return
     
@@ -334,7 +360,7 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
             onClick={onClose}
             className="fixed top-4 right-4 md:absolute text-white hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full p-2 z-20"
           >
-            <X className="w-6 h-6" />
+            <X className="w-6 h-6 text-icon" />
           </button>
 
           {/* Content */}
@@ -435,16 +461,21 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
                       key={model.id}
                       className="bg-bg-secondary rounded-lg p-4 flex items-center justify-between hover:bg-bg-primary transition-colors"
                     >
-                      <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        <img
-                          src={model.image_url || 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'}
-                          alt={model.name}
-                          className="w-12 h-12 object-cover rounded"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.src = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
-                          }}
-                        />
+                                             <div className="flex items-center space-x-3 flex-1 min-w-0">
+                         {(() => {
+                           const imageData = getModelImageSrc(model)
+                           return (
+                                                           <img
+                                src={imageData.src}
+                                alt={model.name}
+                                className={`w-12 h-12 object-cover rounded ${imageData.isGameFallback ? 'opacity-10' : ''}`}
+                                onError={(e) => {
+                                 const target = e.target as HTMLImageElement
+                                 target.src = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                               }}
+                             />
+                           )
+                         })()}
                         
                         <div className="flex-1 min-w-0">
                           <h4 className="font-medium text-text truncate">{model.name}</h4>
@@ -467,7 +498,7 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleRemoveModelFromBox(model)}
-                          className="p-2 text-red-500 hover:text-red-700 transition-colors"
+                          className="p-2 text-icon hover:text-icon-hover transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -486,10 +517,10 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
 
             {/* Action Buttons */}
             <div className="flex justify-center pt-6">
-              <div className="space-y-3 w-full max-w-xs">
+              <div className="space-y-3 w-full">
                 <button
                   onClick={() => setShowAddModelsModal(true)}
-                  className="flex items-center justify-center space-x-2 w-full px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white transition-colors rounded-lg font-medium"
+                  className="btn-primary btn-full btn-with-icon"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add Models to Box</span>
@@ -497,14 +528,14 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
                 <button
                   onClick={handleShareBox}
                   disabled={sharing}
-                  className="flex items-center justify-center space-x-2 w-full px-6 py-2 border-2 border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white disabled:opacity-50 transition-colors rounded-lg font-medium"
+                  className="btn-secondary btn-full btn-with-icon"
                 >
                   <Share2 className="w-4 h-4" />
                   <span>{sharing ? 'Copying Link...' : 'Share Box'}</span>
                 </button>
                 <button
                   onClick={handleDeleteClick}
-                  className="w-full px-6 py-2 border-2 border-button-red text-button-red hover:bg-button-red hover:text-white transition-colors rounded-lg font-medium"
+                  className="btn-danger-outline btn-full"
                 >
                   Delete this box
                 </button>

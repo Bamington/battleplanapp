@@ -590,13 +590,13 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
         <div className="flex space-x-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-border-custom text-text rounded-lg hover:bg-bg-secondary transition-colors"
+            className="btn-ghost btn-flex"
           >
             Cancel
           </button>
           <button
             onClick={handleCrop}
-            className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors"
+            className="btn-primary btn-flex"
           >
             Crop & Use
           </button>

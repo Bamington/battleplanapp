@@ -43,7 +43,7 @@ export function CollectionSubMenu({ activeView, onViewChange }: CollectionSubMen
                 >
                   <div className="w-8 h-8 rounded-full flex items-center justify-center bg-border-custom transition-opacity">
                     <Icon className={`w-4 h-4 transition-opacity ${
-                      isActive ? 'opacity-100' : 'opacity-75'
+                      isActive ? 'text-icon-active opacity-100' : 'text-icon opacity-75'
                     }`} />
                   </div>
                   <span className={`text-lg font-medium transition-colors ${

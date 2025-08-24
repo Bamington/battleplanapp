@@ -118,7 +118,7 @@ export function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
             onClick={onClose}
             className="text-secondary-text hover:text-text"
           >
-            <X className="w-6 h-6" />
+            <X className="w-6 h-6 text-icon" />
           </button>
         </div>
 
@@ -167,7 +167,7 @@ export function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+              className="w-full px-3 py-2 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text"
             />
           </div>
 
@@ -183,7 +183,7 @@ export function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                className="w-full px-3 py-2 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text"
               />
             </div>
           )}
@@ -194,7 +194,7 @@ export function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
               <button
                 type="button"
                 onClick={() => setCurrentMode('forgot-password')}
-                className="text-sm text-amber-500 hover:text-amber-600 transition-colors"
+                className="text-sm text-[var(--color-brand)] hover:text-[var(--color-brand)]/80 transition-colors"
               >
                 Forgot your password?
               </button>
@@ -212,7 +212,7 @@ export function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white py-2 px-4 rounded-lg text-base font-semibold transition-colors"
+            className="btn-primary btn-full"
           >
             {loading ? 'Processing...' : 
              currentMode === 'login' ? 'Log In' : 
@@ -229,7 +229,7 @@ export function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
               <button
                 type="button"
                 onClick={() => setCurrentMode(currentMode === 'login' ? 'signup' : 'login')}
-                className="text-amber-500 hover:text-amber-600 transition-colors font-medium"
+                className="text-[var(--color-brand)] hover:text-[var(--color-brand)]/80 transition-colors font-medium"
               >
                 {currentMode === 'login' ? 'Sign Up' : 'Log In'}
               </button>

@@ -98,7 +98,7 @@ export function PasswordResetModal({ isOpen, onClose }: PasswordResetModalProps)
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
-                  className="w-full px-3 py-2 pr-10 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                  className="w-full px-3 py-2 pr-10 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                 />
                 <button
                   type="button"
@@ -121,7 +121,7 @@ export function PasswordResetModal({ isOpen, onClose }: PasswordResetModalProps)
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="w-full px-3 py-2 pr-10 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                  className="w-full px-3 py-2 pr-10 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                 />
                 <button
                   type="button"
@@ -140,7 +140,7 @@ export function PasswordResetModal({ isOpen, onClose }: PasswordResetModalProps)
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white py-2 px-4 rounded-lg text-base font-semibold transition-colors"
+              className="w-full bg-brand hover:bg-amber-600 disabled:bg-amber-300 text-white py-2 px-4 rounded-lg text-base font-semibold transition-colors"
             >
               {loading ? 'Updating Password...' : 'Update Password'}
             </button>

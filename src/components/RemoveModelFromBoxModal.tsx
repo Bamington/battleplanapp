@@ -52,7 +52,7 @@ export function RemoveModelFromBoxModal({ isOpen, onClose, onConfirm, modelName,
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg transition-colors font-medium"
+            className="flex-1 px-4 py-2 bg-brand hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg transition-colors font-medium"
           >
             {loading ? 'Removing...' : 'Remove from Box'}
           </button>

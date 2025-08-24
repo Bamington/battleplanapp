@@ -52,7 +52,7 @@ export function AuthCallback() {
     return (
       <div className="min-h-screen bg-bg-primary flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)] mx-auto mb-4"></div>
           <p className="text-text">Completing authentication...</p>
         </div>
       </div>
@@ -68,7 +68,7 @@ export function AuthCallback() {
           <p className="text-red-500 mb-6">{error}</p>
           <button 
             onClick={() => window.location.href = '/'}
-            className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+            className="btn-primary"
           >
             Return to Home
           </button>

@@ -192,7 +192,7 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
                   id="locationName"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                   required
                 />
               </div>
@@ -210,7 +210,7 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
                   id="address"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                   required
                 />
               </div>
@@ -229,7 +229,7 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
                   min="1"
                   value={formData.tables}
                   onChange={(e) => setFormData({ ...formData, tables: parseInt(e.target.value) || 1 })}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                   required
                 />
               </div>
@@ -247,7 +247,7 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
                   id="locationIcon"
                   accept="image/*"
                   onChange={handleIconSelect}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 bg-bg-primary text-text"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 bg-bg-primary text-text"
                 />
               </div>
               {croppedIconBlob && (
@@ -268,7 +268,7 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
               <button
                 type="button"
                 onClick={() => setShowTimeslotsModal(true)}
-                className="w-full px-4 py-2 border-2 border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white rounded-lg transition-colors font-medium flex items-center justify-center space-x-2"
+                className="btn-secondary btn-with-icon"
               >
                 <Clock className="w-4 h-4" />
                 <span>Edit Timeslots</span>
@@ -276,7 +276,7 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
               <button
                 type="button"
                 onClick={() => setShowAdminsModal(true)}
-                className="w-full px-4 py-2 border-2 border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white rounded-lg transition-colors font-medium flex items-center justify-center space-x-2"
+                className="btn-secondary btn-with-icon"
               >
                 <Users className="w-4 h-4" />
                 <span>Edit Admins</span>
@@ -285,14 +285,14 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
               <button
                 type="button"
                 onClick={handleDiscard}
-                className="flex-1 px-4 py-2 border border-border-custom text-text rounded-lg hover:bg-bg-secondary transition-colors font-medium"
+                className="btn-ghost btn-flex"
               >
                 Discard Changes
               </button>
               <button
                 type="submit"
                 disabled={loading || compressing}
-                className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg transition-colors font-medium"
+                className="btn-primary btn-flex"
               >
                 {compressing ? 'Processing...' : loading ? 'Saving...' : 'Save Changes'}
               </button>

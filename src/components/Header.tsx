@@ -51,7 +51,7 @@ export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: Hea
                   onClick={() => setIsNavigationMenuOpen(!isNavigationMenuOpen)}
                   className="text-secondary-text hover:text-text focus:outline-none mr-4"
                 >
-                  {isNavigationMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                  {isNavigationMenuOpen ? <X className="w-6 h-6 text-icon" /> : <Menu className="w-6 h-6 text-icon" />}
                 </button>
               )}
             </div>
@@ -74,7 +74,7 @@ export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: Hea
                     onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                     className="text-secondary-text hover:text-text focus:outline-none"
                   >
-                    <User className="w-6 h-6" />
+                    <User className="w-6 h-6 text-icon hover:text-icon-hover" />
                   </button>
                 </>
               ) : null}
@@ -91,7 +91,7 @@ export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: Hea
               {/* User info */}
               <div className="px-4 py-2 border-b border-border-custom">
                 <div className="flex items-center space-x-2">
-                  <User className="w-5 h-5 text-gray-500" />
+                  <User className="w-5 h-5 text-icon" />
                   <span className="text-base text-text">{user.email}</span>
                 </div>
               </div>
@@ -105,7 +105,7 @@ export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: Hea
                   (user?.is_admin || user?.is_location_admin) ? '' : 'hidden'
                 }`}
               >
-                <Shield className="w-5 h-5" />
+                <Shield className="w-5 h-5 text-icon hover:text-icon-hover" />
                 <span>Admin</span>
               </button>
               
@@ -116,21 +116,21 @@ export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: Hea
                 }}
                 className="flex items-center space-x-3 w-full text-left px-4 py-2 text-base font-semibold text-text hover:bg-bg-secondary transition-colors"
               >
-                <Settings className="w-5 h-5" />
+                <Settings className="w-5 h-5 text-icon hover:text-icon-hover" />
                 <span>Settings</span>
               </button>
               
               <div className="flex items-center justify-between px-4 py-2 hover:bg-bg-secondary transition-colors">
                 <div className="flex items-center space-x-3">
-                  {isDarkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                  {isDarkMode ? <Moon className="w-5 h-5 text-icon hover:text-icon-hover" /> : <Sun className="w-5 h-5 text-icon hover:text-icon-hover" />}
                   <span className="text-base font-semibold text-text">
                     {isDarkMode ? 'Dark Mode' : 'Light Mode'}
                   </span>
                 </div>
                 <button
                   onClick={toggleDarkMode}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${
-                    isDarkMode ? 'bg-amber-500' : 'bg-gray-200'
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring---color-brand focus:ring-offset-2 ${
+                    isDarkMode ? 'bg-brand' : 'bg-gray-200'
                   }`}
                 >
                   <span
@@ -165,7 +165,7 @@ export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: Hea
                 onClick={() => setIsNavigationMenuOpen(false)}
                 className="text-secondary-text hover:text-text transition-colors"
               >
-                <X className="w-6 h-6" />
+                <X className="w-6 h-6 text-icon" />
               </button>
             </div>
             
@@ -177,18 +177,22 @@ export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: Hea
                   const isActive = activeTab === item.id
                   
                   return (
-                    <button
-                      key={item.id}
-                      onClick={() => handleNavigationItemClick(item.id)}
-                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                        isActive
-                          ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                          : 'text-secondary-text hover:text-text hover:bg-bg-secondary'
-                      }`}
-                    >
-                      <Icon className="w-5 h-5" />
-                      <span className="font-medium">{item.name}</span>
-                    </button>
+                                         <button
+                       key={item.id}
+                       onClick={() => handleNavigationItemClick(item.id)}
+                       className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                         isActive
+                           ? 'bg-brand/10 text-brand border border-brand/20'
+                           : 'text-secondary-text hover:text-text hover:bg-bg-secondary'
+                       }`}
+                     >
+                       <Icon className={`w-5 h-5 ${
+                         isActive
+                           ? 'text-icon-active'
+                           : 'text-icon hover:text-icon-hover'
+                       }`} />
+                       <span className={`font-medium ${isActive ? 'text-brand' : ''}`}>{item.name}</span>
+                     </button>
                   )
                 })}
                 
@@ -203,7 +207,7 @@ export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: Hea
                   }}
                   className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors text-secondary-text hover:text-text hover:bg-bg-secondary"
                 >
-                  <User className="w-5 h-5" />
+                  <User className="w-5 h-5 text-icon hover:text-icon-hover" />
                   <span className="font-medium">About</span>
                 </button>
                 
@@ -221,20 +225,24 @@ export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: Hea
                     </div>
                     
                     {/* All Bookings Item */}
-                    <button
-                      onClick={() => {
-                        setIsNavigationMenuOpen(false)
-                        onTabChange?.('all-bookings')
-                      }}
-                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                        activeTab === 'all-bookings'
-                          ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                          : 'text-secondary-text hover:text-text hover:bg-bg-secondary'
-                      }`}
-                    >
-                      <Calendar className="w-5 h-5" />
-                      <span className="font-medium">All Bookings</span>
-                    </button>
+                                         <button
+                       onClick={() => {
+                         setIsNavigationMenuOpen(false)
+                         onTabChange?.('all-bookings')
+                       }}
+                       className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                         activeTab === 'all-bookings'
+                           ? 'bg-brand/10 text-brand border border-brand/20'
+                           : 'text-secondary-text hover:text-text hover:bg-bg-secondary'
+                       }`}
+                     >
+                       <Calendar className={`w-5 h-5 ${
+                         activeTab === 'all-bookings'
+                           ? 'text-icon-active'
+                           : 'text-icon hover:text-icon-hover'
+                       }`} />
+                       <span className={`font-medium ${activeTab === 'all-bookings' ? 'text-brand' : ''}`}>All Bookings</span>
+                     </button>
                   </>
                 )}
               </div>

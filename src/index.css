@@ -42,9 +42,12 @@
   :root {
     --color-title: #1F2937;
     --color-text: #000000;
+    --color-text-hover: #2a242b;
     --color-secondary-text: #6B7280;
-    --color-brand: #F59E0B;
+    --color-brand: #724ddd;
+    --color-brand-hover: #261652;
     --color-button-red: #EF4444;
+    --color-button-red-hover: #DC2626;
     --color-input-label: #1F2937;
     --color-bg-primary: #FFFFFF;
     --color-bg-secondary: #F9FAFB;
@@ -52,14 +55,22 @@
     --color-bg-card-secondary: #F9FAFB;
     --color-border: #E5E7EB;
     --color-modal-bg: #FFFFFF;
+    --color-white: #FFFFFF;
+    --color-icon: #6B7280;
+    --color-icon-hover: #724ddd ;
+    --color-icon-active: #724ddd;
+    --color-icon-disabled: #D1D5DB;
   }
   
   .dark {
     --color-title: #F9FAFB;
     --color-text: #F9FAFB;
+    --color-text-hover: #c8bbca;
     --color-secondary-text: #9CA3AF;
-    --color-brand: #F59E0B;
+    --color-brand: #724ddd;
+    --color-brand-hover: #8f73dd;
     --color-button-red: #EF4444;
+    --color-button-red-hover: #F87171;
     --color-input-label: #F9FAFB;
     --color-bg-primary: #0F172A;
     --color-bg-secondary: #1F2937;
@@ -67,6 +78,11 @@
     --color-bg-card-secondary: #0F131C;
     --color-border: #475569;
     --color-modal-bg: #1F2937;
+    --color-white: #F9FAFB;
+    --color-icon: #9CA3AF;
+    --color-icon-hover: #D1D5DB;
+    --color-icon-active: #8f73dd;
+    --color-icon-disabled: #4B5563;
   }
 }
 
@@ -84,7 +100,7 @@
   height: 16px;
   width: 16px;
   border-radius: 50%;
-  background: #F59E0B;
+  background: var(--color-brand);
   cursor: pointer;
   border: 2px solid #FFFFFF;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -94,7 +110,7 @@
   height: 16px;
   width: 16px;
   border-radius: 50%;
-  background: #F59E0B;
+  background: var(--color-brand);
   cursor: pointer;
   border: 2px solid #FFFFFF;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -110,4 +126,87 @@
   height: 8px;
   border-radius: 4px;
   background: var(--color-border);
+}
+
+/* Button Component Library */
+@layer components {
+  /* Primary Button */
+  .btn-primary {
+    @apply bg-brand hover:bg-brand-hover hover:text-white text-white px-6 py-3 rounded-lg transition-colors text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Primary Button Small */
+  .btn-primary-sm {
+    @apply bg-brand hover:bg-brand-hover hover:text-white text-white px-4 py-2 rounded-lg transition-colors text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    @apply border border-brand text-brand hover:bg-brand hover:bg-opacity-10 hover:text-white px-4 py-3 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Secondary Button Small */
+  .btn-secondary-sm {
+    @apply border border-brand text-brand hover:bg-brand hover:bg-opacity-10 px-4 py-3 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Danger Button */
+  .btn-danger {
+    @apply bg-button-red hover:bg-button-red-hover text-white px-6 py-3 rounded-lg transition-colors font-medium;
+  }
+
+  /* Danger Button Small */
+  .btn-danger-sm {
+    @apply bg-button-red hover:bg-button-red-hover text-white px-4 py-2 rounded-lg transition-colors font-medium;
+  }
+
+  /* Danger Outline Button */
+  .btn-danger-outline {
+    @apply border-2 border-button-red text-button-red px-6 py-3 hover:bg-button-red hover:text-white transition-colors rounded-lg font-medium;
+  }
+
+  /* Danger Outline Button Small */
+  .btn-danger-outline-sm {
+    @apply border-2 border-button-red text-button-red hover:bg-button-red hover:text-white px-4 py-2 transition-colors rounded-lg font-medium;
+  }
+
+  /* Ghost Button */
+  .btn-ghost {
+    @apply border border-border-custom text-text rounded-lg hover:bg-bg-secondary transition-colors font-medium;
+  }
+
+  /* Ghost Button Small */
+  .btn-ghost-sm {
+    @apply border border-border-custom text-text px-4 py-2 rounded-lg hover:bg-bg-secondary transition-colors font-medium;
+  }
+
+  /* Disabled Button */
+  .btn-disabled {
+    @apply bg-secondary-text opacity-50 text-text cursor-not-allowed px-6 py-3 rounded-lg font-medium;
+  }
+
+  /* Disabled Button Small */
+  .btn-disabled-sm {
+    @apply bg-secondary-text opacity-50 text-text cursor-not-allowed px-4 py-2 rounded-lg font-medium;
+  }
+
+  /* Full Width Button */
+  .btn-full {
+    @apply w-full;
+  }
+
+  /* Flex Button */
+  .btn-flex {
+    @apply flex-1;
+  }
+
+  /* Button with Icon */
+  .btn-with-icon {
+    @apply flex items-center space-x-2;
+  }
+
+  /* Button with Icon Small */
+  .btn-with-icon-sm {
+    @apply flex items-center space-x-1;
+  }
 }

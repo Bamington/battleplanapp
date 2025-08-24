@@ -183,6 +183,8 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
       // Create search query combining box name and game
       const searchQuery = `${formData.name.trim()} ${gameName}`.trim()
       
+      console.log('Finding more images with exclude:', previousSearchResults)
+      
       // Call our edge function to search for images
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-images`, {
         method: 'POST',
@@ -204,10 +206,18 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
       const data = await response.json()
       const additionalImages = data.images || []
       
-      // Combine previous and new results, avoiding duplicates
-      const allImages = [...previousSearchResults, ...additionalImages]
-      setSuggestedImages(allImages)
-      setPreviousSearchResults(allImages)
+      console.log('Received additional images:', additionalImages)
+      console.log('Previous results count:', previousSearchResults.length)
+      console.log('New results count:', additionalImages.length)
+      
+      // Filter out any duplicates that might have been returned despite the exclude parameter
+      const uniqueNewImages = additionalImages.filter((img: string) => !previousSearchResults.includes(img))
+      
+      console.log('Unique new images after filtering:', uniqueNewImages)
+      
+      // Show only the new results, but keep track of all for future exclusions
+      setSuggestedImages(uniqueNewImages)
+      setPreviousSearchResults([...previousSearchResults, ...uniqueNewImages])
     } catch (error) {
       console.error('Error searching for more images:', error)
     } finally {
@@ -333,7 +343,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
               onClick={onClose}
               className="text-secondary-text hover:text-text transition-colors"
             >
-              <X className="w-6 h-6" />
+              <X className="w-6 h-6 text-icon" />
             </button>
           </div>
 
@@ -350,7 +360,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
                   id="boxName"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                   required
                 />
               </div>
@@ -381,7 +391,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
                   id="purchaseDate"
                   value={formData.purchase_date}
                   onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                 />
               </div>
             </div>
@@ -411,7 +421,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
                     <button
                       type="button"
                       onClick={handleDeleteImage}
-                      className="text-red-500 hover:text-red-700 transition-colors p-1"
+                      className="text-icon hover:text-icon-hover transition-colors p-1"
                       title="Delete current image"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -436,7 +446,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
                   id="boxImage"
                   accept="image/*"
                   onChange={handleImageSelect}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 bg-bg-primary text-text"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 bg-bg-primary text-text"
                 />
               </div>
               {croppedImageBlob && (
@@ -452,7 +462,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
                     type="button"
                     onClick={searchForImages}
                     disabled={searchingImages}
-                    className="w-full px-4 py-2 border border-amber-500 text-amber-500 hover:bg-amber-50 rounded-lg transition-colors font-medium disabled:opacity-50"
+                    className="w-full px-4 py-2 border border---color-brand text---color-brand hover:bg-amber-50 rounded-lg transition-colors font-medium disabled:opacity-50"
                   >
                     {searchingImages ? 'Searching for images...' : 'Find images for this box'}
                   </button>
@@ -480,14 +490,14 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
               <button
                 type="button"
                 onClick={handleDiscard}
-                className="flex-1 px-4 py-2 border border-border-custom text-text rounded-lg hover:bg-bg-secondary transition-colors font-medium"
+                className="btn-ghost btn-flex"
               >
                 Discard Changes
               </button>
               <button
                 type="submit"
                 disabled={loading || compressing}
-                className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg transition-colors font-medium"
+                className="btn-primary btn-flex"
               >
                 {compressing ? 'Processing...' : loading ? 'Saving...' : 'Save Changes'}
               </button>

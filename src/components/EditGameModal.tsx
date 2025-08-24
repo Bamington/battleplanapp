@@ -230,7 +230,7 @@ export function EditGameModal({ isOpen, onClose, onGameUpdated, game }: EditGame
                   id="gameName"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                   required
                 />
               </div>
@@ -247,7 +247,7 @@ export function EditGameModal({ isOpen, onClose, onGameUpdated, game }: EditGame
                   id="manufacturer"
                   value={formData.manufacturer_id}
                   onChange={(e) => setFormData({ ...formData, manufacturer_id: e.target.value })}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                 >
                   <option value="">Select Manufacturer</option>
                   {manufacturers.map((manufacturer) => (
@@ -271,7 +271,7 @@ export function EditGameModal({ isOpen, onClose, onGameUpdated, game }: EditGame
                   id="gameImage"
                   accept="image/*"
                   onChange={handleImageSelect}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 bg-bg-primary text-text"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 bg-bg-primary text-text"
                 />
               </div>
               {croppedImageBlob && (
@@ -293,7 +293,7 @@ export function EditGameModal({ isOpen, onClose, onGameUpdated, game }: EditGame
                   id="gameIcon"
                   accept="image/*"
                   onChange={handleIconSelect}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 bg-bg-primary text-text"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 bg-bg-primary text-text"
                 />
               </div>
               {croppedIconBlob && (
@@ -314,14 +314,14 @@ export function EditGameModal({ isOpen, onClose, onGameUpdated, game }: EditGame
               <button
                 type="button"
                 onClick={handleDiscard}
-                className="flex-1 px-4 py-2 border border-border-custom text-text rounded-lg hover:bg-bg-secondary transition-colors font-medium"
+                className="btn-ghost btn-flex"
               >
                 Discard Changes
               </button>
               <button
                 type="submit"
                 disabled={loading || compressing}
-                className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg transition-colors font-medium"
+                className="btn-primary btn-flex"
               >
                 {compressing ? 'Processing...' : loading ? 'Saving...' : 'Save Changes'}
               </button>

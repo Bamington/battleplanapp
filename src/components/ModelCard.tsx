@@ -44,22 +44,22 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
         !imageUrl.includes('undefined') &&
         !imageUrl.includes('null') &&
         (imageUrl.startsWith('http') || imageUrl.startsWith('/'))) {
-      return imageUrl
+      return { src: imageUrl, isGameFallback: false }
     }
     
-    // Try to use the game's image as fallback
-    const gameImage = model?.box?.game?.image || model?.game?.image
-    if (gameImage && 
-        typeof gameImage === 'string' &&
-        gameImage.trim() !== '' && 
-        gameImage !== 'undefined' && 
-        gameImage !== 'null' &&
-        gameImage.startsWith('http')) {
-      return gameImage
+    // Try to use the game's icon as fallback
+    const gameIcon = model?.box?.game?.icon || model?.game?.icon
+    if (gameIcon && 
+        typeof gameIcon === 'string' &&
+        gameIcon.trim() !== '' && 
+        gameIcon !== 'undefined' && 
+        gameIcon !== 'null' &&
+        gameIcon.startsWith('http')) {
+      return { src: gameIcon, isGameFallback: true }
     }
     
     // Fallback to default image
-    return 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+    return { src: 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg', isGameFallback: false }
   }
 
   const isValidGameIcon = (iconUrl: string | null | undefined): boolean => {
@@ -75,20 +75,25 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
   return (
     <div className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden max-w-[380px] flex flex-col h-full">
       <div className="aspect-w-16 aspect-h-12 relative bg-bg-card-secondary">
-        <img
-          src={getImageSrc()}
-          alt={name}
-          className="w-full h-48 min-h-[400px] object-cover"
-          loading="lazy"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement
-            const fallbackUrl = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
-            if (target.src !== fallbackUrl) {
-              console.log('Image failed to load:', target.src, 'Falling back to default')
-              target.src = fallbackUrl
-            }
-          }}
-        />
+        {(() => {
+          const imageData = getImageSrc()
+          return (
+                         <img
+               src={imageData.src}
+               alt={name}
+               className={`w-full h-48 min-h-[400px] object-cover ${imageData.isGameFallback ? 'opacity-10' : ''}`}
+               loading="lazy"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                const fallbackUrl = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                if (target.src !== fallbackUrl) {
+                  console.log('Image failed to load:', target.src, 'Falling back to default')
+                  target.src = fallbackUrl
+                }
+              }}
+            />
+          )
+        })()}
         {status !== 'None' && (
           <div className="absolute top-2 left-2">
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
@@ -107,7 +112,7 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
             {isValidGameIcon(gameIcon) ? (
               <>
                 <img
-                  src={gameIcon}
+                  src={gameIcon || ''}
                   alt={`${gameName} icon`}
                   className="w-8 h-8 object-contain rounded flex-shrink-0"
                   onError={(e) => {
@@ -144,14 +149,14 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
         {model?.box && (
           <button
             onClick={() => onViewBox?.(model.box)}
-            className="text-sm text-secondary-text font-semibold mb-3 hover:text-amber-600 transition-colors text-left"
+            className="text-sm text-secondary-text font-semibold mb-3 hover:text-brand transition-colors text-left"
           >
             {boxName}
           </button>
         )}
         </div>
         <div className="flex space-x-2">
-          <button onClick={onViewModel} className="flex-1 border-2 border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white py-2 px-4 rounded-lg text-base font-semibold transition-colors">
+          <button onClick={onViewModel} className="btn-secondary btn-flex">
             View Model
           </button>
         </div>

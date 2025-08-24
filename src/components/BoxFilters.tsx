@@ -21,7 +21,9 @@ interface BoxFiltersProps {
   games: Game[]
   boxes: Box[]
   selectedGames: string[]
+  searchQuery: string
   onGamesChange: (gameIds: string[]) => void
+  onSearchChange: (query: string) => void
   onClearFilters: () => void
 }
 
@@ -29,10 +31,12 @@ export function BoxFilters({
   games,
   boxes,
   selectedGames,
+  searchQuery,
   onGamesChange,
+  onSearchChange,
   onClearFilters
 }: BoxFiltersProps) {
-  const hasActiveFilters = selectedGames.length > 0
+  const hasActiveFilters = selectedGames.length > 0 || searchQuery.length > 0
 
   // Calculate available game options with counts
   const getAvailableGames = () => {
@@ -82,10 +86,24 @@ export function BoxFilters({
             onClick={onClearFilters}
             className="flex items-center space-x-1 text-sm text-secondary-text hover:text-text transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 text-icon" />
             <span>Clear all</span>
           </button>
         )}
+      </div>
+
+      {/* Search Field */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-input-label font-overpass mb-2">
+          Search Boxes
+        </label>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Search by box name..."
+          className="w-full px-3 py-2 border border-border-custom rounded-lg bg-bg-primary text-text placeholder-secondary-text focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -118,6 +136,17 @@ export function BoxFilters({
       {hasActiveFilters && (
         <div className="mt-4 pt-4 border-t border-border-custom">
           <div className="flex flex-wrap gap-2">
+            {searchQuery && (
+              <div className="flex items-center space-x-2 bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm">
+                <span>Search: "{searchQuery}"</span>
+                <button
+                  onClick={() => onSearchChange('')}
+                  className="text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  <X className="w-3 h-3 text-icon" />
+                </button>
+              </div>
+            )}
             {selectedGames.map((gameId) => {
               const gameName = availableGames.find(game => game.id === gameId)?.name || ''
               return (
@@ -127,7 +156,7 @@ export function BoxFilters({
                     onClick={() => handleGameToggle(gameId)}
                     className="text-blue-600 hover:text-blue-800 transition-colors"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-3 h-3 text-icon" />
                   </button>
                 </div>
               )

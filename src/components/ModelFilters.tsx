@@ -45,9 +45,11 @@ interface ModelFiltersProps {
   selectedBoxes: string[]
   selectedGames: string[]
   selectedStatuses: string[]
+  searchQuery: string
   onBoxesChange: (boxIds: string[]) => void
   onGamesChange: (gameIds: string[]) => void
   onStatusesChange: (statuses: string[]) => void
+  onSearchChange: (query: string) => void
   onClearFilters: () => void
 }
 
@@ -58,12 +60,14 @@ export function ModelFilters({
   selectedBoxes,
   selectedGames,
   selectedStatuses,
+  searchQuery,
   onBoxesChange,
   onGamesChange,
   onStatusesChange,
+  onSearchChange,
   onClearFilters
 }: ModelFiltersProps) {
-  const hasActiveFilters = selectedBoxes.length > 0 || selectedGames.length > 0 || selectedStatuses.length > 0
+  const hasActiveFilters = selectedBoxes.length > 0 || selectedGames.length > 0 || selectedStatuses.length > 0 || searchQuery.length > 0
 
   // Calculate available filter options with counts
   const getAvailableBoxes = () => {
@@ -167,10 +171,24 @@ export function ModelFilters({
             onClick={onClearFilters}
             className="flex items-center space-x-1 text-sm text-secondary-text hover:text-text transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 text-icon" />
             <span>Clear all</span>
           </button>
         )}
+      </div>
+
+      {/* Search Field */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-input-label font-overpass mb-2">
+          Search Models
+        </label>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Search by model name..."
+          className="w-full px-3 py-2 border border-border-custom rounded-lg bg-bg-primary text-text placeholder-secondary-text focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -189,7 +207,7 @@ export function ModelFilters({
                   type="checkbox"
                   checked={selectedBoxes.includes(box.id)}
                   onChange={() => handleBoxToggle(box.id)}
-                  className="rounded border-border-custom text-amber-500 focus:ring-amber-500"
+                  className="rounded border-border-custom text---color-brand focus:ring---color-brand"
                 />
                 <span className="text-sm text-text flex-1">{box.name}</span>
                 <span className="text-xs text-secondary-text">({box.count})</span>
@@ -251,6 +269,17 @@ export function ModelFilters({
       {hasActiveFilters && (
         <div className="mt-4 pt-4 border-t border-border-custom">
           <div className="flex flex-wrap gap-2">
+            {searchQuery && (
+              <div className="flex items-center space-x-2 bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm">
+                <span>Search: "{searchQuery}"</span>
+                <button
+                  onClick={() => onSearchChange('')}
+                  className="text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  <X className="w-3 h-3 text-icon" />
+                </button>
+              </div>
+            )}
             {selectedBoxes.map((boxId) => {
               const boxName = availableBoxes.find(box => box.id === boxId)?.name || ''
               return (
@@ -260,7 +289,7 @@ export function ModelFilters({
                     onClick={() => handleBoxToggle(boxId)}
                     className="text-amber-600 hover:text-amber-800 transition-colors"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-3 h-3 text-icon" />
                   </button>
                 </div>
               )
@@ -274,7 +303,7 @@ export function ModelFilters({
                     onClick={() => handleGameToggle(gameId)}
                     className="text-blue-600 hover:text-blue-800 transition-colors"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-3 h-3 text-icon" />
                   </button>
                 </div>
               )
@@ -282,12 +311,12 @@ export function ModelFilters({
             {selectedStatuses.map((status) => (
               <div key={status} className="flex items-center space-x-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
                 <span>Status: {status}</span>
-                <button
-                  onClick={() => handleStatusToggle(status)}
-                  className="text-green-600 hover:text-green-800 transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
+                                  <button
+                    onClick={() => handleStatusToggle(status)}
+                    className="text-green-600 hover:text-green-800 transition-colors"
+                  >
+                    <X className="w-3 h-3 text-icon" />
+                  </button>
               </div>
             ))}
           </div>

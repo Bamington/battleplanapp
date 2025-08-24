@@ -34,12 +34,16 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
                 onClick={() => onTabChange(tab.id)}
                 className={`flex items-center space-x-2 py-4 px-6 border-b-2 font-medium text-sm transition-colors ${
                   isActive
-                    ? 'border-amber-500 text-amber-600'
+                    ? 'border---color-brand text-brand'
                     : 'border-transparent text-secondary-text hover:text-text hover:border-border-custom'
                 }`}
               >
-                <Icon className="w-5 h-5" />
-                <span>{tab.name}</span>
+                <Icon className={`w-5 h-5 ${
+                  isActive
+                    ? 'text-icon-active'
+                    : 'text-icon hover:text-icon-hover'
+                }`} />
+                <span className={isActive ? 'text-brand' : ''}>{tab.name}</span>
               </button>
             )
           })}

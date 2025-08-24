@@ -449,7 +449,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
                 value={userNameInput}
                 onChange={(e) => setUserNameInput(e.target.value)}
                 placeholder="Enter your full name"
-                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                 required
               />
             </div>
@@ -483,7 +483,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
                 id="location"
                 value={selectedLocation}
                 onChange={(e) => setSelectedLocation(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                 required
               >
                 <option value="">Select Location</option>
@@ -509,7 +509,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]} // Prevent past dates
-                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                 required
               />
             </div>
@@ -527,7 +527,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
                 value={selectedTimeslot}
                 onChange={(e) => setSelectedTimeslot(e.target.value)}
                 disabled={!selectedLocation || !selectedDate}
-                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text disabled:opacity-50 disabled:cursor-not-allowed"
                 required
               >
                 <option value="">
@@ -594,10 +594,10 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
             <button
               type="submit"
               disabled={!isFormValid || loading || availableTables === 0 || currentBookingCount >= 4}
-              className={`w-full px-8 py-3 rounded-lg font-medium transition-colors text-base font-semibold ${
+              className={`btn-full ${
                 isFormValid && !loading && availableTables !== 0 && currentBookingCount < 4
-                  ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                  : 'bg-secondary-text opacity-50 text-text cursor-not-allowed'
+                  ? 'btn-primary'
+                  : 'btn-disabled'
               }`}
             >
               {loading ? 'Creating Booking...' : 
@@ -608,7 +608,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
             <button
               type="button"
               onClick={onClose}
-              className="w-full px-8 py-3 border-2 border-button-red text-button-red hover:bg-button-red hover:text-white rounded-lg transition-colors font-medium"
+              className="btn-danger-outline btn-full"
             >
               Cancel
             </button>

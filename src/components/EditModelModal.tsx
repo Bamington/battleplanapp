@@ -230,7 +230,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Edit Model</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="text-icon hover:text-icon-hover"
           >
             <X className="w-6 h-6" />
           </button>
@@ -261,7 +261,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white"
                 required
               />
             </div>
@@ -307,7 +307,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white"
               >
                 <option value="">Select Status</option>
                 <option value="Assembled">Assembled</option>
@@ -328,7 +328,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                   type="date"
                   value={formData.painted_date}
                   onChange={(e) => setFormData({ ...formData, painted_date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring---color-brand dark:bg-gray-700 dark:text-white"
                 />
               </div>
             )}
@@ -344,7 +344,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                   type="date"
                   value={formData.purchase_date}
                   onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white"
                 />
               </div>
             )}
@@ -360,7 +360,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                 min="1"
                 value={formData.count}
                 onChange={(e) => setFormData({ ...formData, count: parseInt(e.target.value) || 1 })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white"
                 required
               />
             </div>
@@ -391,7 +391,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                     <button
                       type="button"
                       onClick={handleDeleteImage}
-                      className="text-red-500 hover:text-red-700 transition-colors p-1"
+                      className="text-icon hover:text-icon-hover transition-colors p-1"
                       title="Delete current image"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -413,7 +413,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                 type="file"
                 accept="image/*"
                 onChange={handleFileSelect}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-brand)]/10 file:text-[var(--color-brand)] hover:file:bg-[var(--color-brand)]/20"
               />
               {croppedImageBlob && (
                 <p className="text-sm text-green-600 dark:text-green-400 mt-1">
@@ -437,7 +437,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white resize-none"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white resize-none"
                 placeholder="Optional notes about this model..."
               />
             </div>
@@ -446,14 +446,14 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="btn-ghost btn-flex"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={uploading || compressing}
-                className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                className="btn-primary btn-flex"
               >
                 {uploading ? (
                   <>

@@ -108,7 +108,7 @@ export function BookingCard({ booking, onClick, onCancelBooking, isPast = false 
         <div className="flex justify-end pt-2 border-t border-border-custom">
           <button
             onClick={() => onCancelBooking(booking.id)}
-            className="flex items-center space-x-1 px-3 py-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors text-sm"
+            className="btn-danger-outline-sm btn-with-icon-sm"
           >
             <X className="w-3 h-3" />
             <span>Cancel</span>

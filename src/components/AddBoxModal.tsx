@@ -6,6 +6,7 @@ import { GameDropdown } from './GameDropdown'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
 import { ImageSearchResults } from './ImageSearchResults'
+import { Button } from './Button'
 
 interface Game {
   id: string
@@ -229,6 +230,8 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
       // Create search query combining box name and game
       const searchQuery = `${boxName.trim()} ${gameName}`.trim()
       
+      console.log('Finding more images with exclude:', previousSearchResults)
+      
       // Call our edge function to search for images
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-images`, {
         method: 'POST',
@@ -250,10 +253,18 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
       const data = await response.json()
       const additionalImages = data.images || []
       
-      // Combine previous and new results, avoiding duplicates
-      const allImages = [...previousSearchResults, ...additionalImages]
-      setSuggestedImages(allImages)
-      setPreviousSearchResults(allImages)
+      console.log('Received additional images:', additionalImages)
+      console.log('Previous results count:', previousSearchResults.length)
+      console.log('New results count:', additionalImages.length)
+      
+      // Filter out any duplicates that might have been returned despite the exclude parameter
+      const uniqueNewImages = additionalImages.filter((img: string) => !previousSearchResults.includes(img))
+      
+      console.log('Unique new images after filtering:', uniqueNewImages)
+      
+      // Show only the new results, but keep track of all for future exclusions
+      setSuggestedImages(uniqueNewImages)
+      setPreviousSearchResults([...previousSearchResults, ...uniqueNewImages])
     } catch (error) {
       console.error('Error searching for more images:', error)
     } finally {
@@ -484,7 +495,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
             onClick={onClose}
             className="text-secondary-text hover:text-text transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-6 h-6 text-icon" />
           </button>
         </div>
 
@@ -507,7 +518,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
               value={boxName}
               onChange={(e) => setBoxName(e.target.value)}
               placeholder='eg. "Kill Team Starter Set", "Space Marine Heroes", "Warhammer 40k Elite Edition", etc.'
-              className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-secondary-text bg-bg-primary text-text"
+              className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] placeholder-secondary-text bg-bg-primary text-text"
             />
           </div>
 
@@ -529,16 +540,16 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
             <label htmlFor="purchaseDate" className="block text-sm font-medium text-input-label font-overpass mb-2">
               Purchase Date
             </label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
-              <input
-                type="date"
-                id="purchaseDate"
-                value={purchaseDate}
-                onChange={(e) => setPurchaseDate(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-text bg-bg-primary"
-              />
-            </div>
+                          <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
+                <input
+                  type="date"
+                  id="purchaseDate"
+                  value={purchaseDate}
+                  onChange={(e) => setPurchaseDate(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] text-text bg-bg-primary"
+                />
+              </div>
           </div>
 
           {/* Purchase Price */}
@@ -546,19 +557,19 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
             <label htmlFor="purchasePrice" className="block text-sm font-medium text-input-label font-overpass mb-2">
               Purchase Price
             </label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
-              <input
-                type="number"
-                id="purchasePrice"
-                value={purchasePrice}
-                onChange={handlePriceChange}
-                placeholder="Enter Purchase Price"
-                step="0.01"
-                min="0"
-                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 placeholder-secondary-text bg-bg-primary text-text"
-              />
-            </div>
+                          <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
+                <input
+                  type="number"
+                  id="purchasePrice"
+                  value={purchasePrice}
+                  onChange={handlePriceChange}
+                  placeholder="Enter Purchase Price"
+                  step="0.01"
+                  min="0"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] placeholder-secondary-text bg-bg-primary text-text"
+                />
+              </div>
           </div>
 
           {/* Image */}
@@ -567,13 +578,13 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
               Image
             </label>
             <div className="relative">
-              <Image className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+              <Image className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
               <input
                 type="file"
                 id="boxImage"
                 accept="image/*"
                 onChange={handleImageChange}
-                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 bg-bg-primary text-text"
+                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-brand)]/10 file:text-[var(--color-brand)] hover:file:bg-[var(--color-brand)]/20 bg-bg-primary text-text"
               />
             </div>
             <p className="text-xs text-secondary-text mt-1">
@@ -583,14 +594,15 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
             {/* Image Search Button */}
             {boxName.trim() && !selectedImages && !selectedImageUrl && (
               <div className="mt-3">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  width="full"
+                  size="small"
                   onClick={searchForImages}
                   disabled={searchingImages}
-                  className="w-full px-4 py-2 border border-amber-500 text-amber-500 hover:bg-amber-50 rounded-lg transition-colors font-medium disabled:opacity-50"
                 >
                   {searchingImages ? 'Searching for images...' : 'Find images for this box'}
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -615,28 +627,23 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
 
           {/* Submit Button */}
           <div className="flex flex-col space-y-3 pt-4">
-            <button
+            <Button
+              className='btn-primary'
+              variant={isFormValid && !loading ? 'primary' : 'disabled'}
+              width="full"
               onClick={handleAddEmptyBox}
               disabled={!isFormValid || loading}
-              className={`w-full px-8 py-3 rounded-lg font-medium transition-colors text-base font-semibold ${
-                isFormValid && !loading
-                  ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                  : 'bg-secondary-text opacity-50 text-text cursor-not-allowed'
-              }`}
             >
               {compressing ? 'Compressing Image...' : loading ? 'Adding...' : 'Add Empty Box'}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={isFormValid && !loading ? 'primary' : 'disabled'}
+              width="full"
               onClick={handleAddModelsToBox}
               disabled={!isFormValid || loading}
-              className={`w-full px-8 py-3 rounded-lg font-medium transition-colors text-base font-semibold ${
-                isFormValid && !loading
-                  ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                  : 'bg-secondary-text opacity-50 text-text cursor-not-allowed'
-              }`}
             >
               {compressing ? 'Compressing Image...' : loading ? 'Adding...' : 'Add Models to Box'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

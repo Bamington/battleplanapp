@@ -246,7 +246,7 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
             onClick={onClose}
             className="fixed top-4 right-4 md:absolute text-white hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full p-2 z-20"
           >
-            <X className="w-6 h-6" />
+            <X className="w-6 h-6 text-icon" />
           </button>
 
           {/* Content */}
@@ -357,14 +357,14 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
                 <button
                   onClick={handleShareModel}
                   disabled={sharing}
-                  className="flex items-center justify-center space-x-2 w-full px-6 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white transition-colors rounded-lg font-medium"
+                  className="btn-primary btn-full btn-with-icon"
                 >
                   <Share2 className="w-4 h-4" />
                   <span>{sharing ? 'Copying Link...' : 'Share Model'}</span>
                 </button>
                 <button
                   onClick={handleDeleteClick}
-                  className="px-6 py-2 border-2 border-button-red text-button-red hover:bg-button-red hover:text-white transition-colors rounded-lg font-medium"
+                  className="btn-danger-outline"
                 >
                   Delete this model
                 </button>

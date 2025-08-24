@@ -77,7 +77,7 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
       <button
         type="button"
         onClick={handleToggleOpen}
-        className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-left bg-bg-primary flex items-center justify-between hover:bg-bg-secondary transition-colors"
+                    className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] text-left bg-bg-primary flex items-center justify-between hover:bg-bg-secondary transition-colors"
       >
         <div className="flex items-center space-x-3">
           {selectedGameData?.icon ? (
@@ -101,7 +101,7 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
             {selectedGameData ? selectedGameData.name : placeholder}
           </span>
         </div>
-        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-5 h-5 text-icon transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
@@ -109,14 +109,14 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
           {/* Search Input */}
           <div className="p-3 border-b border-border-custom">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-4 h-4" />
               <input
                 ref={inputRef}
                 type="text"
                 value={searchTerm}
                 onChange={handleInputChange}
                 placeholder="Search games..."
-                className="w-full pl-10 pr-4 py-2 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-bg-primary text-text"
+                className="w-full pl-10 pr-4 py-2 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] text-sm bg-bg-primary text-text"
               />
             </div>
           </div>

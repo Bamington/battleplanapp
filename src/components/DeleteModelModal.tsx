@@ -44,14 +44,14 @@ export function DeleteModelModal({ isOpen, onClose, onConfirm, modelName, loadin
           <button
             onClick={onClose}
             disabled={loading}
-            className="flex-1 px-4 py-2 border border-border-custom text-text rounded-lg hover:bg-bg-secondary transition-colors font-medium"
+            className="btn-ghost btn-flex"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="flex-1 px-4 py-2 bg-button-red text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+            className="btn-danger btn-flex"
           >
             {loading ? 'Deleting...' : 'Delete Model'}
           </button>

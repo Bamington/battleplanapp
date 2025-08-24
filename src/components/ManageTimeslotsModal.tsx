@@ -201,7 +201,7 @@ export function ManageTimeslotsModal({ isOpen, onClose, location }: ManageTimesl
           <div className="mb-6">
             <button
               onClick={() => setShowAddForm(true)}
-              className="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+              className="flex items-center space-x-2 bg-brand hover:bg-amber-600 text-white px-4 py-2 rounded-lg transition-colors font-medium"
             >
               <Plus className="w-4 h-4" />
               <span>Add Timeslot</span>
@@ -226,7 +226,7 @@ export function ManageTimeslotsModal({ isOpen, onClose, location }: ManageTimesl
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g., Morning Session, Evening Games"
-                  className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                  className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                   required
                 />
               </div>
@@ -240,7 +240,7 @@ export function ManageTimeslotsModal({ isOpen, onClose, location }: ManageTimesl
                     type="time"
                     value={formData.start_time}
                     onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                    className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                    className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                     required
                   />
                 </div>
@@ -252,7 +252,7 @@ export function ManageTimeslotsModal({ isOpen, onClose, location }: ManageTimesl
                     type="time"
                     value={formData.end_time}
                     onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                    className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+                    className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                     required
                   />
                 </div>
@@ -270,7 +270,7 @@ export function ManageTimeslotsModal({ isOpen, onClose, location }: ManageTimesl
                       onClick={() => handleDayToggle(day)}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         formData.availability.includes(day)
-                          ? 'bg-amber-500 text-white'
+                          ? 'bg-brand text-white'
                           : 'bg-bg-primary border border-border-custom text-text hover:bg-bg-secondary'
                       }`}
                     >
@@ -291,7 +291,7 @@ export function ManageTimeslotsModal({ isOpen, onClose, location }: ManageTimesl
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg transition-colors font-medium"
+                  className="flex-1 px-4 py-2 bg-brand hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg transition-colors font-medium"
                 >
                   {submitting ? 'Saving...' : editingTimeslot ? 'Update Timeslot' : 'Add Timeslot'}
                 </button>
@@ -306,7 +306,7 @@ export function ManageTimeslotsModal({ isOpen, onClose, location }: ManageTimesl
           
           {loading ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border---color-brand mx-auto mb-4"></div>
               <p className="text-secondary-text">Loading timeslots...</p>
             </div>
           ) : timeslots.length === 0 ? (
@@ -345,7 +345,7 @@ export function ManageTimeslotsModal({ isOpen, onClose, location }: ManageTimesl
                   </button>
                   <button
                     onClick={() => handleDelete(timeslot.id)}
-                    className="p-2 text-red-500 hover:text-red-700 transition-colors"
+                    className="p-2 text-icon hover:text-icon-hover transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

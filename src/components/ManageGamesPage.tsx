@@ -70,7 +70,7 @@ export function ManageGamesPage({ onBack }: ManageGamesPageProps) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border---color-brand mx-auto mb-4"></div>
           <p className="text-base text-secondary-text">Loading games...</p>
         </div>
       </div>
@@ -131,7 +131,7 @@ export function ManageGamesPage({ onBack }: ManageGamesPageProps) {
             
             <button
               onClick={() => handleEditGame(game)}
-              className="flex items-center space-x-2 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-lg transition-colors flex-shrink-0"
+              className="btn-secondary-sm btn-with-icon-sm"
             >
               <Edit className="w-4 h-4" />
               <span>Edit</span>

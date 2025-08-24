@@ -52,68 +52,72 @@ export function BoxCard({ name, gameName, purchaseDate, imageUrl, gameImage, gam
       iconUrl.includes('game-assets'))
   }
 
-  return (
-    <div className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden max-w-[380px]">
-      <div className="aspect-square">
-        <img
-          src={getImageSrc()}
-          alt={name}
-          className="w-full h-full bg-bg-card-secondary object-cover"
-        />
-      </div>
-      <div className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="text-lg font-bold text-title w-[70%]">{name}</h3>
-          <div className="flex items-center space-x-2 ml-2 flex-col w-[30%]">
-            <div className="flex items-center space-x-2">
-              <span className="text-xs text-secondary-text font-bold text-right">{gameName.toUpperCase()}</span>
-            {isValidGameIcon(gameIcon) ? (
-              <>
-                <img
-                  src={gameIcon}
-                  alt={`${gameName} icon`}
-                  className="w-8 h-8 object-contain rounded flex-shrink-0"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement
-                    console.warn('Game icon failed to load (bucket not found):', gameIcon, 'Falling back to letter icon')
-                    // Hide the broken image and show fallback
-                    target.style.display = 'none'
-                    const fallback = target.nextElementSibling as HTMLElement
-                    if (fallback && fallback.classList.contains('icon-fallback')) {
-                      fallback.style.display = 'flex'
-                    }
-                  }}
-                  onLoad={(e) => {
-                    // Hide fallback when image loads successfully
-                    const target = e.target as HTMLImageElement
-                    const fallback = target.nextElementSibling as HTMLElement
-                    if (fallback && fallback.classList.contains('icon-fallback')) {
-                      fallback.style.display = 'none'
-                    }
-                  }}
-                />
-                <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center icon-fallback">
+     return (
+     <div className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden max-w-[380px] flex flex-col">
+       <div className="aspect-w-16 aspect-h-12 relative bg-bg-card-secondary">
+         <img
+           src={getImageSrc()}
+           alt={name}
+           className="w-full h-48 min-h-[400px] bg-bg-card-secondary object-cover"
+         />
+       </div>
+              <div className="p-4 flex flex-col flex-1">
+         <div className="flex items-start justify-between mb-4">
+           {/* Left side: Box name and purchase date in vertical flex */}
+           <div className="flex flex-col flex-1 min-w-0 mr-3">
+             <h3 className="text-lg font-bold text-title mb-1 break-words">{name}</h3>
+             <p className="text-sm text-secondary-text">Purchased: {formatDate(purchaseDate)}</p>
+           </div>
+           
+                                 {/* Right side: Game name and icon */}
+             <div className="flex items-center space-x-2 flex-shrink-0 max-w-[30%]">
+              <span className="text-xs text-secondary-text font-bold">{gameName.toUpperCase()}</span>
+              {isValidGameIcon(gameIcon) ? (
+                <>
+                  <img
+                    src={gameIcon || ''}
+                    alt={`${gameName} icon`}
+                    className="w-8 h-8 object-contain rounded flex-shrink-0"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      console.warn('Game icon failed to load (bucket not found):', gameIcon, 'Falling back to letter icon')
+                      // Hide the broken image and show fallback
+                      target.style.display = 'none'
+                      const fallback = target.nextElementSibling as HTMLElement
+                      if (fallback && fallback.classList.contains('icon-fallback')) {
+                        fallback.style.display = 'flex'
+                      }
+                    }}
+                    onLoad={(e) => {
+                      // Hide fallback when image loads successfully
+                      const target = e.target as HTMLImageElement
+                      const fallback = target.nextElementSibling as HTMLElement
+                      if (fallback && fallback.classList.contains('icon-fallback')) {
+                        fallback.style.display = 'none'
+                      }
+                    }}
+                  />
+                  <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center icon-fallback">
+                    <span className="text-white text-xs font-bold">{gameName.charAt(0)}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0 icon-fallback">
                   <span className="text-white text-xs font-bold">{gameName.charAt(0)}</span>
                 </div>
-              </>
-            ) : (
-              <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0 icon-fallback">
-                <span className="text-white text-xs font-bold">{gameName.charAt(0)}</span>
-              </div>
-            )}
+              )}
             </div>
-          </div>
-        </div>
-        <p className="text-sm text-secondary-text mb-4">Purchased: {formatDate(purchaseDate)}</p>
-        <div className="flex justify-center">
-          <button 
-            onClick={onViewBox}
-            className="bg-amber-500 hover:bg-amber-600 text-white py-2 px-6 rounded-lg text-base font-semibold transition-colors"
-          >
-            View Box
-          </button>
-        </div>
-      </div>
+         </div>
+         
+         <div className="flex justify-center mt-auto">
+           <button 
+             onClick={onViewBox}
+             className="btn-secondary btn-flex"
+           >
+             View Box
+           </button>
+         </div>
+       </div>
     </div>
   )
 }
