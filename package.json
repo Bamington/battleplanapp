@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "node scripts/updateBuildTimestamp.js && vite",
+    "build": "node scripts/updateBuildTimestamp.js && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "update-timestamp": "node scripts/updateBuildTimestamp.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.55.0",

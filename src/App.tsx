@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Plus } from 'lucide-react'
 import { Header } from './components/Header'
 import { TabBar } from './components/TabBar'
@@ -15,12 +15,23 @@ import { AboutPage } from './components/AboutPage'
 import { AllBookingsPage } from './components/AllBookingsPage'
 import { ViewModelModal } from './components/ViewModelModal'
 import { ViewBoxModal } from './components/ViewBoxModal'
+import { PasswordResetModal } from './components/PasswordResetModal'
+import { AuthCallback } from './components/AuthCallback'
 import { useAuth } from './hooks/useAuth'
 import { useModels } from './hooks/useModels'
 import { useBoxes } from './hooks/useBoxes'
 import { supabase } from './lib/supabase'
+import { getBuildInfo } from './utils/buildTimestamp'
 
 function App() {
+  // Check if we're on the auth callback route
+  const isAuthCallback = window.location.pathname === '/auth/callback'
+
+  // Show auth callback component if on callback route
+  if (isAuthCallback) {
+    return <AuthCallback />
+  }
+
   const [activeTab, setActiveTab] = useState('collection')
   const [collectionView, setCollectionView] = useState<'recent' | 'boxes' | 'models'>('recent')
   const [currentPage, setCurrentPage] = useState(1)
@@ -32,6 +43,7 @@ function App() {
   const [addModelModal, setAddModelModal] = useState(false)
   const [addBoxModal, setAddBoxModal] = useState(false)
   const [showAdminPage, setShowAdminPage] = useState(false)
+  const [showPasswordResetModal, setShowPasswordResetModal] = useState(false)
   const [preselectedBoxId, setPreselectedBoxId] = useState<string | null>(null)
   const [viewModelModal, setViewModelModal] = useState<{
     isOpen: boolean
@@ -48,7 +60,7 @@ function App() {
     box: null
   })
   
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, needsPasswordReset } = useAuth()
   const { models, loading: modelsLoading, refetch: refetchModels } = useModels()
   const { boxes, loading: boxesLoading, refetch: refetchBoxes } = useBoxes()
 
@@ -120,6 +132,13 @@ function App() {
     setShowAdminPage(true)
   }
 
+  // Show password reset modal if user needs to set a new password
+  useEffect(() => {
+    if (needsPasswordReset) {
+      setShowPasswordResetModal(true)
+    }
+  }, [needsPasswordReset])
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-bg-secondary flex items-center justify-center">
@@ -138,6 +157,9 @@ function App() {
         <div className="max-w-4xl mx-auto px-4 py-16 text-center">
           <div className="bg-bg-card rounded-lg shadow-sm p-8">
             <h1 className="text-3xl font-bold text-title mb-4">Welcome to the Mini Myths App Beta</h1>
+            <p className="text-xs text-secondary-text mb-2">
+              Last updated: {getBuildInfo().date} at {getBuildInfo().time}
+            </p>
             <p className="text-base text-secondary-text mb-8">
               Track your miniatures and book a table at your favourite gaming store.<br /><br />
               Make sure to report any bugs and issues on the Discord!
@@ -707,6 +729,12 @@ function App() {
         onViewModel={handleViewModel}
         onAddNewModel={handleAddNewModelToBox}
         box={viewBoxModal.box}
+      />
+
+      {/* Add Password Reset Modal */}
+      <PasswordResetModal
+        isOpen={showPasswordResetModal}
+        onClose={() => setShowPasswordResetModal(false)}
       />
     </div>
   )

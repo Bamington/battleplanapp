@@ -110,6 +110,23 @@ export function useAuth() {
     return { error }
   }
 
+  const resetPassword = async (email: string) => {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    })
+    return { data, error }
+  }
+
+  const updatePassword = async (newPassword: string) => {
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword
+    })
+    return { data, error }
+  }
+
+  // Check if user needs to set a new password
+  const needsPasswordReset = user && window.location.hash.includes('type=recovery')
+
   return {
     user,
     loading,
@@ -117,5 +134,8 @@ export function useAuth() {
     signUp,
     signInWithGoogle,
     signOut,
+    resetPassword,
+    updatePassword,
+    needsPasswordReset,
   }
 }
