@@ -7,6 +7,7 @@ interface Box {
   name: string
   purchase_date: string
   image_url: string
+  public: boolean
   game: {
     id: string
     name: string
@@ -40,6 +41,7 @@ export function useBoxes() {
           name,
           purchase_date,
           image_url,
+          public,
           game:games(id, name, icon, image)
         `)
         .eq('user_id', user?.id)

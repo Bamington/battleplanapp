@@ -4,6 +4,7 @@ import { DeleteBoxModal } from './DeleteBoxModal'
 import { AddModelsToBoxModal } from './AddModelsToBoxModal'
 import { EditBoxModal } from './EditBoxModal'
 import { RemoveModelFromBoxModal } from './RemoveModelFromBoxModal'
+import { ShareCollectionModal } from './ShareCollectionModal'
 import { supabase } from '../lib/supabase'
 
 interface ViewBoxModalProps {
@@ -18,6 +19,7 @@ interface ViewBoxModalProps {
     name: string
     purchase_date: string | null
     image_url: string | null
+    public: boolean
     game: {
       name: string
       image: string | null
@@ -30,6 +32,7 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
   const [showDeleteModal, setShowDeleteModal] = React.useState(false)
   const [showAddModelsModal, setShowAddModelsModal] = React.useState(false)
   const [showEditModal, setShowEditModal] = React.useState(false)
+  const [showShareModal, setShowShareModal] = React.useState(false)
   const [removeModelModal, setRemoveModelModal] = React.useState<{
     isOpen: boolean
     model: any | null
@@ -40,7 +43,6 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
   const [shouldAddNewModel, setShouldAddNewModel] = React.useState(false)
   const [deleting, setDeleting] = React.useState(false)
   const [removingModel, setRemovingModel] = React.useState(false)
-  const [sharing, setSharing] = React.useState(false)
   const [boxModels, setBoxModels] = React.useState<any[]>([])
   const [modelsLoading, setModelsLoading] = React.useState(true)
   const [modelsError, setModelsError] = React.useState<string | null>(null)
@@ -250,35 +252,8 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
     return { src: 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg', isGameFallback: false }
   }
 
-  const handleShareBox = async () => {
-    if (!box) return
-    
-    setSharing(true)
-    
-    try {
-      // Generate the public share URL
-      const shareUrl = `${window.location.origin}/shared/box/${box.id}`
-      
-      // Copy to clipboard
-      await navigator.clipboard.writeText(shareUrl)
-      
-      // You could add a toast notification here
-      console.log('Box share link copied to clipboard')
-      
-    } catch (error) {
-      console.error('Error sharing box:', error)
-      // Fallback for older browsers that don't support clipboard API
-      const textArea = document.createElement('textarea')
-      textArea.value = `${window.location.origin}/shared/box/${box.id}`
-      document.body.appendChild(textArea)
-      textArea.select()
-      document.execCommand('copy')
-      document.body.removeChild(textArea)
-      
-      console.log('Box share link copied to clipboard (fallback)')
-    } finally {
-      setSharing(false)
-    }
+  const handleShareClick = () => {
+    setShowShareModal(true)
   }
 
   const handleDeleteClick = () => {
@@ -426,9 +401,9 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
               )}
             </div>
 
-            {/* Models in this Box Section */}
+            {/* Models in this Collection Section */}
             <div className="mt-8">
-              <h3 className="text-lg font-semibold text-title mb-4">Models in this Box</h3>
+              <h3 className="text-lg font-semibold text-title mb-4">Models in this Collection</h3>
               
               {modelsLoading ? (
                 <div className="space-y-3">
@@ -451,8 +426,8 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
               ) : boxModels.length === 0 ? (
                 <div className="text-center py-8 bg-bg-secondary rounded-lg">
                   <Package className="w-12 h-12 text-secondary-text mx-auto mb-4" />
-                  <p className="text-secondary-text">No models in this box yet.</p>
-                  <p className="text-sm text-secondary-text mt-2">Use the "Add Models to Box" button to add some!</p>
+                  <p className="text-secondary-text">No models in this collection yet.</p>
+                  <p className="text-sm text-secondary-text mt-2">Use the "Add Models to Collection" button to add some!</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -523,21 +498,20 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
                   className="btn-primary btn-full btn-with-icon"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Add Models to Box</span>
+                  <span>Add Models to Collection</span>
                 </button>
                 <button
-                  onClick={handleShareBox}
-                  disabled={sharing}
+                  onClick={handleShareClick}
                   className="btn-secondary btn-full btn-with-icon"
                 >
                   <Share2 className="w-4 h-4" />
-                  <span>{sharing ? 'Copying Link...' : 'Share Box'}</span>
+                  <span>Share Collection</span>
                 </button>
                 <button
                   onClick={handleDeleteClick}
                   className="btn-danger-outline btn-full"
                 >
-                  Delete this box
+                  Delete Collection
                 </button>
               </div>
             </div>
@@ -575,6 +549,13 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
         modelName={removeModelModal.model?.name || ''}
         boxName={box?.name || ''}
         loading={removingModel}
+      />
+
+      <ShareCollectionModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        onCollectionUpdated={handleBoxUpdated}
+        box={box}
       />
     </>
   )

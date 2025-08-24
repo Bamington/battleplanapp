@@ -338,7 +338,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
       >
         <div className="bg-modal-bg rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-title">Edit Box</h2>
+            <h2 className="text-lg font-bold text-title">Edit Collection</h2>
             <button
               onClick={onClose}
               className="text-secondary-text hover:text-text transition-colors"
@@ -351,7 +351,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
             {/* Box Name */}
             <div>
               <label htmlFor="boxName" className="block text-sm font-medium text-input-label font-overpass mb-2">
-                Box Name
+                Collection Name
               </label>
               <div className="relative">
                 <Package className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />

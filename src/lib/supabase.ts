@@ -189,6 +189,7 @@ type Database = {
           purchase_date: string | null
           user_id: string | null
           image_url: string | null
+          public: boolean
           created_at: string
         }
         Insert: {
@@ -198,6 +199,7 @@ type Database = {
           purchase_date?: string | null
           user_id?: string | null
           image_url?: string | null
+          public?: boolean
           created_at?: string
         }
         Update: {
@@ -207,6 +209,7 @@ type Database = {
           purchase_date?: string | null
           user_id?: string | null
           image_url?: string | null
+          public?: boolean
           created_at?: string
         }
       }

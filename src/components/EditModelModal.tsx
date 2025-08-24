@@ -274,7 +274,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
               </label>
               <input
                 type="text"
-                value={model.box?.name || 'No Box (Loose Model)'}
+                value={model.box?.name || 'No Collection (Loose Model)'}
                 disabled
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
               />

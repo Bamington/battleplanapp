@@ -201,7 +201,7 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
     >
       <div className="bg-modal-bg rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-title">Add Models to {box.name}</h2>
+          <h2 className="text-lg font-bold text-title">Add Models to Collection: {box.name}</h2>
           <button
             onClick={onClose}
             className="text-secondary-text hover:text-text transition-colors"
@@ -225,7 +225,7 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
           <div className="text-center py-8">
             <Package className="w-12 h-12 text-secondary-text mx-auto mb-4" />
             <p className="text-secondary-text mb-4">No unboxed models found in your collection.</p>
-            <p className="text-sm text-secondary-text mb-6">All your models are already assigned to boxes.</p>
+                            <p className="text-sm text-secondary-text mb-6">All your models are already assigned to collections.</p>
             <button
               onClick={handleAddNewModel}
               className="btn-primary-sm"

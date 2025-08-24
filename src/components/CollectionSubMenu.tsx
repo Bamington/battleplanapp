@@ -2,8 +2,8 @@ import React from 'react'
 import { Package, Layers, Clock } from 'lucide-react'
 
 interface CollectionSubMenuProps {
-  activeView: 'recent' | 'boxes' | 'models'
-  onViewChange: (view: 'recent' | 'boxes' | 'models') => void
+  activeView: 'recent' | 'collections' | 'models'
+  onViewChange: (view: 'recent' | 'collections' | 'models') => void
 }
 
 export function CollectionSubMenu({ activeView, onViewChange }: CollectionSubMenuProps) {
@@ -19,8 +19,8 @@ export function CollectionSubMenu({ activeView, onViewChange }: CollectionSubMen
       icon: Layers
     },
     {
-      id: 'boxes' as const,
-      label: 'Boxes',
+      id: 'collections' as const,
+      label: 'Collections',
       icon: Package
     }
 

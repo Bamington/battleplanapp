@@ -94,14 +94,14 @@ export function BoxFilters({
 
       {/* Search Field */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-input-label font-overpass mb-2">
-          Search Boxes
-        </label>
+                  <label className="block text-sm font-medium text-input-label font-overpass mb-2">
+            Search Collections
+          </label>
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search by box name..."
+          placeholder="Search by collection name..."
           className="w-full px-3 py-2 border border-border-custom rounded-lg bg-bg-primary text-text placeholder-secondary-text focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
         />
       </div>

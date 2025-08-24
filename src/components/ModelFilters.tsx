@@ -195,7 +195,7 @@ export function ModelFilters({
         {/* Box Filter */}
         <div>
           <label className="block text-sm font-medium text-input-label font-overpass mb-2">
-            Boxes
+            Collections
           </label>
           <div className="max-h-48 overflow-y-auto border border-border-custom rounded-lg bg-bg-primary">
             {availableBoxes.map((box) => (
@@ -284,7 +284,7 @@ export function ModelFilters({
               const boxName = availableBoxes.find(box => box.id === boxId)?.name || ''
               return (
                 <div key={boxId} className="flex items-center space-x-2 bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm">
-                  <span>Box: {boxName}</span>
+                  <span>Collection: {boxName}</span>
                   <button
                     onClick={() => handleBoxToggle(boxId)}
                     className="text-amber-600 hover:text-amber-800 transition-colors"

@@ -477,7 +477,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
           {/* Box Selection */}
           <div>
             <label htmlFor="box" className="block text-sm font-medium text-input-label font-overpass mb-2">
-              Box (Optional)
+              Collection (Optional)
             </label>
             <select
               id="box"
@@ -491,7 +491,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
               }}
               className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text"
             >
-              <option value="">No Box (Loose Model)</option>
+              <option value="">No Collection (Loose Model)</option>
               {getFilteredBoxes().map((box) => (
                 <option key={box.id} value={box.id}>
                   {box.name} {box.game && `(${box.game.name})`}
@@ -499,7 +499,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
               ))}
             </select>
             <p className="text-xs text-secondary-text mt-1">
-              Choose an existing box or leave as loose model.
+              Choose an existing collection or leave as loose model.
             </p>
             {/* Show game info when box is selected */}
             {selectedBox && (() => {

@@ -489,7 +489,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
         }`}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-secondary-text uppercase tracking-wide text-center flex-1">
-            Add New Box
+            Add New Collection
           </h2>
           <button
             onClick={onClose}
@@ -508,7 +508,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
           <div>
             <div className="flex items-center justify-between mb-2">
               <label htmlFor="boxName" className="block text-sm font-medium text-input-label font-overpass">
-                Box Name
+                Collection Name
               </label>
               <span className="text-sm text-gray-500">Required</span>
             </div>
@@ -517,7 +517,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
               id="boxName"
               value={boxName}
               onChange={(e) => setBoxName(e.target.value)}
-              placeholder='eg. "Kill Team Starter Set", "Space Marine Heroes", "Warhammer 40k Elite Edition", etc.'
+              placeholder='eg. "Kill Team Collection", "Space Marine Heroes", "Warhammer 40k Elite Edition", etc.'
               className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] placeholder-secondary-text bg-bg-primary text-text"
             />
           </div>
@@ -574,9 +574,9 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
 
           {/* Image */}
           <div>
-            <label htmlFor="boxImage" className="block text-sm font-medium text-input-label font-overpass mb-2">
-              Image
-            </label>
+                          <label htmlFor="boxImage" className="block text-sm font-medium text-input-label font-overpass mb-2">
+                Collection Image
+              </label>
             <div className="relative">
               <Image className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
               <input
@@ -601,7 +601,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
                   onClick={searchForImages}
                   disabled={searchingImages}
                 >
-                  {searchingImages ? 'Searching for images...' : 'Find images for this box'}
+                  {searchingImages ? 'Searching for images...' : 'Find images for this collection'}
                 </Button>
               </div>
             )}
@@ -634,7 +634,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
               onClick={handleAddEmptyBox}
               disabled={!isFormValid || loading}
             >
-              {compressing ? 'Compressing Image...' : loading ? 'Adding...' : 'Add Empty Box'}
+              {compressing ? 'Compressing Image...' : loading ? 'Adding...' : 'Add Empty Collection'}
             </Button>
             <Button
               variant={isFormValid && !loading ? 'primary' : 'disabled'}
@@ -642,7 +642,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
               onClick={handleAddModelsToBox}
               disabled={!isFormValid || loading}
             >
-              {compressing ? 'Compressing Image...' : loading ? 'Adding...' : 'Add Models to Box'}
+              {compressing ? 'Compressing Image...' : loading ? 'Adding...' : 'Add Models to Collection'}
             </Button>
           </div>
         </form>

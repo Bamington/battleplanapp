@@ -114,7 +114,7 @@ export function BoxCard({ name, gameName, purchaseDate, imageUrl, gameImage, gam
              onClick={onViewBox}
              className="btn-secondary btn-flex"
            >
-             View Box
+                           View Collection
            </button>
          </div>
        </div>

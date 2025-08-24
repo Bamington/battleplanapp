@@ -24,18 +24,28 @@ import { supabase } from './lib/supabase'
 import { getBuildInfo } from './utils/buildTimestamp'
 import { ModelFilters } from './components/ModelFilters'
 import { BoxFilters } from './components/BoxFilters'
+import { PublicCollectionView } from './components/PublicCollectionView'
 
 function App() {
   // Check if we're on the auth callback route
   const isAuthCallback = window.location.pathname === '/auth/callback'
+
+  // Check if we're on a shared collection route
+  const sharedCollectionMatch = window.location.pathname.match(/^\/shared\/collection\/(.+)$/)
+  const sharedCollectionId = sharedCollectionMatch ? sharedCollectionMatch[1] : null
 
   // Show auth callback component if on callback route
   if (isAuthCallback) {
     return <AuthCallback />
   }
 
+  // Show shared collection view if on shared collection route
+  if (sharedCollectionId) {
+    return <PublicCollectionView collectionId={sharedCollectionId as string} />
+  }
+
   const [activeTab, setActiveTab] = useState('collection')
-  const [collectionView, setCollectionView] = useState<'recent' | 'models' | 'boxes'>('recent')
+  const [collectionView, setCollectionView] = useState<'recent' | 'models' | 'collections'>('recent')
   const [currentPage, setCurrentPage] = useState(1)
   const [boxCurrentPage, setBoxCurrentPage] = useState(1)
   
@@ -285,10 +295,10 @@ function App() {
               Track your miniatures and book a table at your favourite gaming store.<br /><br />
               Make sure to report any bugs and issues on the Discord!
             </p>
-            <div className="space-x-4">
+            <div className="flex justify-center space-x-4">
               <button
                 onClick={() => setAuthModal({ isOpen: true, mode: 'login' })}
-                className="btn-ghost"
+                className="btn-secondary"
               >
                 Log In
               </button>
@@ -398,9 +408,6 @@ function App() {
       )}
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-title mb-4">YOUR COLLECTION</h1>
-        </div>
 
         {/* Recent View */}
         {collectionView === 'recent' && (
@@ -451,7 +458,7 @@ function App() {
                         key={model.id}
                         model={model}
                         name={model.name}
-                        boxName={model.box?.name || 'Unknown Box'}
+                                                 boxName={model.box?.name || 'Unknown Collection'}
                         gameName={model.box?.game?.name || model.game?.name || 'Unknown Game'}
                         gameIcon={model.box?.game?.icon || model.game?.icon || null}
                         status={model.status}
@@ -474,17 +481,17 @@ function App() {
               )}
             </section>
 
-            {/* Recent Boxes Section */}
-            <section>
-              {boxes.length > 0 && (
-                <div className="flex flex-col items-center mb-8">
-                  <h2 className="text-lg font-bold text-secondary-text text-center mb-4">RECENT BOXES</h2>
+                         {/* Recent Collections Section */}
+             <section>
+               {boxes.length > 0 && (
+                 <div className="flex flex-col items-center mb-8">
+                   <h2 className="text-lg font-bold text-secondary-text text-center mb-4">RECENT COLLECTIONS</h2>
                   <button
                     onClick={() => setAddBoxModal(true)}
                     className="btn-primary-sm btn-with-icon-sm"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Add Box</span>
+                    <span>Add Collection</span>
                   </button>
                 </div>
               )}
@@ -504,7 +511,7 @@ function App() {
                 </div>
               ) : boxes.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-base text-secondary-text mb-4">No boxes in your collection yet.</p>
+                  <p className="text-base text-secondary-text mb-4">No collections in your collection yet.</p>
                   <button 
                     onClick={() => setAddBoxModal(true)}
                     className="btn-primary"
@@ -542,8 +549,8 @@ function App() {
           </>
         )}
 
-        {/* Boxes Only View */}
-        {collectionView === 'boxes' && (
+                 {/* Collections Only View */}
+         {collectionView === 'collections' && (
           <section>
             {boxes.length > 0 && (
               <div className="flex flex-col items-center mb-8">
@@ -552,7 +559,7 @@ function App() {
                   className="btn-primary-sm btn-with-icon-sm"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Add Box</span>
+                                     <span>Add Collection</span>
                 </button>
               </div>
             )}
