@@ -14,6 +14,7 @@ export default {
         'bg-primary': 'var(--color-bg-primary)',
         'bg-secondary': 'var(--color-bg-secondary)',
         'bg-card': 'var(--color-bg-card)',
+        'bg-card-secondary':  'var(--color-bg-card-secondary)',
         'border-custom': 'var(--color-border)',
         'modal-bg': 'var(--color-modal-bg)',
       },

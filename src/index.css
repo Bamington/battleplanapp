@@ -49,6 +49,7 @@
     --color-bg-primary: #FFFFFF;
     --color-bg-secondary: #F9FAFB;
     --color-bg-card: #FFFFFF;
+    --color-bg-card-secondary: #F9FAFB;
     --color-border: #E5E7EB;
     --color-modal-bg: #FFFFFF;
   }
@@ -63,6 +64,7 @@
     --color-bg-primary: #0F172A;
     --color-bg-secondary: #1F2937;
     --color-bg-card: #0F172A;
+    --color-bg-card-secondary: #0F131C;
     --color-border: #475569;
     --color-modal-bg: #1F2937;
   }

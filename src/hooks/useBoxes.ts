@@ -8,8 +8,11 @@ interface Box {
   purchase_date: string
   image_url: string
   game: {
+    id: string
     name: string
-  }
+    icon: string | null
+    image: string | null
+  } | null
 }
 
 export function useBoxes() {
@@ -37,7 +40,7 @@ export function useBoxes() {
           name,
           purchase_date,
           image_url,
-          game:games(name, image, icon)
+          game:games(id, name, icon, image)
         `)
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false })
@@ -45,7 +48,13 @@ export function useBoxes() {
 
       if (error) throw error
 
-      setBoxes(data || [])
+      // Transform the data to match our interface
+      const transformedData = (data || []).map(box => ({
+        ...box,
+        game: box.game && Array.isArray(box.game) ? box.game[0] : box.game
+      }))
+
+      setBoxes(transformedData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch boxes')
     } finally {

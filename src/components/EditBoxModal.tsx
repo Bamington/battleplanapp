@@ -15,7 +15,12 @@ interface Game {
 interface Box {
   id: string
   name: string
-  game_id: string | null
+  game_id?: string | null
+  game?: {
+    id: string
+    name: string
+    icon: string | null
+  } | null
   purchase_date: string | null
   image_url: string | null
 }
@@ -54,7 +59,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
     if (box) {
       setFormData({
         name: box.name,
-        game_id: box.game_id || '',
+        game_id: box.game_id || box.game?.id || '',
         purchase_date: box.purchase_date || '',
         image_url: box.image_url || ''
       })
@@ -66,6 +71,13 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
       fetchGames()
     }
   }, [isOpen])
+
+  // Also fetch games when box changes to ensure they're available
+  useEffect(() => {
+    if (isOpen && box) {
+      fetchGames()
+    }
+  }, [isOpen, box])
 
   const fetchGames = async () => {
     try {
@@ -285,7 +297,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
     if (box) {
       setFormData({
         name: box.name,
-        game_id: box.game_id || '',
+        game_id: box.game_id || box.game?.id || '',
         purchase_date: box.purchase_date || '',
         image_url: box.image_url || ''
       })
@@ -351,7 +363,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
               </label>
               <GameDropdown
                 games={games}
-               selectedGame={formData.game_id || ''}
+                selectedGame={formData.game_id || ''}
                 onGameSelect={(gameId) => setFormData({ ...formData, game_id: gameId })}
                 placeholder="Choose a Game"
               />

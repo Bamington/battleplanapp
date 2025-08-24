@@ -11,14 +11,19 @@ interface Model {
   game_id: string | null
   notes: string | null
   box: {
+    id: string
     name: string
     purchase_date: string
     game: {
+      id: string
       name: string
+      icon: string | null
     } | null
   } | null
   game: {
+    id: string
     name: string
+    icon: string | null
   } | null
 }
 
@@ -51,19 +56,26 @@ export function useModels() {
           game_id,
           notes,
           box:boxes(
+            id,
             name,
             purchase_date,
-            id,
-            game:games(name, icon)
+            game:games(id, name, icon)
           ),
-          game:games(name, icon)
+          game:games(id, name, icon)
         `)
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      setModels(data || [])
+      // Transform the data to handle array responses from Supabase
+      const transformedData = (data || []).map(model => ({
+        ...model,
+        box: model.box && Array.isArray(model.box) ? model.box[0] : model.box,
+        game: model.game && Array.isArray(model.game) ? model.game[0] : model.game
+      }))
+
+      setModels(transformedData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch models')
     } finally {

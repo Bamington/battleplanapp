@@ -119,7 +119,14 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setBoxes(data || [])
+      
+      // Transform the data to handle array responses from Supabase
+      const transformedData = (data || []).map(box => ({
+        ...box,
+        game: box.game && Array.isArray(box.game) ? box.game[0] : box.game
+      }))
+      
+      setBoxes(transformedData)
     } catch (err) {
       console.error('Error fetching boxes:', err)
     }
@@ -350,13 +357,25 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
         }
       }
 
+      // Determine the game_id for the model
+      let modelGameId = selectedGame || null
+      
+      // If a box is selected, use the box's game_id
+      if (selectedBox || preselectedBoxId) {
+        const boxId = selectedBox || preselectedBoxId
+        const selectedBoxData = boxes.find(box => box.id === boxId)
+        if (selectedBoxData && selectedBoxData.game_id) {
+          modelGameId = selectedBoxData.game_id
+        }
+      }
+
       // Create the model
       const { error: modelError } = await supabase
         .from('models')
         .insert({
           name: modelName.trim(),
           box_id: selectedBox || preselectedBoxId || null,
-          game_id: selectedGame || null,
+          game_id: modelGameId,
           status: paintedStatus || 'None',
           count: parseInt(numberOfModels) || 1,
           user_id: user.id,
@@ -455,30 +474,42 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
             />
           </div>
 
-          {/* Box */}
+          {/* Box Selection */}
           <div>
             <label htmlFor="box" className="block text-sm font-medium text-input-label font-overpass mb-2">
-              Box
+              Box (Optional)
             </label>
-            <div className="relative">
-              <Package className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
-              <select
-                id="box"
-                value={selectedBox}
-                onChange={(e) => setSelectedBox(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
-              >
-                <option value="">No Box (Loose Model)</option>
-                {filteredBoxes.map((box) => (
-                  <option key={box.id} value={box.id}>
-                    {box.name} {box.game?.name ? `- ${box.game.name}` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select
+              id="box"
+              value={selectedBox}
+              onChange={(e) => {
+                setSelectedBox(e.target.value)
+                // Clear selected game when a box is selected since game will be auto-assigned
+                if (e.target.value) {
+                  setSelectedGame('')
+                }
+              }}
+              className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-bg-primary text-text"
+            >
+              <option value="">No Box (Loose Model)</option>
+              {getFilteredBoxes().map((box) => (
+                <option key={box.id} value={box.id}>
+                  {box.name} {box.game && `(${box.game.name})`}
+                </option>
+              ))}
+            </select>
             <p className="text-xs text-secondary-text mt-1">
               Choose an existing box or leave as loose model.
             </p>
+            {/* Show game info when box is selected */}
+            {selectedBox && (() => {
+              const selectedBoxData = boxes.find(box => box.id === selectedBox)
+              return selectedBoxData && selectedBoxData.game ? (
+                <p className="text-xs text-amber-500 mt-1">
+                  Game will be automatically set to: <strong>{selectedBoxData.game.name}</strong>
+                </p>
+              ) : null
+            })()}
           </div>
 
           {/* Game - Only show if no box is selected */}

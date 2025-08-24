@@ -22,6 +22,8 @@ import { useModels } from './hooks/useModels'
 import { useBoxes } from './hooks/useBoxes'
 import { supabase } from './lib/supabase'
 import { getBuildInfo } from './utils/buildTimestamp'
+import { ModelFilters } from './components/ModelFilters'
+import { BoxFilters } from './components/BoxFilters'
 
 function App() {
   // Check if we're on the auth callback route
@@ -33,9 +35,20 @@ function App() {
   }
 
   const [activeTab, setActiveTab] = useState('collection')
-  const [collectionView, setCollectionView] = useState<'recent' | 'boxes' | 'models'>('recent')
+  const [collectionView, setCollectionView] = useState<'recent' | 'models' | 'boxes'>('recent')
   const [currentPage, setCurrentPage] = useState(1)
   const [boxCurrentPage, setBoxCurrentPage] = useState(1)
+  
+  // Filter states
+  const [modelFilters, setModelFilters] = useState({
+    selectedBoxes: [] as string[],
+    selectedGames: [] as string[],
+    selectedStatuses: [] as string[]
+  })
+  const [boxFilters, setBoxFilters] = useState({
+    selectedGames: [] as string[]
+  })
+  const [games, setGames] = useState<any[]>([])
   const [authModal, setAuthModal] = useState<{ isOpen: boolean; mode: 'login' | 'signup' }>({
     isOpen: false,
     mode: 'login'
@@ -64,16 +77,84 @@ function App() {
   const { models, loading: modelsLoading, refetch: refetchModels } = useModels()
   const { boxes, loading: boxesLoading, refetch: refetchBoxes } = useBoxes()
 
-  const itemsPerPage = 6
-  const totalPages = Math.ceil(models.length / itemsPerPage)
-  const boxTotalPages = Math.ceil(boxes.length / itemsPerPage)
+  // Fetch games for filters
+  useEffect(() => {
+    if (user) {
+      fetchGames()
+    }
+  }, [user])
 
-  const paginatedModels = models.slice(
+  const fetchGames = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .select('id, name, icon')
+        .order('name')
+
+      if (error) throw error
+      setGames(data || [])
+    } catch (err) {
+      console.error('Error fetching games:', err)
+    }
+  }
+
+  const itemsPerPage = 6
+
+  // Filter functions
+  const handleModelBoxesFilter = (boxIds: string[]) => {
+    setModelFilters(prev => ({ ...prev, selectedBoxes: boxIds }))
+    setCurrentPage(1)
+  }
+
+  const handleModelGamesFilter = (gameIds: string[]) => {
+    setModelFilters(prev => ({ ...prev, selectedGames: gameIds }))
+    setCurrentPage(1)
+  }
+
+  const handleModelStatusesFilter = (statuses: string[]) => {
+    setModelFilters(prev => ({ ...prev, selectedStatuses: statuses }))
+    setCurrentPage(1)
+  }
+
+  const handleModelClearFilters = () => {
+    setModelFilters({ selectedBoxes: [], selectedGames: [], selectedStatuses: [] })
+    setCurrentPage(1)
+  }
+
+  const handleBoxGamesFilter = (gameIds: string[]) => {
+    setBoxFilters(prev => ({ ...prev, selectedGames: gameIds }))
+    setBoxCurrentPage(1)
+  }
+
+  const handleBoxClearFilters = () => {
+    setBoxFilters({ selectedGames: [] })
+    setBoxCurrentPage(1)
+  }
+
+  // Filtered data
+  const filteredModels = models.filter(model => {
+    if (modelFilters.selectedBoxes.length > 0 && !modelFilters.selectedBoxes.includes(model.box?.id || '')) return false
+    if (modelFilters.selectedGames.length > 0 && 
+        !modelFilters.selectedGames.includes(model.box?.game?.id || '') && 
+        !modelFilters.selectedGames.includes(model.game?.id || '')) return false
+    if (modelFilters.selectedStatuses.length > 0 && !modelFilters.selectedStatuses.includes(model.status)) return false
+    return true
+  })
+
+  const filteredBoxes = boxes.filter(box => {
+    if (boxFilters.selectedGames.length > 0 && !boxFilters.selectedGames.includes(box.game?.id || '')) return false
+    return true
+  })
+
+  const totalPages = Math.ceil(filteredModels.length / itemsPerPage)
+  const boxTotalPages = Math.ceil(filteredBoxes.length / itemsPerPage)
+
+  const paginatedModels = filteredModels.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   )
 
-  const paginatedBoxes = boxes.slice(
+  const paginatedBoxes = filteredBoxes.slice(
     (boxCurrentPage - 1) * itemsPerPage,
     boxCurrentPage * itemsPerPage
   )
@@ -435,6 +516,17 @@ function App() {
                 </button>
               </div>
             )}
+
+            {/* Box Filters */}
+            {boxes.length > 0 && (
+              <BoxFilters
+                games={games}
+                boxes={boxes}
+                selectedGames={boxFilters.selectedGames}
+                onGamesChange={handleBoxGamesFilter}
+                onClearFilters={handleBoxClearFilters}
+              />
+            )}
             
             {boxesLoading ? (
               <div className="space-y-3">
@@ -563,6 +655,22 @@ function App() {
                 <span>Add Model</span>
               </button>
             </div>
+          )}
+
+          {/* Model Filters */}
+          {models.length > 0 && (
+            <ModelFilters
+              games={games}
+              boxes={boxes}
+              models={models}
+              selectedBoxes={modelFilters.selectedBoxes}
+              selectedGames={modelFilters.selectedGames}
+              selectedStatuses={modelFilters.selectedStatuses}
+              onBoxesChange={handleModelBoxesFilter}
+              onGamesChange={handleModelGamesFilter}
+              onStatusesChange={handleModelStatusesFilter}
+              onClearFilters={handleModelClearFilters}
+            />
           )}
           
           {modelsLoading ? (

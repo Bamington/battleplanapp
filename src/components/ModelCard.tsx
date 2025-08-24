@@ -74,7 +74,7 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
 
   return (
     <div className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden max-w-[380px] flex flex-col h-full">
-      <div className="aspect-w-16 aspect-h-12 relative">
+      <div className="aspect-w-16 aspect-h-12 relative bg-bg-card-secondary">
         <img
           src={getImageSrc()}
           alt={name}

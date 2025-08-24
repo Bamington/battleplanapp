@@ -59,7 +59,7 @@ export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: Hea
             {/* Center - Logo */}
             <div className="flex items-center justify-center flex-1">
               <img 
-                src={isDarkMode ? "/Logo White.svg" : "/Logo.svg"}
+                src={isDarkMode ? "Battleplan-Logo-Purple.svg" : "Battleplan-Logo-Purple.svg"}
                 alt="Mini Myths Logo" 
                 className="max-h-[300px] w-auto"
               />

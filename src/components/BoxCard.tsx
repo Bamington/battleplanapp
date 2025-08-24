@@ -58,7 +58,7 @@ export function BoxCard({ name, gameName, purchaseDate, imageUrl, gameImage, gam
         <img
           src={getImageSrc()}
           alt={name}
-          className="w-full h-full object-cover"
+          className="w-full h-full bg-bg-card-secondary object-cover"
         />
       </div>
       <div className="p-4">
