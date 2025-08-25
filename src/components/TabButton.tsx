@@ -14,7 +14,7 @@ export function TabButton({ icon: Icon, label, isActive, onClick }: TabButtonPro
       onClick={onClick}
       className={`flex items-center space-x-2 py-4 px-6 border-b-2 font-medium text-sm transition-colors ${
         isActive
-          ? 'border-brand text-brand'
+          ? '!border-brand !text-brand'
           : 'border-transparent text-secondary-text hover:text-text hover:border-border-custom'
       }`}
     >

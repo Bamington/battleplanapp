@@ -13,6 +13,7 @@ import { AddBoxModal } from './components/AddBoxModal'
 import { AdminPage } from './components/AdminPage'
 import { AboutPage } from './components/AboutPage'
 import { AllBookingsPage } from './components/AllBookingsPage'
+import { BlockedDatesPage } from './components/BlockedDatesPage'
 import { ViewModelModal } from './components/ViewModelModal'
 import { ViewBoxModal } from './components/ViewBoxModal'
 import { PasswordResetModal } from './components/PasswordResetModal'
@@ -375,6 +376,22 @@ function App() {
           onTabChange={setActiveTab}
         />
         <AllBookingsPage onBack={() => setActiveTab('collection')} />
+        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
+    )
+  }
+
+  // Render Blocked Dates page (Admin only)
+  if (activeTab === 'blocked-dates') {
+    return (
+      <div className="min-h-screen bg-bg-secondary">
+        <Header 
+          onAddModel={() => setAddModelModal(true)} 
+          onAdminClick={handleAdminClick}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+        <BlockedDatesPage onBack={() => setActiveTab('collection')} />
         <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
     )

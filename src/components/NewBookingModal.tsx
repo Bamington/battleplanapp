@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { GameDropdown } from './GameDropdown'
 import { useRecentGames } from '../hooks/useRecentGames'
+import { DatePicker } from './DatePicker'
 
 interface Location {
   id: string
@@ -51,6 +52,8 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
   const [checkingBookingLimit, setCheckingBookingLimit] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [blockedDateInfo, setBlockedDateInfo] = useState<{ description: string | null } | null>(null)
+  const [checkingBlockedDate, setCheckingBlockedDate] = useState(false)
   const { user } = useAuth()
   const { recentGames, addRecentGame } = useRecentGames()
 
@@ -123,6 +126,15 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
   }, [selectedDate])
 
   useEffect(() => {
+    // Check blocked date when location and date are selected
+    if (selectedLocation && selectedDate) {
+      checkBlockedDate()
+    } else {
+      setBlockedDateInfo(null)
+    }
+  }, [selectedLocation, selectedDate])
+
+  useEffect(() => {
     // Check table availability when location, date, and timeslot are all selected
     if (selectedLocation && selectedDate && selectedTimeslot) {
       checkTableAvailability()
@@ -130,6 +142,45 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
       setAvailableTables(null)
     }
   }, [selectedLocation, selectedDate, selectedTimeslot])
+
+  const checkBlockedDate = async () => {
+    if (!selectedLocation || !selectedDate) return
+
+    setCheckingBlockedDate(true)
+    try {
+      console.log('Checking blocked date for:', { selectedLocation, selectedDate })
+      
+      // Try a simpler query first to test table access
+      const { data, error } = await supabase
+        .from('blocked_dates')
+        .select('description')
+        .eq('location_id', selectedLocation)
+        .eq('date', selectedDate)
+
+      console.log('Blocked date query result:', { data, error })
+
+      if (error) {
+        console.error('Error checking blocked date:', error)
+        // Don't show error to user, just assume no blocked date
+        setBlockedDateInfo(null)
+        return
+      }
+
+      // Check if we found any blocked dates
+      if (data && data.length > 0) {
+        console.log('Found blocked date:', data[0])
+        setBlockedDateInfo({ description: data[0].description })
+      } else {
+        console.log('No blocked date found for this location/date')
+        setBlockedDateInfo(null)
+      }
+    } catch (err) {
+      console.error('Error checking blocked date:', err)
+      setBlockedDateInfo(null)
+    } finally {
+      setCheckingBlockedDate(false)
+    }
+  }
 
   const checkTableAvailability = async () => {
     if (!selectedLocation || !selectedDate || !selectedTimeslot) return
@@ -365,6 +416,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
       setSelectedTimeslot('')
       setSelectedGame('')
       setUserNameInput('')
+      setBlockedDateInfo(null)
       
       onBookingCreated()
       onClose()
@@ -378,7 +430,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
     }
   }
 
-  const isFormValid = selectedLocation && selectedDate && selectedTimeslot && userNameInput.trim() && currentBookingCount < 4
+  const isFormValid = selectedLocation && selectedDate && selectedTimeslot && userNameInput.trim() && currentBookingCount < 4 && !blockedDateInfo
 
   if (!isOpen) return null
 
@@ -501,18 +553,12 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
             <label htmlFor="date" className="block text-sm font-medium text-input-label font-overpass mb-2">
               Date
             </label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
-              <input
-                type="date"
-                id="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]} // Prevent past dates
-                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-                required
-              />
-            </div>
+            <DatePicker
+              value={selectedDate}
+              onChange={setSelectedDate}
+              minDate={new Date().toISOString().split('T')[0]}
+              placeholder="Select a date"
+            />
           </div>
 
           {/* Timeslot */}
@@ -552,6 +598,30 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
               </p>
             )}
           </div>
+
+          {/* Blocked Date Warning */}
+          {checkingBlockedDate ? (
+            <div className="p-4 rounded-lg border bg-blue-50 border-blue-200">
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                <span className="text-blue-700 text-sm font-medium">Checking date availability...</span>
+              </div>
+            </div>
+          ) : blockedDateInfo ? (
+            <div className="p-4 rounded-lg border bg-red-50 border-red-200">
+              <div className="flex items-start space-x-2">
+                <span className="text-red-700 text-sm font-medium">🚫 Location Unavailable</span>
+              </div>
+              <p className="text-red-600 text-sm mt-1">
+                This location is blocked on the selected date.
+                {blockedDateInfo.description && (
+                  <span className="block mt-1">
+                    <strong>Reason:</strong> {blockedDateInfo.description}
+                  </span>
+                )}
+              </p>
+            </div>
+          ) : null}
 
           {error && (
             <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
@@ -593,9 +663,9 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
           <div className="flex flex-col space-y-3 pt-4">
             <button
               type="submit"
-              disabled={!isFormValid || loading || availableTables === 0 || currentBookingCount >= 4}
+              disabled={!isFormValid || loading || availableTables === 0 || currentBookingCount >= 4 || blockedDateInfo}
               className={`btn-full ${
-                isFormValid && !loading && availableTables !== 0 && currentBookingCount < 4
+                isFormValid && !loading && availableTables !== 0 && currentBookingCount < 4 && !blockedDateInfo
                   ? 'btn-primary'
                   : 'btn-disabled'
               }`}
@@ -603,6 +673,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
               {loading ? 'Creating Booking...' : 
                currentBookingCount >= 4 ? 'Booking Limit Reached' :
                availableTables === 0 ? 'No Tables Available' : 
+               blockedDateInfo ? 'Location Unavailable' :
                'Confirm Booking'}
             </button>
             <button

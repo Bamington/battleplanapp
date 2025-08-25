@@ -39,3 +39,4 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
     </div>
   )
 }
+

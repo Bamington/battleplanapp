@@ -128,21 +128,21 @@ type Database = {
           id: string
           location_id: string
           date: string
-          number_of_tables: number
+          description: string | null
           created_at: string
         }
         Insert: {
           id?: string
           location_id: string
           date: string
-          number_of_tables?: number
+          description?: string | null
           created_at?: string
         }
         Update: {
           id?: string
           location_id?: string
           date?: string
-          number_of_tables?: number
+          description?: string | null
           created_at?: string
         }
       }

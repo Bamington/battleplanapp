@@ -500,7 +500,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
         </div>
 
         <p className="text-base text-secondary-text text-center mb-8">
-          Don't worry- you can update any of these details later.
+          Collections are a way to sort your models into groups. You can use this to track boxes you've bought, squads you've assembled, or simply to organise your collection.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">

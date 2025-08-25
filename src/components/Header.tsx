@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Menu, X, User, Plus, Settings, Moon, Sun, Shield, Package, Calendar } from 'lucide-react'
+import { Menu, X, User, Plus, Settings, Moon, Sun, Shield, Package, Calendar, Ban } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useDarkMode } from '../hooks/useDarkMode'
 
@@ -225,24 +225,44 @@ export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: Hea
                     </div>
                     
                     {/* All Bookings Item */}
-                                         <button
-                       onClick={() => {
-                         setIsNavigationMenuOpen(false)
-                         onTabChange?.('all-bookings')
-                       }}
-                       className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                         activeTab === 'all-bookings'
-                           ? 'bg-brand/10 text-brand border border-brand/20'
-                           : 'text-secondary-text hover:text-text hover:bg-bg-secondary'
-                       }`}
-                     >
-                       <Calendar className={`w-5 h-5 ${
-                         activeTab === 'all-bookings'
-                           ? 'text-icon-active'
-                           : 'text-icon hover:text-icon-hover'
-                       }`} />
-                       <span className={`font-medium ${activeTab === 'all-bookings' ? 'text-brand' : ''}`}>All Bookings</span>
-                     </button>
+                    <button
+                      onClick={() => {
+                        setIsNavigationMenuOpen(false)
+                        onTabChange?.('all-bookings')
+                      }}
+                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                        activeTab === 'all-bookings'
+                          ? 'bg-brand/10 text-brand border border-brand/20'
+                          : 'text-secondary-text hover:text-text hover:bg-bg-secondary'
+                      }`}
+                    >
+                      <Calendar className={`w-5 h-5 ${
+                        activeTab === 'all-bookings'
+                          ? 'text-icon-active'
+                          : 'text-icon hover:text-icon-hover'
+                      }`} />
+                      <span className={`font-medium ${activeTab === 'all-bookings' ? 'text-brand' : ''}`}>All Bookings</span>
+                    </button>
+
+                    {/* Blocked Dates Item */}
+                    <button
+                      onClick={() => {
+                        setIsNavigationMenuOpen(false)
+                        onTabChange?.('blocked-dates')
+                      }}
+                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                        activeTab === 'blocked-dates'
+                          ? 'bg-brand/10 text-brand border border-brand/20'
+                          : 'text-secondary-text hover:text-text hover:bg-bg-secondary'
+                      }`}
+                    >
+                      <Ban className={`w-5 h-5 ${
+                        activeTab === 'blocked-dates'
+                          ? 'text-icon-active'
+                          : 'text-icon hover:text-icon-hover'
+                      }`} />
+                      <span className={`font-medium ${activeTab === 'blocked-dates' ? 'text-brand' : ''}`}>Blocked Dates</span>
+                    </button>
                   </>
                 )}
               </div>
