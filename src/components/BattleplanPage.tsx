@@ -154,15 +154,6 @@ export function BattleplanPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-title mb-4">YOUR TABLE BOOKINGS</h1>
-          {bookings.length > 0 && (
-            <button
-              onClick={() => setShowNewBookingModal(true)}
-              className="btn-primary-sm btn-with-icon-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>New Table Booking</span>
-            </button>
-          )}
         </div>
 
         {/* Bookings List */}
@@ -183,12 +174,14 @@ export function BattleplanPage() {
             <div className="text-center py-12">
               <Calendar className="w-16 h-16 text-secondary-text mx-auto mb-4" />
               <p className="text-base text-secondary-text mb-4">No table bookings yet.</p>
-              <button 
-                onClick={() => setShowNewBookingModal(true)}
-                className="btn-primary"
-              >
-                Book Your First Table
-              </button>
+              <div className="flex justify-center">
+                <button 
+                  onClick={() => setShowNewBookingModal(true)}
+                  className="btn-primary"
+                >
+                  Book Your First Table
+                </button>
+              </div>
             </div>
           ) : (
             <div className="space-y-8">

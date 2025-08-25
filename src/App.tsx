@@ -16,8 +16,10 @@ import { AllBookingsPage } from './components/AllBookingsPage'
 import { ViewModelModal } from './components/ViewModelModal'
 import { ViewBoxModal } from './components/ViewBoxModal'
 import { PasswordResetModal } from './components/PasswordResetModal'
+import { NewBookingModal } from './components/NewBookingModal'
 import { AuthCallback } from './components/AuthCallback'
 import { ExpandableFAB } from './components/ExpandableFAB'
+import { BookingsFAB } from './components/BookingsFAB'
 import { useAuth } from './hooks/useAuth'
 import { useModels } from './hooks/useModels'
 import { useBoxes } from './hooks/useBoxes'
@@ -68,6 +70,7 @@ function App() {
   })
   const [addModelModal, setAddModelModal] = useState(false)
   const [addBoxModal, setAddBoxModal] = useState(false)
+  const [showNewBookingModal, setShowNewBookingModal] = useState(false)
   const [showAdminPage, setShowAdminPage] = useState(false)
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false)
   const [preselectedBoxId, setPreselectedBoxId] = useState<string | null>(null)
@@ -89,6 +92,8 @@ function App() {
   const { user, loading: authLoading, needsPasswordReset } = useAuth()
   const { models, loading: modelsLoading, refetch: refetchModels } = useModels()
   const { boxes, loading: boxesLoading, refetch: refetchBoxes } = useBoxes()
+
+
 
   // Fetch games for filters
   useEffect(() => {
@@ -387,6 +392,26 @@ function App() {
         />
         <BattleplanPage />
         <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+        
+        {/* Bookings FAB - Only show on battleplan tab */}
+        <BookingsFAB
+          onNewBooking={() => setShowNewBookingModal(true)}
+        />
+
+        {/* New Booking Modal for battleplan tab */}
+        <NewBookingModal
+          isOpen={showNewBookingModal}
+          onClose={() => setShowNewBookingModal(false)}
+          onBookingCreated={() => {
+            // Refresh data if needed
+            setShowNewBookingModal(false)
+          }}
+          lastSelectedLocation=""
+          onLocationSelected={(locationId) => {
+            // Handle location selection if needed
+            console.log('Location selected:', locationId)
+          }}
+        />
       </div>
     )
   }
@@ -837,6 +862,21 @@ function App() {
         onClose={() => setShowPasswordResetModal(false)}
       />
 
+      {/* Add New Booking Modal */}
+      <NewBookingModal
+        isOpen={showNewBookingModal}
+        onClose={() => setShowNewBookingModal(false)}
+        onBookingCreated={() => {
+          // Refresh data if needed
+          setShowNewBookingModal(false)
+        }}
+        lastSelectedLocation=""
+        onLocationSelected={(locationId) => {
+          // Handle location selection if needed
+          console.log('Location selected:', locationId)
+        }}
+      />
+
       {/* Expandable FAB - Only show on collection tab */}
       {activeTab === 'collection' && (
         <ExpandableFAB
@@ -844,6 +884,8 @@ function App() {
           onAddCollection={() => setAddBoxModal(true)}
         />
       )}
+
+
     </div>
   )
 }

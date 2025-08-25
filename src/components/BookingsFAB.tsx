@@ -1,28 +1,22 @@
 import React, { useState } from 'react'
-import { Package, User } from 'lucide-react'
+import { Calendar } from 'lucide-react'
 import { FABButton } from './FABButton'
 import { FABSubItem } from './FABSubItem'
 
-interface ExpandableFABProps {
-  onAddModel: () => void
-  onAddCollection: () => void
+interface BookingsFABProps {
+  onNewBooking: () => void
 }
 
-export function ExpandableFAB({ onAddModel, onAddCollection }: ExpandableFABProps) {
+export function BookingsFAB({ onNewBooking }: BookingsFABProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded)
   }
 
-  const handleAddModel = () => {
+  const handleNewBooking = () => {
     setIsExpanded(false)
-    onAddModel()
-  }
-
-  const handleAddCollection = () => {
-    setIsExpanded(false)
-    onAddCollection()
+    onNewBooking()
   }
 
   return (
@@ -30,19 +24,11 @@ export function ExpandableFAB({ onAddModel, onAddCollection }: ExpandableFABProp
       {/* Expanded Options */}
       {isExpanded && (
                  <div className="absolute bottom-16 right-0 flex flex-col space-y-3">
-           {/* Add Model Option */}
+           {/* New Table Booking Option */}
            <FABSubItem
-             icon={User}
-             label="Add Model"
-             onClick={handleAddModel}
-             animationClass="animate-fab-slide-in-delayed"
-           />
-           
-           {/* Add Collection Option */}
-           <FABSubItem
-             icon={Package}
-             label="Add Collection"
-             onClick={handleAddCollection}
+             icon={Calendar}
+             label="New Table Booking"
+             onClick={handleNewBooking}
              animationClass="animate-fab-slide-in"
            />
          </div>
