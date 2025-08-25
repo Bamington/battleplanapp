@@ -13,7 +13,13 @@ export const isLocalhost = (): boolean => {
  * Get the base URL for the current environment
  */
 export const getBaseUrl = (): string => {
-  return isLocalhost() ? 'http://localhost:5173' : window.location.origin
+  if (isLocalhost()) {
+    return 'http://localhost:5173'
+  }
+  
+  // For production, use the same base path as Vite config
+  const basePath = import.meta.env.BASE_URL || '/'
+  return `${window.location.origin}${basePath}`
 }
 
 /**
