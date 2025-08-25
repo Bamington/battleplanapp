@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { X, Share2, Globe, Lock, Copy } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { getShareUrl } from '../utils/environment'
 
 interface ShareCollectionModalProps {
   isOpen: boolean
@@ -61,8 +62,8 @@ export function ShareCollectionModal({ isOpen, onClose, onCollectionUpdated, box
     setError('')
     
     try {
-      // Generate the public share URL
-      const shareUrl = `${window.location.origin}/shared/collection/${box.id}`
+      // Generate the public share URL using environment-specific base URL
+      const shareUrl = getShareUrl(`/shared/collection/${box.id}`)
       
       // Copy to clipboard
       await navigator.clipboard.writeText(shareUrl)
@@ -73,8 +74,9 @@ export function ShareCollectionModal({ isOpen, onClose, onCollectionUpdated, box
     } catch (error) {
       console.error('Error copying URL:', error)
       // Fallback for older browsers that don't support clipboard API
+      const shareUrl = getShareUrl(`/shared/collection/${box.id}`)
       const textArea = document.createElement('textarea')
-      textArea.value = `${window.location.origin}/shared/collection/${box.id}`
+      textArea.value = shareUrl
       document.body.appendChild(textArea)
       textArea.select()
       document.execCommand('copy')

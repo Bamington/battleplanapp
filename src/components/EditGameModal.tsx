@@ -224,12 +224,13 @@ export function EditGameModal({ isOpen, onClose, onGameUpdated, game }: EditGame
                 Game Name
               </label>
               <div className="relative">
-                <Gamepad2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+                <Gamepad2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
                 <input
                   type="text"
                   id="gameName"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Enter game name..."
                   className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                   required
                 />
@@ -242,14 +243,14 @@ export function EditGameModal({ isOpen, onClose, onGameUpdated, game }: EditGame
                 Manufacturer
               </label>
               <div className="relative">
-                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
                 <select
                   id="manufacturer"
                   value={formData.manufacturer_id}
                   onChange={(e) => setFormData({ ...formData, manufacturer_id: e.target.value })}
                   className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                 >
-                  <option value="">Select Manufacturer</option>
+                  <option value="">Select a manufacturer...</option>
                   {manufacturers.map((manufacturer) => (
                     <option key={manufacturer.id} value={manufacturer.id}>
                       {manufacturer.name}
@@ -265,7 +266,7 @@ export function EditGameModal({ isOpen, onClose, onGameUpdated, game }: EditGame
                 Game Image
               </label>
               <div className="relative">
-                <ImageIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+                <ImageIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
                 <input
                   type="file"
                   id="gameImage"
@@ -287,7 +288,7 @@ export function EditGameModal({ isOpen, onClose, onGameUpdated, game }: EditGame
                 Game Icon
               </label>
               <div className="relative">
-                <ImageIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+                <ImageIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
                 <input
                   type="file"
                   id="gameIcon"

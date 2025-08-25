@@ -103,7 +103,7 @@ export function PasswordResetModal({ isOpen, onClose }: PasswordResetModalProps)
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-secondary-text hover:text-text"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-icon hover:text-icon-hover"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -126,7 +126,7 @@ export function PasswordResetModal({ isOpen, onClose }: PasswordResetModalProps)
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-secondary-text hover:text-text"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-icon hover:text-icon-hover"
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -140,7 +140,7 @@ export function PasswordResetModal({ isOpen, onClose }: PasswordResetModalProps)
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-brand hover:bg-amber-600 disabled:bg-amber-300 text-white py-2 px-4 rounded-lg text-base font-semibold transition-colors"
+              className="btn-primary btn-full"
             >
               {loading ? 'Updating Password...' : 'Update Password'}
             </button>

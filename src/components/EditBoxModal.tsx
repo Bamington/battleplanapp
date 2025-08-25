@@ -354,12 +354,13 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
                 Collection Name
               </label>
               <div className="relative">
-                <Package className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+                <Package className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
                 <input
                   type="text"
                   id="boxName"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Enter collection name..."
                   className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                   required
                 />
@@ -385,13 +386,13 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
                 Purchase Date
               </label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
                 <input
                   type="date"
                   id="purchaseDate"
                   value={formData.purchase_date}
                   onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
                 />
               </div>
             </div>
@@ -440,7 +441,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
               )}
               
               <div className="relative">
-                <ImageIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+                <ImageIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
                 <input
                   type="file"
                   id="boxImage"
@@ -462,7 +463,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
                     type="button"
                     onClick={searchForImages}
                     disabled={searchingImages}
-                    className="w-full px-4 py-2 border border---color-brand text---color-brand hover:bg-amber-50 rounded-lg transition-colors font-medium disabled:opacity-50"
+                    className="btn-secondary btn-full"
                   >
                     {searchingImages ? 'Searching for images...' : 'Find images for this box'}
                   </button>

@@ -180,15 +180,14 @@ export function EditLocationAdminsModal({ isOpen, onClose, location, onAdminsUpd
         <div className="mb-6">
           <h3 className="text-md font-semibold text-title mb-3">Add New Admin</h3>
           <div className="flex space-x-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-4 h-4" />
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-4 h-4" />
               <input
-                type="email"
+                type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Enter user email address..."
-                className="w-full pl-10 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
+                placeholder="Search users by email..."
+                className="w-full pl-10 pr-4 py-2 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
               />
             </div>
             <button

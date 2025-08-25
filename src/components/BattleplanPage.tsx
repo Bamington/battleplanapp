@@ -202,9 +202,9 @@ export function BattleplanPage() {
                       {formatDateHeader(date)}
                     </h2>
                     {expandedDates.has(date) ? (
-                      <ChevronDown className="w-5 h-5 text-secondary-text" />
+                      <ChevronDown className="w-5 h-5 text-icon" />
                     ) : (
-                      <ChevronRight className="w-5 h-5 text-secondary-text" />
+                                              <ChevronRight className="w-5 h-5 text-icon" />
                     )}
                   </button>
                   {expandedDates.has(date) && (

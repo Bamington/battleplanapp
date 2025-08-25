@@ -1,41 +1,35 @@
 import { useState, useEffect } from 'react'
-import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { getAuthCallbackUrl } from '../utils/environment'
 
-interface UserWithAdmin extends User {
-  is_admin?: boolean
-  is_location_admin?: boolean
-  user_name_public?: string | null
+interface User {
+  id: string
+  email: string
+  is_admin: boolean
+  is_location_admin: boolean
+  user_name_public: string | null
 }
 
 export function useAuth() {
-  const [user, setUser] = useState<UserWithAdmin | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const fetchUserProfile = async (session: Session | null) => {
+  const fetchUserProfile = async (session: any) => {
     if (!session?.user) {
       setUser(null)
       return
     }
 
     try {
-      // Upsert user profile to ensure it exists
+      // Fetch user profile from users table
       const { data, error } = await supabase
         .from('users')
-        .upsert(
-          {
-            id: session.user.id,
-            email: session.user.email || '',
-          },
-          { onConflict: 'id' }
-        )
         .select('is_admin, user_name_public')
+        .eq('id', session.user.id)
         .single()
 
-      if (error) {
+      if (error && error.code !== 'PGRST116') {
         console.error('Error fetching user profile:', error)
-        setUser(session.user)
-        return
       }
 
       // Check if user is a location admin
@@ -89,7 +83,7 @@ export function useAuth() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: getAuthCallbackUrl(),
       },
     })
     return { data, error }
@@ -99,7 +93,7 @@ export function useAuth() {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: getAuthCallbackUrl(),
       },
     })
     return { data, error }
@@ -112,7 +106,7 @@ export function useAuth() {
 
   const resetPassword = async (email: string) => {
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: getAuthCallbackUrl(),
     })
     return { data, error }
   }

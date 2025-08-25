@@ -1,9 +1,12 @@
-import React from 'react'
-import { X, Hash, Calendar, Palette, FileText, Share2, Edit } from 'lucide-react'
+import React, { useState } from 'react'
+import { X, Share2, Edit, Trash2, Calendar, Hash, Palette, FileText, Package, Gamepad2 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 import { DeleteModelModal } from './DeleteModelModal'
 import { EditModelModal } from './EditModelModal'
 import { Toast } from './Toast'
-import { supabase } from '../lib/supabase'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { getShareUrl } from '../utils/environment'
 
 interface ViewModelModalProps {
   isOpen: boolean
@@ -153,8 +156,8 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
     setSharing(true)
     
     try {
-      // Generate the public share URL
-      const shareUrl = `${window.location.origin}/shared/model/${model.id}`
+      // Generate the public share URL using environment-specific base URL
+      const shareUrl = getShareUrl(`/shared/model/${model.id}`)
       
       // Copy to clipboard
       await navigator.clipboard.writeText(shareUrl)
@@ -165,8 +168,9 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
     } catch (error) {
       console.error('Error sharing model:', error)
       // Fallback for older browsers that don't support clipboard API
+      const shareUrl = getShareUrl(`/shared/model/${model.id}`)
       const textArea = document.createElement('textarea')
-      textArea.value = `${window.location.origin}/shared/model/${model.id}`
+      textArea.value = shareUrl
       document.body.appendChild(textArea)
       textArea.select()
       document.execCommand('copy')
@@ -344,9 +348,28 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
               {getPaintNotes() && (
                 <div className="bg-bg-secondary rounded-lg p-4 flex items-start space-x-3">
                   <FileText className="w-5 h-5 text-secondary-text mt-0.5" />
-                  <span className="text-base text-text font-medium">
-                    {getPaintNotes()}
-                  </span>
+                  <div className="flex-1">
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      className="prose prose-sm max-w-none dark:prose-invert"
+                      components={{
+                        p: ({ children }) => <p className="mb-2 last:mb-0 text-base text-text">{children}</p>,
+                        h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-text">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-text">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-sm font-bold mb-1 text-text">{children}</h3>,
+                        ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                        li: ({ children }) => <li className="text-sm text-text">{children}</li>,
+                        strong: ({ children }) => <strong className="font-semibold text-text">{children}</strong>,
+                        em: ({ children }) => <em className="italic text-text">{children}</em>,
+                        code: ({ children }) => <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                        pre: ({ children }) => <pre className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs font-mono overflow-x-auto mb-2">{children}</pre>,
+                        blockquote: ({ children }) => <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-3 italic mb-2 text-text">{children}</blockquote>,
+                      }}
+                    >
+                      {getPaintNotes()}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               )}
             </div>

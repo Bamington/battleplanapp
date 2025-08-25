@@ -201,7 +201,7 @@ export function ManageTimeslotsModal({ isOpen, onClose, location }: ManageTimesl
           <div className="mb-6">
             <button
               onClick={() => setShowAddForm(true)}
-              className="flex items-center space-x-2 bg-brand hover:bg-amber-600 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+              className="btn-primary btn-with-icon"
             >
               <Plus className="w-4 h-4" />
               <span>Add Timeslot</span>
@@ -268,7 +268,7 @@ export function ManageTimeslotsModal({ isOpen, onClose, location }: ManageTimesl
                       key={day}
                       type="button"
                       onClick={() => handleDayToggle(day)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      className={`px-3 py-2 rounded-lg text-sm font-overpass font-medium transition-colors ${
                         formData.availability.includes(day)
                           ? 'bg-brand text-white'
                           : 'bg-bg-primary border border-border-custom text-text hover:bg-bg-secondary'
@@ -284,14 +284,14 @@ export function ManageTimeslotsModal({ isOpen, onClose, location }: ManageTimesl
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="flex-1 px-4 py-2 border border-border-custom text-text rounded-lg hover:bg-bg-secondary transition-colors font-medium"
+                  className="btn-ghost btn-flex"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 px-4 py-2 bg-brand hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg transition-colors font-medium"
+                  className="btn-primary btn-flex"
                 >
                   {submitting ? 'Saving...' : editingTimeslot ? 'Update Timeslot' : 'Add Timeslot'}
                 </button>

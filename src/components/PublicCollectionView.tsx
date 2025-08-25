@@ -3,6 +3,8 @@ import { Calendar, Package, Users, Globe, User, Moon, Sun } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useDarkMode } from '../hooks/useDarkMode'
 import battleplanLogo from '/Battleplan-Logo-Purple.svg'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface PublicCollectionViewProps {
   collectionId: string
@@ -453,7 +455,28 @@ export function PublicCollectionView({ collectionId }: PublicCollectionViewProps
                       </div>
 
                       {model.notes && (
-                        <p className="text-sm text-secondary-text">{model.notes}</p>
+                        <div className="text-sm text-secondary-text">
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]}
+                            className="prose prose-sm max-w-none"
+                            components={{
+                              p: ({ children }) => <p className="mb-1 last:mb-0 text-sm text-secondary-text">{children}</p>,
+                              h1: ({ children }) => <h1 className="text-sm font-bold mb-1 text-secondary-text">{children}</h1>,
+                              h2: ({ children }) => <h2 className="text-sm font-bold mb-1 text-secondary-text">{children}</h2>,
+                              h3: ({ children }) => <h3 className="text-xs font-bold mb-1 text-secondary-text">{children}</h3>,
+                              ul: ({ children }) => <ul className="list-disc list-inside mb-1 space-y-0.5">{children}</ul>,
+                              ol: ({ children }) => <ol className="list-decimal list-inside mb-1 space-y-0.5">{children}</ol>,
+                              li: ({ children }) => <li className="text-sm text-secondary-text">{children}</li>,
+                              strong: ({ children }) => <strong className="font-semibold text-secondary-text">{children}</strong>,
+                              em: ({ children }) => <em className="italic text-secondary-text">{children}</em>,
+                              code: ({ children }) => <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                              pre: ({ children }) => <pre className="bg-gray-100 dark:bg-gray-800 p-1 rounded text-xs font-mono overflow-x-auto mb-1">{children}</pre>,
+                              blockquote: ({ children }) => <blockquote className="border-l-2 border-gray-300 dark:border-gray-600 pl-2 italic mb-1 text-secondary-text">{children}</blockquote>,
+                            }}
+                          >
+                            {model.notes}
+                          </ReactMarkdown>
+                        </div>
                       )}
                     </div>
                   </div>

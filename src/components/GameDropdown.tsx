@@ -97,7 +97,7 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
           ) : (
             <div className="w-6 h-6 bg-gray-200 rounded-full flex-shrink-0" />
           )}
-          <span className={selectedGameData ? 'text-gray-900' : 'text-gray-500'}>
+          <span className={selectedGameData ? 'text-text' : 'text-secondary-text'}>
             {selectedGameData ? selectedGameData.name : placeholder}
           </span>
         </div>

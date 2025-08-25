@@ -186,12 +186,13 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
                 Location Name
               </label>
               <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
                 <input
                   type="text"
                   id="locationName"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Enter location name..."
                   className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                   required
                 />
@@ -204,12 +205,13 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
                 Address
               </label>
               <div className="relative">
-                <Home className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+                <Home className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
                 <input
                   type="text"
                   id="address"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="Enter full address..."
                   className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                   required
                 />
@@ -222,13 +224,14 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
                 Number of Tables
               </label>
               <div className="relative">
-                <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+                <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
                 <input
                   type="number"
                   id="tables"
-                  min="1"
                   value={formData.tables}
-                  onChange={(e) => setFormData({ ...formData, tables: parseInt(e.target.value) || 1 })}
+                  onChange={(e) => setFormData({ ...formData, tables: parseInt(e.target.value) || 0 })}
+                  min="1"
+                  placeholder="Enter number of tables..."
                   className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
                   required
                 />
@@ -241,7 +244,7 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
                 Location Icon
               </label>
               <div className="relative">
-                <ImageIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+                <ImageIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
                 <input
                   type="file"
                   id="locationIcon"

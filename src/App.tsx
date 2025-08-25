@@ -17,6 +17,7 @@ import { ViewModelModal } from './components/ViewModelModal'
 import { ViewBoxModal } from './components/ViewBoxModal'
 import { PasswordResetModal } from './components/PasswordResetModal'
 import { AuthCallback } from './components/AuthCallback'
+import { ExpandableFAB } from './components/ExpandableFAB'
 import { useAuth } from './hooks/useAuth'
 import { useModels } from './hooks/useModels'
 import { useBoxes } from './hooks/useBoxes'
@@ -417,13 +418,6 @@ function App() {
               {models.filter(model => model.status === 'Painted').length > 0 && (
                 <div className="flex flex-col items-center mb-8">
                   <h2 className="text-lg font-bold text-secondary-text text-center mb-4">RECENT MODELS</h2>
-                  <button
-                    onClick={() => setAddModelModal(true)}
-                    className="btn-primary-sm btn-with-icon-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Model</span>
-                  </button>
                 </div>
               )}
               
@@ -443,12 +437,6 @@ function App() {
               ) : recentModels.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-base text-secondary-text mb-4">No painted models in your collection yet.</p>
-                  <button 
-                    onClick={() => setAddModelModal(true)}
-                    className="btn-primary"
-                  >
-                    Add Your First Model
-                  </button>
                 </div>
               ) : (
                 <>
@@ -486,13 +474,6 @@ function App() {
                {boxes.length > 0 && (
                  <div className="flex flex-col items-center mb-8">
                    <h2 className="text-lg font-bold text-secondary-text text-center mb-4">RECENT COLLECTIONS</h2>
-                  <button
-                    onClick={() => setAddBoxModal(true)}
-                    className="btn-primary-sm btn-with-icon-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Collection</span>
-                  </button>
                 </div>
               )}
               
@@ -512,12 +493,6 @@ function App() {
               ) : boxes.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-base text-secondary-text mb-4">No collections in your collection yet.</p>
-                  <button 
-                    onClick={() => setAddBoxModal(true)}
-                    className="btn-primary"
-                  >
-                    Add Your First Box
-                  </button>
                 </div>
                 ) : (
                 <>
@@ -552,17 +527,6 @@ function App() {
                  {/* Collections Only View */}
          {collectionView === 'collections' && (
           <section>
-            {boxes.length > 0 && (
-              <div className="flex flex-col items-center mb-8">
-                <button
-                  onClick={() => setAddBoxModal(true)}
-                  className="btn-primary-sm btn-with-icon-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                                     <span>Add Collection</span>
-                </button>
-              </div>
-            )}
 
             {/* Box Filters */}
             {boxes.length > 0 && (
@@ -595,12 +559,6 @@ function App() {
             ) : models.filter(model => model.status === 'Painted').length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-base text-secondary-text mb-4">No painted models in your collection yet.</p>
-                <button 
-                  onClick={() => setAddBoxModal(true)}
-                  className="btn-primary"
-                >
-                  Add Your First Painted Model
-                </button>
               </div>
             ) : (
               <>
@@ -694,17 +652,6 @@ function App() {
         {/* Models Only View */}
         {collectionView === 'models' && (
           <section>
-          {models.length > 0 && (
-            <div className="flex flex-col items-center mb-8">
-                          <button
-              onClick={() => setAddModelModal(true)}
-              className="btn-primary-sm btn-with-icon-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Model</span>
-            </button>
-            </div>
-          )}
 
           {/* Model Filters */}
           {models.length > 0 && (
@@ -742,12 +689,6 @@ function App() {
           ) : models.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-base text-secondary-text mb-4">No models in your collection yet.</p>
-              <button 
-                onClick={() => setAddModelModal(true)}
-                className="btn-primary"
-              >
-                Add Your First Model
-              </button>
             </div>
           ) : (
             <>
@@ -895,6 +836,14 @@ function App() {
         isOpen={showPasswordResetModal}
         onClose={() => setShowPasswordResetModal(false)}
       />
+
+      {/* Expandable FAB - Only show on collection tab */}
+      {activeTab === 'collection' && (
+        <ExpandableFAB
+          onAddModel={() => setAddModelModal(true)}
+          onAddCollection={() => setAddBoxModal(true)}
+        />
+      )}
     </div>
   )
 }

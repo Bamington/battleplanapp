@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Calendar, FileText, Hash, Image as ImageIcon, Package, Gamepad2, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { compressImage } from '../utils/imageCompression';
 import { ImageCropper } from './ImageCropper';
 import { GameDropdown } from './GameDropdown';
+import { MarkdownEditor } from './MarkdownEditor';
 
 interface Game {
   id: string;
@@ -328,7 +329,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                   type="date"
                   value={formData.painted_date}
                   onChange={(e) => setFormData({ ...formData, painted_date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring---color-brand dark:bg-gray-700 dark:text-white"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring---color-brand dark:bg-gray-700 dark:text-white [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
                 />
               </div>
             )}
@@ -344,7 +345,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                   type="date"
                   value={formData.purchase_date}
                   onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
                 />
               </div>
             )}
@@ -428,19 +429,13 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
             </div>
 
             {/* Notes */}
-            <div>
-              <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <FileText className="w-4 h-4 mr-2" />
-                Notes
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white resize-none"
-                placeholder="Optional notes about this model..."
-              />
-            </div>
+            <MarkdownEditor
+              value={formData.notes}
+              onChange={(value) => setFormData({ ...formData, notes: value })}
+              placeholder="Optional notes about this model... (supports markdown formatting)"
+              label="Notes"
+              rows={4}
+            />
 
             <div className="flex gap-3 pt-4">
               <button

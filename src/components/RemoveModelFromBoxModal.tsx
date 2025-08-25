@@ -45,14 +45,14 @@ export function RemoveModelFromBoxModal({ isOpen, onClose, onConfirm, modelName,
           <button
             onClick={onClose}
             disabled={loading}
-            className="flex-1 px-4 py-2 border border-border-custom text-text rounded-lg hover:bg-bg-secondary transition-colors font-medium"
+            className="btn-ghost btn-flex"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="flex-1 px-4 py-2 bg-brand hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg transition-colors font-medium"
+            className="btn-primary btn-flex"
           >
             {loading ? 'Removing...' : 'Remove from Box'}
           </button>

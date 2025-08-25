@@ -103,12 +103,23 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
         )}
       </div>
       <div className="p-4 flex flex-col flex-1">
-        <div className="flex-1">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="text-lg font-bold text-title w-[70%]">{name}</h3>
-          <div className="flex items-center space-x-2 ml-2 flex-col w-[30%]">
-            <div className="flex items-center space-x-2">
-              <span className="text-xs text-secondary-text font-bold text-right">{gameName.toUpperCase()}</span>
+        <div className="flex items-start justify-between mb-4">
+          {/* Left side: Model name and box name in vertical flex */}
+          <div className="flex flex-col flex-1 min-w-0 mr-3">
+            <h3 className="text-lg font-bold text-title mb-1 break-words">{name}</h3>
+            {model?.box && (
+              <button
+                onClick={() => onViewBox?.(model.box)}
+                className="text-sm text-secondary-text hover:text-brand transition-colors text-left"
+              >
+                {boxName}
+              </button>
+            )}
+          </div>
+          
+          {/* Right side: Game name and icon */}
+          <div className="flex items-center space-x-2 flex-shrink-0 max-w-[30%]">
+            <span className="text-xs text-secondary-text font-bold">{gameName.toUpperCase()}</span>
             {isValidGameIcon(gameIcon) ? (
               <>
                 <img
@@ -143,19 +154,10 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
                 <span className="text-white text-xs font-bold">{gameName.charAt(0)}</span>
               </div>
             )}
-            </div>
           </div>
         </div>
-        {model?.box && (
-          <button
-            onClick={() => onViewBox?.(model.box)}
-            className="text-sm text-secondary-text font-semibold mb-3 hover:text-brand transition-colors text-left"
-          >
-            {boxName}
-          </button>
-        )}
-        </div>
-        <div className="flex space-x-2">
+        
+        <div className="flex justify-center mt-auto">
           <button onClick={onViewModel} className="btn-secondary btn-flex">
             View Model
           </button>

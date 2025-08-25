@@ -57,7 +57,7 @@ export function ImageSearchResults({
             </p>
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-brand hover:bg-amber-600 text-white rounded-lg transition-colors"
+              className="btn-primary"
             >
               Upload My Own Image
             </button>
@@ -82,7 +82,7 @@ export function ImageSearchResults({
                     loading="lazy"
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
-                    <span className="text-white font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <span className="text-white font-overpass font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                       Select Image
                     </span>
                   </div>
@@ -96,7 +96,7 @@ export function ImageSearchResults({
                 <button
                   onClick={onFindMoreImages}
                   disabled={isLoadingMore}
-                  className="flex items-center space-x-2 px-6 py-2 bg-brand hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg transition-colors font-medium"
+                  className="btn-primary btn-with-icon"
                 >
                   {isLoadingMore ? (
                     <>
@@ -116,7 +116,7 @@ export function ImageSearchResults({
             <div className="flex justify-center">
               <button
                 onClick={onClose}
-                className="px-6 py-2 border border-border-custom text-text hover:bg-bg-secondary rounded-lg transition-colors"
+                className="btn-ghost"
               >
                 Upload My Own Image Instead
               </button>

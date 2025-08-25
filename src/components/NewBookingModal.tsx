@@ -442,7 +442,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
               Your Name
             </label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
               <input
                 type="text"
                 id="userName"
@@ -478,7 +478,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
               Location
             </label>
             <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
               <select
                 id="location"
                 value={selectedLocation}
@@ -502,14 +502,14 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
               Date
             </label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
               <input
                 type="date"
                 id="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]} // Prevent past dates
-                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
+                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
                 required
               />
             </div>
@@ -521,7 +521,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
               Timeslot
             </label>
             <div className="relative">
-              <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-text w-5 h-5" />
+              <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
               <select
                 id="timeslot"
                 value={selectedTimeslot}

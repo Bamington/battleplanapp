@@ -48,7 +48,7 @@ export function AdminPage({ onBack }: AdminPageProps) {
               <Users className="w-6 h-6 text-secondary-text" />
               <span className="text-lg font-semibold text-text">Manage Users</span>
             </div>
-            <ChevronRight className="w-5 h-5 text-secondary-text" />
+            <ChevronRight className="w-5 h-5 text-icon" />
           </button>
         )}
 
@@ -61,7 +61,7 @@ export function AdminPage({ onBack }: AdminPageProps) {
               <Gamepad2 className="w-6 h-6 text-secondary-text" />
               <span className="text-lg font-semibold text-text">Manage Games</span>
             </div>
-            <ChevronRight className="w-5 h-5 text-secondary-text" />
+            <ChevronRight className="w-5 h-5 text-icon" />
           </button>
         )}
 
@@ -73,7 +73,7 @@ export function AdminPage({ onBack }: AdminPageProps) {
             <MapPin className="w-6 h-6 text-secondary-text" />
             <span className="text-lg font-semibold text-text">Manage Locations</span>
           </div>
-          <ChevronRight className="w-5 h-5 text-secondary-text" />
+          <ChevronRight className="w-5 h-5 text-icon" />
         </button>
       </div>
     </div>
