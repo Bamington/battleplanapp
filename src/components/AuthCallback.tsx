@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { getBaseUrl } from '../utils/environment'
 
 export function AuthCallback() {
   const [error, setError] = useState<string | null>(null)
@@ -20,7 +21,7 @@ export function AuthCallback() {
           setTimeout(() => {
             setLoading(false)
             // Redirect to home page after successful auth
-            window.location.href = '/'
+            window.location.href = getBaseUrl()
           }, 1000)
         } else if (hash.includes('error')) {
           // Handle OAuth error
@@ -44,7 +45,7 @@ export function AuthCallback() {
   // If user is already authenticated, redirect to home
   useEffect(() => {
     if (user && !loading) {
-      window.location.href = '/'
+      window.location.href = getBaseUrl()
     }
   }, [user, loading])
 
@@ -67,7 +68,7 @@ export function AuthCallback() {
           <h1 className="text-2xl font-bold text-title mb-4">Authentication Failed</h1>
           <p className="text-red-500 mb-6">{error}</p>
           <button 
-            onClick={() => window.location.href = '/'}
+            onClick={() => window.location.href = getBaseUrl()}
             className="btn-primary"
           >
             Return to Home
