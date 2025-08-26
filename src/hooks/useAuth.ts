@@ -100,6 +100,15 @@ export function useAuth() {
       provider: 'google',
       options: {
         redirectTo: getAuthCallbackUrl(),
+        queryParams: {
+          // Add branding parameters
+          hd: '', // Hosted domain (optional)
+          prompt: 'select_account', // Always show account selection
+        },
+        // Add custom branding if available
+        ...(import.meta.env.VITE_GOOGLE_CLIENT_ID && {
+          clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        }),
       },
     })
     return { data, error }

@@ -313,7 +313,7 @@ function App() {
         <Header />
         <div className="max-w-4xl mx-auto px-4 py-16 text-center">
           <div className="bg-bg-card rounded-lg shadow-sm p-8">
-            <h1 className="text-3xl font-bold text-title mb-4">Welcome to the Mini Myths App Beta</h1>
+            <h1 className="text-3xl font-bold text-title mb-4">Welcome to the Battleplan App Beta</h1>
             <p className="text-xs text-secondary-text mb-2">
               Last updated: {getBuildInfo().date} at {getBuildInfo().time}
             </p>
