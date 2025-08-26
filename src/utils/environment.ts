@@ -33,12 +33,19 @@ export const getBasePath = (): string => {
  * Get the auth callback URL for the current environment
  */
 export const getAuthCallbackUrl = (): string => {
-  return `${getBaseUrl()}/auth/callback`
+  const baseUrl = getBaseUrl()
+  // Remove trailing slash from base URL to avoid double slashes
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+  return `${cleanBaseUrl}/auth/callback`
 }
 
 /**
  * Get a share URL for the current environment
  */
 export const getShareUrl = (path: string): string => {
-  return `${getBaseUrl()}${path}`
+  const baseUrl = getBaseUrl()
+  // Remove trailing slash from base URL and leading slash from path to avoid double slashes
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+  const cleanPath = path.startsWith('/') ? path : `/${path}`
+  return `${cleanBaseUrl}${cleanPath}`
 }
