@@ -260,118 +260,49 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
     return null
   }
 
-     return (
-     <div className="min-h-screen bg-bg-primary">
-       {onBack ? (
-         <>
-           {/* Preview Banner */}
-           <div className="bg-[var(--color-brand)] text-white px-4 py-3">
-             <div className="max-w-4xl mx-auto flex items-center justify-between">
-               <button
-                 onClick={onBack}
-                 className="flex items-center space-x-2 text-white hover:text-white/80 transition-colors"
-               >
-                 <ArrowLeft className="w-4 h-4" />
-                 <span className="text-sm font-medium">Back</span>
-               </button>
-               <span className="text-sm font-medium">This is just a preview.</span>
-               <div className="w-16"></div> {/* Spacer for centering */}
-             </div>
-           </div>
-         </>
-       ) : (
-         /* Custom Header for Public Collection View */
-         <header className="bg-bg-primary shadow-sm border-b border-border-custom relative z-50">
-           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-             <div className="flex justify-between items-center h-16">
-               {/* Left side - Empty for spacing */}
-               <div className="flex items-center">
-                 {/* Empty div for spacing */}
-               </div>
-
-               {/* Center - Logo */}
-               <div className="flex items-center justify-center flex-1">
-                 <img 
-                   src={battleplanLogo}
-                   alt="Battleplan" 
-                   className="max-h-[300px] w-auto"
-                 />
-               </div>
-
-               {/* Right side - Profile Menu */}
-               <div className="relative profile-dropdown">
+                     return (
+               <div className="min-h-screen bg-bg-primary px-[10%] pt-6">
+         {onBack ? (
+           <>
+             {/* Preview Banner */}
+             <div className="bg-[var(--color-brand)] text-white px-4 py-3">
+               <div className="max-w-4xl mx-auto flex items-center justify-between">
                  <button
-                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                   className="text-secondary-text hover:text-text focus:outline-none p-2"
+                   onClick={onBack}
+                   className="flex items-center space-x-2 text-white hover:text-white/80 transition-colors"
                  >
-                   <User className="w-6 h-6 text-icon hover:text-icon-hover" />
+                   <ArrowLeft className="w-4 h-4" />
+                   <span className="text-sm font-medium">Back</span>
                  </button>
-
-                 {/* Profile Menu Dropdown */}
-                 {isProfileMenuOpen && (
-                   <div className="absolute right-0 top-12 bg-bg-primary border border-border-custom rounded-lg shadow-lg py-2 z-[60] min-w-[200px]">
-                     <button
-                       onClick={() => {
-                         setIsProfileMenuOpen(false)
-                         window.location.href = getBasePath()
-                       }}
-                       className="w-full px-4 py-2 text-left text-text hover:bg-bg-secondary transition-colors"
-                     >
-                       <span>Log In</span>
-                     </button>
-                     <div className="border-t border-border-custom my-1"></div>
-                     <div className="flex items-center justify-between px-4 py-2">
-                       <div className="flex items-center space-x-3">
-                         {isDarkMode ? <Moon className="w-5 h-5 text-icon" /> : <Sun className="w-5 h-5 text-icon" />}
-                         <span className="text-base font-semibold text-text">
-                           {isDarkMode ? 'Dark Mode' : 'Light Mode'}
-                         </span>
-                       </div>
-                       <button
-                         onClick={(e) => {
-                           e.stopPropagation()
-                           toggleDarkMode()
-                         }}
-                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
-                           isDarkMode ? 'bg-brand' : 'bg-gray-200'
-                         }`}
-                       >
-                         <span
-                           className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                             isDarkMode ? 'translate-x-6' : 'translate-x-1'
-                           }`}
-                         />
-                       </button>
-                     </div>
-                   </div>
-                 )}
+                 <span className="text-sm font-medium">This is just a preview.</span>
+                 <div className="w-16"></div> {/* Spacer for centering */}
                </div>
              </div>
-           </div>
-         </header>
-       )}
+           </>
+                   ) : null}
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+                               {/* Full-width Hero Image */}
+                     <div className="w-full relative">
+                          <img
+                src={getImageSrc()}
+                alt={collection.name}
+                className="w-full max-h-[70vh] object-contain rounded-lg"
+                loading="lazy"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement
+                  const fallbackUrl = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                  if (target.src !== fallbackUrl) {
+                    target.src = fallbackUrl
+                  }
+                }}
+              />
+           </div>
+
+        {/* Content Container */}
+        <div className="max-w-4xl mx-auto py-8">
         {/* Collection Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-title mb-4">{collection.name}</h1>
-        </div>
-
-        {/* Collection Image */}
-        <div className="mb-8">
-          <img
-            src={getImageSrc()}
-            alt={collection.name}
-            className="w-full h-64 object-contain rounded-lg bg-bg-secondary"
-            loading="lazy"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement
-              const fallbackUrl = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
-              if (target.src !== fallbackUrl) {
-                target.src = fallbackUrl
-              }
-            }}
-          />
+          <h1 className="text-3xl font-bold text-title mb-4 text-center">{collection.name}</h1>
         </div>
 
         {/* Collection Details */}
@@ -444,7 +375,17 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
           ) : (
             <div className="divide-y divide-border-custom">
               {models.map((model) => (
-                <div key={model.id} className="p-6 hover:bg-bg-secondary transition-colors">
+                                 <div 
+                   key={model.id} 
+                   className="p-6 hover:bg-bg-secondary transition-colors cursor-pointer"
+                   onClick={() => {
+                     const params = new URLSearchParams({
+                       from: collectionId,
+                       collectionName: encodeURIComponent(collection?.name || '')
+                     })
+                     window.location.href = `/shared/model/${model.id}?${params.toString()}`
+                   }}
+                 >
                   <div className="flex items-start space-x-4">
                     {/* Model Image */}
                     <div className="flex-shrink-0">
@@ -507,17 +448,17 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
                   </div>
                 </div>
               ))}
-                         </div>
-           )}
-         </div>
+            </div>
+          )}
+        </div>
 
-         {/* Footer */}
-         <div className="mt-12 pt-8 border-t border-border-custom">
-           <div className="flex items-center justify-center space-x-4">
-             <img src={getLogoImageSrc()} alt="BattlePlan" className="h-8" />
-           </div>
-         </div>
-       </div>
-     </div>
-   )
- }
+        {/* Footer */}
+        <div className="mt-12 pt-8 border-t border-border-custom">
+          <div className="flex items-center justify-center space-x-4">
+            <img src={getLogoImageSrc()} alt="BattlePlan" className="h-8" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

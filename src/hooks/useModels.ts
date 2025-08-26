@@ -10,6 +10,8 @@ interface Model {
   image_url: string
   game_id: string | null
   notes: string | null
+  painted_date: string | null
+  purchase_date: string | null
   box: {
     id: string
     name: string
@@ -57,6 +59,8 @@ export function useModels() {
           image_url,
           game_id,
           notes,
+          painted_date,
+          purchase_date,
           box:boxes(
             id,
             name,

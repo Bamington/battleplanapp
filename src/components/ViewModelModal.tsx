@@ -23,6 +23,8 @@ interface ViewModelModalProps {
     image_url: string
     game_id: string | null
     notes: string | null
+    painted_date: string | null
+    purchase_date: string | null
     public: boolean | null
     box: {
       id: string
@@ -96,7 +98,7 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
 
   const getPaintedDate = () => {
     // Return the painted date if it exists
-    return (model as any)?.painted_date || null
+    return model?.painted_date || null
   }
 
   const getPaintNotes = () => {
@@ -348,18 +350,18 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-center pt-6">
+            <div className="pt-6">
               <div className="space-y-3">
                 <button
                   onClick={handleShareModel}
-                  className="btn-primary btn-full btn-with-icon"
+                  className="btn-primary btn-full btn-with-icon w-full"
                 >
                   <Share2 className="w-4 h-4" />
                   <span>Share Model</span>
                 </button>
                 <button
                   onClick={handleDeleteClick}
-                  className="btn-danger-outline"
+                  className="btn-danger-outline w-full"
                 >
                   Delete this model
                 </button>

@@ -6,6 +6,7 @@ import { compressImage } from '../utils/imageCompression';
 import { ImageCropper } from './ImageCropper';
 import { GameDropdown } from './GameDropdown';
 import { RichTextEditor } from './RichTextEditor';
+import { DatePicker } from './DatePicker';
 
 
 interface Game {
@@ -20,9 +21,14 @@ interface Model {
   count: number;
   status: string;
   purchase_date: string | null;
+  painted_date: string | null;
   notes: string | null;
   image_url: string;
   game_id: string | null;
+  box?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 interface EditModelModalProps {
@@ -47,7 +53,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
   const [uploading, setUploading] = useState(false);
   const [compressing, setCompressing] = useState(false);
   const [showImageCropper, setShowImageCropper] = useState(false);
-  const [imageForCropping, setImageForCropping] = useState<string | null>(null);
+  const [imageForCropping, setImageForCropping] = useState<File | null>(null);
   const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null);
   const [games, setGames] = useState<Game[]>([]);
   const [deleteImage, setDeleteImage] = useState(false);
@@ -61,7 +67,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
         notes: model.notes || '',
         game_id: model.game_id || '',
         status: model.status || '',
-        painted_date: (model as any).painted_date || ''
+        painted_date: model.painted_date || ''
       });
     }
   }, [model]);
@@ -326,11 +332,11 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                   <Calendar className="w-4 h-4 mr-2" />
                   Painted Date
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   value={formData.painted_date}
-                  onChange={(e) => setFormData({ ...formData, painted_date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring---color-brand dark:bg-gray-700 dark:text-white [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                  onChange={(date) => setFormData({ ...formData, painted_date: date })}
+                  placeholder="Select painted date"
+                  minDate=""
                 />
               </div>
             )}
@@ -342,11 +348,11 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                   <Calendar className="w-4 h-4 mr-2" />
                   Purchase Date
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   value={formData.purchase_date}
-                  onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                  onChange={(date) => setFormData({ ...formData, purchase_date: date })}
+                  placeholder="Select purchase date"
+                  minDate=""
                 />
               </div>
             )}

@@ -6,6 +6,7 @@ import { GameDropdown } from './GameDropdown'
 import { useRecentGames } from '../hooks/useRecentGames'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
+import { DatePicker } from './DatePicker'
 
 interface Game {
   id: string
@@ -18,6 +19,7 @@ interface Box {
   name: string
   game_id: string | null
   purchase_date: string | null
+  public: boolean
   created_at: string
   game: {
     name: string
@@ -61,6 +63,12 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = 'unset'
+      // Clear box context from localStorage when modal is closed
+      try {
+        localStorage.removeItem('mini-myths-temp-box-context')
+      } catch (error) {
+        console.error('Error clearing box context:', error)
+      }
     }
 
     // Cleanup on unmount
@@ -76,6 +84,17 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
       // Set preselected box if provided
       if (preselectedBoxId) {
         setSelectedBox(preselectedBoxId)
+      } else {
+        // Check for box context from localStorage (when coming from AddModelsToBoxModal)
+        try {
+          const storedBoxContext = localStorage.getItem('mini-myths-temp-box-context')
+          if (storedBoxContext) {
+            const boxContext = JSON.parse(storedBoxContext)
+            setSelectedBox(boxContext.id)
+          }
+        } catch (error) {
+          console.error('Error reading box context from localStorage:', error)
+        }
       }
     }
   }, [isOpen])
@@ -125,6 +144,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
           name,
           game_id,
           purchase_date,
+          public,
           created_at,
           game:games(
             name,
@@ -385,6 +405,16 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
         }
       }
 
+      // Get the public status from the selected box
+      let modelPublicStatus = false // Default to false for loose models
+      if (selectedBox || preselectedBoxId) {
+        const boxId = selectedBox || preselectedBoxId
+        const selectedBoxData = boxes.find(box => box.id === boxId)
+        if (selectedBoxData) {
+          modelPublicStatus = selectedBoxData.public
+        }
+      }
+
       // Create the model
       const { error: modelError } = await supabase
         .from('models')
@@ -397,7 +427,8 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
           user_id: user.id,
           image_url: imageUrl,
           purchase_date: purchaseDate || null,
-          painted_date: paintedDate || null
+          painted_date: paintedDate || null,
+          public: modelPublicStatus
         })
 
       if (modelError) throw modelError
@@ -414,13 +445,6 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
       setNumberOfModels('1')
       setSelectedImages(null)
       setCompressionInfo('')
-      
-      // Clear any remaining box context from localStorage
-      try {
-        localStorage.removeItem('mini-myths-temp-box-context')
-      } catch (error) {
-        console.error('Error clearing box context:', error)
-      }
       
       onSuccess()
       onClose()
@@ -568,16 +592,12 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
               <label htmlFor="paintedDate" className="block text-sm font-medium text-input-label font-overpass mb-2">
                 Painted Date
               </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
-                <input
-                  type="date"
-                  id="paintedDate"
-                  value={paintedDate}
-                  onChange={(e) => setPaintedDate(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] text-text bg-bg-primary [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-                />
-              </div>
+              <DatePicker
+                value={paintedDate}
+                onChange={setPaintedDate}
+                placeholder="Select painted date"
+                minDate=""
+              />
             </div>
           )}
 
@@ -587,16 +607,12 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
               <label htmlFor="purchaseDate" className="block text-sm font-medium text-input-label font-overpass mb-2">
                 Purchase Date
               </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
-                <input
-                  type="date"
-                  id="purchaseDate"
-                  value={purchaseDate}
-                  onChange={(e) => setPurchaseDate(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] text-text bg-bg-primary [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-                />
-              </div>
+              <DatePicker
+                value={purchaseDate}
+                onChange={setPurchaseDate}
+                placeholder="Select purchase date"
+                minDate=""
+              />
             </div>
           )}
 

@@ -9,6 +9,10 @@ import remarkGfm from 'remark-gfm'
 interface PublicModelViewProps {
   modelId: string
   onBack?: () => void
+  breadcrumbs?: {
+    collectionName: string
+    collectionId: string
+  }
 }
 
 interface Model {
@@ -37,7 +41,7 @@ interface Model {
   } | null
 }
 
-export function PublicModelView({ modelId, onBack }: PublicModelViewProps) {
+export function PublicModelView({ modelId, onBack, breadcrumbs }: PublicModelViewProps) {
   const [model, setModel] = useState<Model | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -129,7 +133,7 @@ export function PublicModelView({ modelId, onBack }: PublicModelViewProps) {
     })
   }
 
-  const getImageSrc = () => {
+  const getLogoImageSrc = () => {
     return isDarkMode ? 'Logo White.svg' : 'Battleplan-Logo-Purple.svg'
   }
 
@@ -173,7 +177,7 @@ export function PublicModelView({ modelId, onBack }: PublicModelViewProps) {
   }
 
   return (
-    <div className="min-h-screen bg-bg-secondary">
+         <div className="min-h-screen bg-bg-secondary px-[10%] pt-6">
       {/* Preview Banner */}
       {onBack && (
         <div className="bg-[var(--color-brand)] text-white px-4 py-3">
@@ -189,87 +193,82 @@ export function PublicModelView({ modelId, onBack }: PublicModelViewProps) {
             <div className="w-16"></div> {/* Spacer for centering */}
           </div>
         </div>
-      )}
+             )}
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Model Header */}
-        <div className="bg-bg-card border border-border-custom rounded-lg p-6 mb-8">
-          <div className="flex items-start space-x-6">
-            {model.image_url && (
-              <img
-                src={model.image_url}
-                alt={model.name}
-                className="w-32 h-32 object-cover rounded-lg"
-              />
-            )}
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-title mb-2">{model.name}</h1>
-              {model.game && (
-                <div className="flex items-center space-x-2 mb-3">
-                  {model.game.icon && (
-                    <img
-                      src={model.game.icon}
-                      alt={model.game.name}
-                      className="w-6 h-6"
-                    />
-                  )}
-                  <span className="text-secondary-text">{model.game.name}</span>
+              {/* Breadcrumbs */}
+              {breadcrumbs && (
+                <div className="mb-4">
+                  <nav className="flex items-center space-x-2 text-sm text-secondary-text">
+                    <a 
+                      href={`/shared/collection/${breadcrumbs.collectionId}`}
+                      className="hover:text-text transition-colors"
+                    >
+                      {breadcrumbs.collectionName}
+                    </a>
+                    <span>/</span>
+                    <span className="text-text">{model?.name || 'Loading...'}</span>
+                  </nav>
                 </div>
               )}
-              <div className="flex items-center space-x-4 text-sm text-secondary-text">
-                <span>Status: {model.status}</span>
-                <span>Count: {model.count}</span>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Model Details */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Notes */}
-          {model.notes && (
-            <div className="bg-bg-card border border-border-custom rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-title mb-4">Notes</h2>
-              <div className="prose prose-sm max-w-none text-text">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {model.notes}
-                </ReactMarkdown>
-              </div>
-            </div>
-          )}
+              {/* Main Content */}
+        <main>
+                    {/* Full-width Hero Image */}
+                     {model.image_url && (
+             <div className="w-full relative">
+                              <img
+                  src={model.image_url}
+                  alt={model.name}
+                  className="w-full max-h-[70vh] object-contain rounded-lg"
+                />
+             </div>
+           )}
 
-          {/* Collection Info */}
-          {model.box && (
-            <div className="bg-bg-card border border-border-custom rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-title mb-4">Collection</h2>
-              <div className="space-y-3">
-                <div>
-                  <span className="text-secondary-text">Name:</span>
-                  <p className="text-text font-medium">{model.box.name}</p>
-                </div>
-                {model.box.game && (
-                  <div>
-                    <span className="text-secondary-text">Game:</span>
-                    <p className="text-text">{model.box.game.name}</p>
-                  </div>
-                )}
-                <div>
-                  <span className="text-secondary-text">Purchase Date:</span>
-                  <p className="text-text">{formatDate(model.box.purchase_date)}</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+          {/* Content Container */}
+          <div className="max-w-4xl mx-auto py-8">
+           {/* Model Header */}
+           <div className="bg-bg-card border border-border-custom rounded-lg p-6 mb-8">
+             <div className="text-center">
+               <h1 className="text-3xl font-bold text-title mb-2">{model.name}</h1>
+               {model.game && (
+                 <div className="flex items-center justify-center space-x-2 mb-3">
+                   {model.game.icon && (
+                     <img
+                       src={model.game.icon}
+                       alt={model.game.name}
+                       className="w-6 h-6"
+                     />
+                   )}
+                   <span className="text-secondary-text">{model.game.name}</span>
+                 </div>
+               )}
+               <div className="flex items-center justify-center space-x-4 text-sm text-secondary-text">
+                 <span>Status: {model.status}</span>
+                 <span>Count: {model.count}</span>
+               </div>
+             </div>
+           </div>
 
-        {/* Footer */}
-        <div className="mt-12 pt-8 border-t border-border-custom">
-          <div className="flex items-center justify-center space-x-4">
-            <img src={getImageSrc()} alt="BattlePlan" className="h-8" />
-          </div>
-        </div>
-      </main>
+                   {/* Model Details */}
+           {model.notes && (
+             <div className="bg-bg-card border border-border-custom rounded-lg p-6">
+               <h2 className="text-xl font-semibold text-title mb-4">Notes</h2>
+               <div className="prose prose-sm max-w-none text-text">
+                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                   {model.notes}
+                 </ReactMarkdown>
+               </div>
+             </div>
+           )}
+
+           {/* Footer */}
+           <div className="mt-12 pt-8 border-t border-border-custom">
+             <div className="flex items-center justify-center space-x-4">
+               <img src={getLogoImageSrc()} alt="BattlePlan" className="h-8" />
+             </div>
+           </div>
+         </div>
+       </main>
     </div>
   )
 }

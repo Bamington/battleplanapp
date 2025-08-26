@@ -84,6 +84,8 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
           image_url,
           game_id,
           notes,
+          painted_date,
+          purchase_date,
           game:games(
             id,
             name,
@@ -140,7 +142,10 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
     try {
       const { error } = await supabase
         .from('models')
-        .update({ box_id: null })
+        .update({ 
+          box_id: null,
+          public: false
+        })
         .eq('id', removeModelModal.model.id)
 
       if (error) throw error

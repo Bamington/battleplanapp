@@ -61,7 +61,23 @@ function App() {
 
   // Show shared model view if on shared model route
   if (sharedModelId) {
-    return <PublicModelView modelId={sharedModelId as string} />
+    // Check if we came from a collection page by looking at URL parameters or referrer
+    const urlParams = new URLSearchParams(window.location.search)
+    const fromCollection = urlParams.get('from')
+    const collectionName = urlParams.get('collectionName')
+    
+    let breadcrumbs = undefined
+    if (fromCollection && collectionName) {
+      breadcrumbs = {
+        collectionId: fromCollection,
+        collectionName: decodeURIComponent(collectionName)
+      }
+    }
+    
+    return <PublicModelView 
+      modelId={sharedModelId as string} 
+      breadcrumbs={breadcrumbs}
+    />
   }
 
   const [activeTab, setActiveTab] = useState('collection')

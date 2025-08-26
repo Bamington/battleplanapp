@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { X, Package, Check } from 'lucide-react'
+import { X, Package, Check, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { Button } from './Button'
 
 interface Model {
   id: string
@@ -27,9 +28,12 @@ interface AddModelsToBoxModalProps {
   box: {
     id: string
     name: string
+    public: boolean
     game: {
       id: string
       name: string
+      icon: string | null
+      image: string | null
     } | null
   }
 }
@@ -117,7 +121,10 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
       
       const { error } = await supabase
         .from('models')
-        .update({ box_id: box.id })
+        .update({ 
+          box_id: box.id,
+          public: box.public
+        })
         .in('id', modelIds)
 
       if (error) throw error
@@ -225,13 +232,16 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
           <div className="text-center py-8">
             <Package className="w-12 h-12 text-secondary-text mx-auto mb-4" />
             <p className="text-secondary-text mb-4">No unboxed models found in your collection.</p>
-                            <p className="text-sm text-secondary-text mb-6">All your models are already assigned to collections.</p>
-            <button
+            <p className="text-sm text-secondary-text mb-6">All your models are already assigned to collections.</p>
+            <Button
               onClick={handleAddNewModel}
-              className="btn-primary-sm"
+              variant="primary"
+              width="full"
+              withIcon
             >
-              Add new model to collection
-            </button>
+              <Plus className="w-4 h-4" />
+              <span>Add new model to collection</span>
+            </Button>
           </div>
         ) : (
           <>
@@ -362,6 +372,19 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Add New Model Button - Always show when there are eligible models */}
+            <div className="pt-4 border-t border-border-custom">
+              <Button
+                onClick={handleAddNewModel}
+                variant="secondary"
+                width="full"
+                withIcon
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add new model to collection</span>
+              </Button>
             </div>
 
             {/* Action Buttons */}
