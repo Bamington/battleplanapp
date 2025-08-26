@@ -1,10 +1,11 @@
-import React from 'react'
-import { Plus, Calendar, ChevronDown, ChevronRight } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Calendar, Plus, ChevronDown, ChevronRight } from 'lucide-react'
 import { NewBookingModal } from './NewBookingModal'
 import { BookingCard } from './BookingCard'
 import { CancelBookingModal } from './CancelBookingModal'
 import { useBookings } from '../hooks/useBookings'
 import { supabase } from '../lib/supabase'
+import { formatLocalDate } from '../utils/timezone'
 
 interface BattleplanPageProps {
   refreshTrigger?: number
@@ -145,8 +146,7 @@ export function BattleplanPage({ refreshTrigger = 0, onNewBooking }: BattleplanP
     if (dateString === 'past') {
       return 'Past Bookings'
     }
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
+    return formatLocalDate(dateString, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

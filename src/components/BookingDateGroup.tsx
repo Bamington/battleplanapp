@@ -1,6 +1,7 @@
 import React from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { BookingCard } from './BookingCard'
+import { getRelativeDate } from '../utils/timezone'
 
 interface Booking {
   id: string
@@ -47,32 +48,7 @@ export function BookingDateGroup({
   onCancelBooking
 }: BookingDateGroupProps) {
   const formatDateHeader = (dateString: string) => {
-    const date = new Date(dateString)
-    const today = new Date()
-    const yesterday = new Date(today)
-    const tomorrow = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    
-    today.setHours(0, 0, 0, 0)
-    yesterday.setHours(0, 0, 0, 0)
-    tomorrow.setHours(0, 0, 0, 0)
-    date.setHours(0, 0, 0, 0)
-    
-    if (date.getTime() === today.getTime()) {
-      return 'Today'
-    } else if (date.getTime() === tomorrow.getTime()) {
-      return 'Tomorrow'
-    } else if (date.getTime() === yesterday.getTime()) {
-      return 'Yesterday'
-    } else {
-      return date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    }
+    return getRelativeDate(dateString)
   }
 
   return (

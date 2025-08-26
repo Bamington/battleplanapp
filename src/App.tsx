@@ -31,6 +31,7 @@ import { BoxFilters } from './components/BoxFilters'
 import { PublicCollectionView } from './components/PublicCollectionView'
 import { PublicModelView } from './components/PublicModelView'
 import { OnboardingModal } from './components/OnboardingModal'
+import { formatLocalDate } from './utils/timezone'
 
 function App() {
   // Get the base path from Vite config
@@ -215,8 +216,24 @@ function App() {
     return true
   })
 
-  // For Recent view, only show painted models
-  const recentModels = models.filter(model => model.status === 'Painted')
+  // For Recent view, show only painted models sorted by painted date (most recent first), then by creation date
+  const recentModels = models
+    .filter(model => model.status === 'Painted')
+    .sort((a, b) => {
+      // If both models have painted dates, sort by painted date (most recent first)
+      if (a.painted_date && b.painted_date) {
+        return new Date(b.painted_date).getTime() - new Date(a.painted_date).getTime()
+      }
+      // If only one has a painted date, prioritize the one with painted date
+      if (a.painted_date && !b.painted_date) {
+        return -1
+      }
+      if (!a.painted_date && b.painted_date) {
+        return 1
+      }
+      // If neither has a painted date, sort by creation date (most recent first)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
 
   const filteredBoxes = boxes.filter(box => {
     // Search filter
@@ -252,6 +269,32 @@ function App() {
   const handleModelAdded = () => {
     refetchModels()
     refetchBoxes()
+    
+    // Check if we came from the Add Models to Box Modal flow
+    try {
+      const storedBoxContext = localStorage.getItem('mini-myths-temp-box-context')
+      if (storedBoxContext) {
+        const boxContext = JSON.parse(storedBoxContext)
+        
+        // Find the box in our current boxes data
+        const box = boxes.find(b => b.id === boxContext.id)
+        if (box) {
+          // Open the View Box Modal for the box we came from
+          setViewBoxModal({
+            isOpen: true,
+            box
+          })
+        }
+        
+        // Clear the stored context
+        localStorage.removeItem('mini-myths-temp-box-context')
+      }
+    } catch (error) {
+      console.error('Error handling return to box modal:', error)
+      // Clear the stored context on error
+      localStorage.removeItem('mini-myths-temp-box-context')
+    }
+    
     setPreselectedBoxId(null)
   }
 
@@ -498,9 +541,9 @@ function App() {
           <>
             {/* Recent Models Section */}
             <section className="mb-16">
-              {models.filter(model => model.status === 'Painted').length > 0 && (
+              {recentModels.length > 0 && (
                 <div className="flex flex-col items-center mb-8">
-                  <h2 className="text-lg font-bold text-secondary-text text-center mb-4">RECENT MODELS</h2>
+                  <h2 className="text-lg font-bold text-secondary-text text-center mb-4">RECENTLY PAINTED MODELS</h2>
                 </div>
               )}
               
@@ -535,6 +578,7 @@ function App() {
                         status={model.status}
                         count={model.count}
                         imageUrl={model.image_url}
+                        paintedDate={model.painted_date}
                         onViewModel={() => handleViewModel(model)}
                         onViewBox={handleViewBox}
                       />
@@ -585,10 +629,10 @@ function App() {
                         key={box.id}
                         name={box.name}
                         gameName={box.game?.name || 'Unknown Game'}
-                        purchaseDate={box.purchase_date}
-                        imageUrl={box.image_url}
-                        gameImage={box.game?.image}
-                        gameIcon={box.game?.icon}
+                        modelCount={box.models_count || 0}
+                        imageUrl={box.image_url || null}
+                        gameImage={box.game?.image || null}
+                        gameIcon={box.game?.icon || null}
                         onViewBox={() => handleViewBox(box)}
                       />
                     ))}
@@ -639,9 +683,9 @@ function App() {
                   </div>
                 ))}
               </div>
-            ) : models.filter(model => model.status === 'Painted').length === 0 ? (
+            ) : boxes.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-base text-secondary-text mb-4">No painted models in your collection yet.</p>
+                <p className="text-base text-secondary-text mb-4">No collections in your collection yet.</p>
               </div>
             ) : (
               <>
@@ -709,11 +753,9 @@ function App() {
                             </div>
                             <span className="text-sm text-secondary-text">{box.game?.name || 'Unknown Game'}</span>
                           </div>
-                          {box.purchase_date && (
-                            <p className="text-xs text-secondary-text mt-1">
-                              Purchased: {new Date(box.purchase_date).toLocaleDateString()}
-                            </p>
-                          )}
+                          <p className="text-xs text-secondary-text mt-1">
+                            {box.models_count || 0} Model{(box.models_count || 0) !== 1 ? 's' : ''}
+                          </p>
                         </div>
                       </div>
                     </div>

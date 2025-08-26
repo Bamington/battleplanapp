@@ -48,7 +48,7 @@ export function ShareModelModal({ isOpen, onClose, onModelUpdated, model }: Shar
       // Update local state
       setIsPublic(!isPublic)
       
-      // Notify parent component
+      // Notify parent component to refresh model data
       onModelUpdated?.()
       
     } catch (err) {

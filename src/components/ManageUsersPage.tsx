@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, User, Shield, ShieldOff } from 'lucide-react'
+import { ArrowLeft, User } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { formatLocalDate } from '../utils/timezone'
 
 interface User {
   id: string
@@ -60,7 +61,7 @@ export function ManageUsersPage({ onBack }: ManageUsersPageProps) {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return formatLocalDate(dateString, {
       year: 'numeric',
       month: 'short',
       day: 'numeric'

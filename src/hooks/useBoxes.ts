@@ -5,9 +5,10 @@ import { useAuth } from './useAuth'
 interface Box {
   id: string
   name: string
-  purchase_date: string
-  image_url: string
-  public: boolean
+  purchase_date: string | null
+  image_url: string | null
+  public: boolean | null
+  models_count: number
   game: {
     id: string
     name: string
@@ -34,7 +35,13 @@ export function useBoxes() {
 
   const fetchBoxes = async () => {
     try {
-      const { data, error } = await supabase
+      if (!user?.id) {
+        setBoxes([])
+        return
+      }
+
+      // First, fetch all boxes
+      const { data: boxesData, error: boxesError } = await supabase
         .from('boxes')
         .select(`
           id,
@@ -44,19 +51,41 @@ export function useBoxes() {
           public,
           game:games(id, name, icon, image)
         `)
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10)
 
-      if (error) throw error
+      if (boxesError) throw boxesError
 
-      // Transform the data to match our interface
-      const transformedData = (data || []).map(box => ({
+      // Transform the boxes data
+      const transformedBoxes = (boxesData || []).map(box => ({
         ...box,
         game: box.game && Array.isArray(box.game) ? box.game[0] : box.game
       }))
 
-      setBoxes(transformedData)
+      // Fetch model counts for each box
+      const boxesWithCounts = await Promise.all(
+        transformedBoxes.map(async (box) => {
+          const { data: modelsData, error: modelsError } = await supabase
+            .from('models')
+            .select('count')
+            .eq('box_id', box.id)
+
+          if (modelsError) {
+            console.error(`Error fetching models for box ${box.id}:`, modelsError)
+            return { ...box, models_count: 0 }
+          }
+
+          // Sum up the count field from all models in this box
+          const totalCount = (modelsData || []).reduce((sum, model) => {
+            return sum + (model.count || 0)
+          }, 0)
+
+          return { ...box, models_count: totalCount }
+        })
+      )
+
+      setBoxes(boxesWithCounts)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch boxes')
     } finally {

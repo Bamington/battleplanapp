@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { X, Calendar, Clock, MapPin, User, Gamepad2, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { formatLocalDate, formatLocalTime, getRelativeDate } from '../utils/timezone'
+import { formatLocalDate, formatLocalTime, getRelativeDate, formatLocalDate as formatLocalDateWithTime } from '../utils/timezone'
 
 interface Booking {
   id: string
@@ -68,7 +68,7 @@ export function BookingDetailModal({ isOpen, onClose, onBookingCancelled, bookin
 
 
   const formatCreatedDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return formatLocalDateWithTime(dateString, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

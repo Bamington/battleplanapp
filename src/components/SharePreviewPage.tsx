@@ -1,10 +1,12 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ArrowLeft, Eye, Layers, Package } from 'lucide-react'
 import { useModels } from '../hooks/useModels'
 import { useBoxes } from '../hooks/useBoxes'
 import { useAuth } from '../hooks/useAuth'
 import { PublicModelView } from './PublicModelView'
 import { PublicCollectionView } from './PublicCollectionView'
+import { supabase } from '../lib/supabase'
+import { formatLocalDate } from '../utils/timezone'
 
 interface SharePreviewPageProps {
   onBack: () => void
@@ -195,7 +197,7 @@ export function SharePreviewPage({ onBack }: SharePreviewPageProps) {
                       <p className="text-sm text-secondary-text">{selectedCollection.game.name}</p>
                     )}
                     <p className="text-sm text-secondary-text">
-                      Purchase Date: {new Date(selectedCollection.purchase_date).toLocaleDateString()}
+                      Purchase Date: {formatLocalDate(selectedCollection.purchase_date)}
                     </p>
                     <p className="text-sm text-secondary-text">
                       Public: {selectedCollection.public ? 'Yes' : 'No'}

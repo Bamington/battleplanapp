@@ -28,16 +28,19 @@ export function DatePicker({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+        // Add a small delay to prevent interference with button clicks
+        setTimeout(() => {
+          setIsOpen(false)
+        }, 10)
       }
     }
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('click', handleClickOutside)
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('click', handleClickOutside)
     }
   }, [isOpen])
 
@@ -88,7 +91,8 @@ export function DatePicker({
     return formatDate(date) === formatDate(selectedDate)
   }
 
-  const handleDateClick = (date: Date) => {
+  const handleDateClick = (date: Date, e: React.MouseEvent) => {
+    e.stopPropagation()
     if (isDateDisabled(date)) return
     
     setSelectedDate(date)
@@ -96,15 +100,22 @@ export function DatePicker({
     setIsOpen(false)
   }
 
-  const handlePrevMonth = () => {
+  const handlePrevMonth = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    console.log('Previous month clicked')
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
   }
 
-  const handleNextMonth = () => {
+  const handleNextMonth = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    console.log('Next month clicked')
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
   }
 
-  const handleClear = () => {
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation()
     setSelectedDate(null)
     onChange('')
     setIsOpen(false)
@@ -130,7 +141,10 @@ export function DatePicker({
             day: 'numeric'
           }) : ''}
           placeholder={placeholder}
-          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onClick={(e) => {
+            e.stopPropagation()
+            if (!disabled) setIsOpen(!isOpen)
+          }}
           readOnly
           disabled={disabled}
           className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand focus:border-brand bg-bg-primary text-text cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
@@ -147,7 +161,10 @@ export function DatePicker({
 
       {/* Date Picker Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 bg-bg-primary border border-border-custom rounded-lg shadow-lg z-50 min-w-[280px]">
+        <div 
+          className="absolute top-full left-0 mt-1 bg-bg-primary border border-border-custom rounded-lg shadow-lg z-[70] min-w-[280px]"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border-custom">
             <button
@@ -184,7 +201,7 @@ export function DatePicker({
                 <div key={index} className="text-center">
                   {day ? (
                     <button
-                      onClick={() => handleDateClick(day)}
+                      onClick={(e) => handleDateClick(day, e)}
                       disabled={isDateDisabled(day)}
                       className={`w-8 h-8 text-sm rounded-full transition-colors ${
                         isDateSelected(day)

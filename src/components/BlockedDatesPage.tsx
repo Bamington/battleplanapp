@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
-import { ArrowLeft, Plus, MapPin, Calendar, Trash2, Ban } from 'lucide-react'
-import { NewBlockedDateModal } from './NewBlockedDateModal'
-import { useBlockedDates } from '../hooks/useBlockedDates'
+import React, { useState, useEffect } from 'react'
+import { ArrowLeft, Plus, Calendar, MapPin, Trash2, Ban } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useBlockedDates } from '../hooks/useBlockedDates'
+import { NewBlockedDateModal } from './NewBlockedDateModal'
+import { formatLocalDate } from '../utils/timezone'
 
 interface BlockedDatesPageProps {
   onBack: () => void
@@ -34,8 +35,7 @@ export function BlockedDatesPage({ onBack }: BlockedDatesPageProps) {
   }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
+    return formatLocalDate(dateString, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

@@ -1,4 +1,5 @@
 import React from 'react'
+import { formatLocalDate } from '../utils/timezone'
 
 interface ModelCardProps {
   model: any
@@ -9,11 +10,12 @@ interface ModelCardProps {
   status: string
   count: number
   imageUrl?: string
+  paintedDate?: string | null
   onViewModel: () => void
   onViewBox?: (box: any) => void
 }
 
-export function ModelCard({ model, name, boxName, gameName, gameIcon, status, count, imageUrl, onViewModel, onViewBox }: ModelCardProps) {
+export function ModelCard({ model, name, boxName, gameName, gameIcon, status, count, imageUrl, paintedDate, onViewModel, onViewBox }: ModelCardProps) {
   // Debug logging to see what gameIcon value we're getting
   console.log('ModelCard Debug:', {
     name,
@@ -32,6 +34,17 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
       case 'Assembled': return 'bg-yellow-100 text-yellow-800'
       default: return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  const getStatusText = (status: string, paintedDate?: string | null) => {
+    if (status === 'Painted' && paintedDate) {
+      return `Painted ${formatLocalDate(paintedDate, {
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit'
+      })}`
+    }
+    return status
   }
 
   const getImageSrc = () => {
@@ -97,7 +110,7 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
         {status !== 'None' && (
           <div className="absolute top-2 left-2">
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
-              {status}
+              {getStatusText(status, paintedDate)}
             </span>
           </div>
         )}

@@ -31,6 +31,12 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
   const [rotation, setRotation] = useState(0)
   const [resizeHandle, setResizeHandle] = useState<string>('')
   const [adjustments, setAdjustments] = useState<ImageAdjustments>({ exposure: 0 })
+  const [hoveredHandle, setHoveredHandle] = useState<string>('')
+
+  // Mobile detection
+  const isMobile = window.innerWidth <= 768
+  const handleSize = isMobile ? 16 : 12 // Larger handles on mobile
+  const handleHitSize = isMobile ? 48 : 24 // Much larger hit area on mobile
 
   useEffect(() => {
     if (isOpen && imageFile) {
@@ -120,71 +126,113 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
     // Restore context
     ctx.restore()
 
-
     // Draw crop border
     ctx.strokeStyle = '#F59E0B'
     ctx.lineWidth = 2
     ctx.strokeRect(cropArea.x, cropArea.y, cropArea.width, cropArea.height)
 
-    // Draw resize handles
-    const handleSize = 8
+    // Draw resize handles with better positioning and visual feedback
     const handles = [
-      // Corner handles for independent width/height resizing
-      { x: cropArea.x - handleSize / 2, y: cropArea.y - handleSize / 2 },
-      { x: cropArea.x + cropArea.width - handleSize / 2, y: cropArea.y - handleSize / 2 },
-      { x: cropArea.x - handleSize / 2, y: cropArea.y + cropArea.height - handleSize / 2 },
-      { x: cropArea.x + cropArea.width - handleSize / 2, y: cropArea.y + cropArea.height - handleSize / 2 },
-      // Side handles for width/height only
-      { x: cropArea.x + cropArea.width / 2 - handleSize / 2, y: cropArea.y - handleSize / 2 }, // top
-      { x: cropArea.x + cropArea.width - handleSize / 2, y: cropArea.y + cropArea.height / 2 - handleSize / 2 }, // right
-      { x: cropArea.x + cropArea.width / 2 - handleSize / 2, y: cropArea.y + cropArea.height - handleSize / 2 }, // bottom
-      { x: cropArea.x - handleSize / 2, y: cropArea.y + cropArea.height / 2 - handleSize / 2 } // left
+      // Corner handles - positioned slightly outside the crop area for easier grabbing
+      { x: cropArea.x - handleSize / 2, y: cropArea.y - handleSize / 2, type: 'nw' },
+      { x: cropArea.x + cropArea.width - handleSize / 2, y: cropArea.y - handleSize / 2, type: 'ne' },
+      { x: cropArea.x - handleSize / 2, y: cropArea.y + cropArea.height - handleSize / 2, type: 'sw' },
+      { x: cropArea.x + cropArea.width - handleSize / 2, y: cropArea.y + cropArea.height - handleSize / 2, type: 'se' },
+      // Side handles - positioned at the center of each edge
+      { x: cropArea.x + cropArea.width / 2 - handleSize / 2, y: cropArea.y - handleSize / 2, type: 'n' },
+      { x: cropArea.x + cropArea.width - handleSize / 2, y: cropArea.y + cropArea.height / 2 - handleSize / 2, type: 'e' },
+      { x: cropArea.x + cropArea.width / 2 - handleSize / 2, y: cropArea.y + cropArea.height - handleSize / 2, type: 's' },
+      { x: cropArea.x - handleSize / 2, y: cropArea.y + cropArea.height / 2 - handleSize / 2, type: 'w' }
     ]
 
-    ctx.fillStyle = '#F59E0B'
+    // Draw handles with visual feedback
     handles.forEach(handle => {
+      const isHovered = hoveredHandle === handle.type
+      const isActive = resizeHandle === handle.type
+      
+      // Handle background (larger for better visibility)
+      ctx.fillStyle = isActive ? '#F59E0B' : isHovered ? '#FCD34D' : '#F59E0B'
       ctx.fillRect(handle.x, handle.y, handleSize, handleSize)
+      
+      // Handle border
+      ctx.strokeStyle = '#FFFFFF'
+      ctx.lineWidth = 2
+      ctx.strokeRect(handle.x, handle.y, handleSize, handleSize)
+      
+      // Inner dot for better visual indication
+      ctx.fillStyle = '#FFFFFF'
+      ctx.fillRect(
+        handle.x + handleSize / 4, 
+        handle.y + handleSize / 4, 
+        handleSize / 2, 
+        handleSize / 2
+      )
     })
-  }, [image, cropArea, scale, rotation, adjustments])
+  }, [image, cropArea, scale, rotation, adjustments, hoveredHandle, resizeHandle, handleSize])
 
   useEffect(() => {
     drawCanvas()
   }, [drawCanvas])
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Helper function to get coordinates from mouse or touch event
+  const getEventCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas) return { x: 0, y: 0 }
 
     const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    let clientX: number, clientY: number
 
-    // Check if clicking on resize handles
-    const handleVisualSize = 8
-    // Increase hit box on mobile devices
-    const isMobile = window.innerWidth <= 768
-    const handleClickSize = isMobile ? 40 : 20 // Much larger clickable area on mobile
+    if ('touches' in e) {
+      // Touch event
+      clientX = e.touches[0].clientX
+      clientY = e.touches[0].clientY
+    } else {
+      // Mouse event
+      clientX = e.clientX
+      clientY = e.clientY
+    }
+
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    }
+  }
+
+  // Helper function to check if a point is within a handle
+  const getHandleAtPoint = (x: number, y: number) => {
     const handles = [
       // Corner handles
-      { x: cropArea.x - handleClickSize / 2, y: cropArea.y - handleClickSize / 2, type: 'nw' },
-      { x: cropArea.x + cropArea.width - handleClickSize / 2, y: cropArea.y - handleClickSize / 2, type: 'ne' },
-      { x: cropArea.x - handleClickSize / 2, y: cropArea.y + cropArea.height - handleClickSize / 2, type: 'sw' },
-      { x: cropArea.x + cropArea.width - handleClickSize / 2, y: cropArea.y + cropArea.height - handleClickSize / 2, type: 'se' },
+      { x: cropArea.x - handleHitSize / 2, y: cropArea.y - handleHitSize / 2, type: 'nw' },
+      { x: cropArea.x + cropArea.width - handleHitSize / 2, y: cropArea.y - handleHitSize / 2, type: 'ne' },
+      { x: cropArea.x - handleHitSize / 2, y: cropArea.y + cropArea.height - handleHitSize / 2, type: 'sw' },
+      { x: cropArea.x + cropArea.width - handleHitSize / 2, y: cropArea.y + cropArea.height - handleHitSize / 2, type: 'se' },
       // Side handles
-      { x: cropArea.x + cropArea.width / 2 - handleClickSize / 2, y: cropArea.y - handleClickSize / 2, type: 'n' },
-      { x: cropArea.x + cropArea.width - handleClickSize / 2, y: cropArea.y + cropArea.height / 2 - handleClickSize / 2, type: 'e' },
-      { x: cropArea.x + cropArea.width / 2 - handleClickSize / 2, y: cropArea.y + cropArea.height - handleClickSize / 2, type: 's' },
-      { x: cropArea.x - handleClickSize / 2, y: cropArea.y + cropArea.height / 2 - handleClickSize / 2, type: 'w' }
+      { x: cropArea.x + cropArea.width / 2 - handleHitSize / 2, y: cropArea.y - handleHitSize / 2, type: 'n' },
+      { x: cropArea.x + cropArea.width - handleHitSize / 2, y: cropArea.y + cropArea.height / 2 - handleHitSize / 2, type: 'e' },
+      { x: cropArea.x + cropArea.width / 2 - handleHitSize / 2, y: cropArea.y + cropArea.height - handleHitSize / 2, type: 's' },
+      { x: cropArea.x - handleHitSize / 2, y: cropArea.y + cropArea.height / 2 - handleHitSize / 2, type: 'w' }
     ]
 
-    for (let i = 0; i < handles.length; i++) {
-      const handle = handles[i]
-      if (x >= handle.x && x <= handle.x + handleClickSize && y >= handle.y && y <= handle.y + handleClickSize) {
-        setIsResizing(true)
-        setResizeHandle(handle.type)
-        setDragStart({ x, y })
-        return
+    for (const handle of handles) {
+      if (x >= handle.x && x <= handle.x + handleHitSize && 
+          y >= handle.y && y <= handle.y + handleHitSize) {
+        return handle.type
       }
+    }
+    return null
+  }
+
+  const handleStart = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
+    const { x, y } = getEventCoordinates(e)
+
+    // Check if clicking on resize handles
+    const handleType = getHandleAtPoint(x, y)
+    if (handleType) {
+      setIsResizing(true)
+      setResizeHandle(handleType)
+      setDragStart({ x, y })
+      return
     }
 
     // Check if clicking inside crop area (for moving crop area)
@@ -195,77 +243,19 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
     }
   }
 
-  const [cursorStyle, setCursorStyle] = useState('crosshair')
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
+    const { x, y } = getEventCoordinates(e)
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-
-    // Update cursor based on mouse position when not dragging or resizing
+    // Update hover state when not dragging or resizing
     if (!isDragging && !isResizing) {
-      // Use same mobile-responsive hit box for hover detection
-      const isMobile = window.innerWidth <= 768
-      const handleClickSize = isMobile ? 40 : 20
-      const handles = [
-        // Corner handles
-        { x: cropArea.x - handleClickSize / 2, y: cropArea.y - handleClickSize / 2, type: 'nw' },
-        { x: cropArea.x + cropArea.width - handleClickSize / 2, y: cropArea.y - handleClickSize / 2, type: 'ne' },
-        { x: cropArea.x - handleClickSize / 2, y: cropArea.y + cropArea.height - handleClickSize / 2, type: 'sw' },
-        { x: cropArea.x + cropArea.width - handleClickSize / 2, y: cropArea.y + cropArea.height - handleClickSize / 2, type: 'se' },
-        // Side handles
-        { x: cropArea.x + cropArea.width / 2 - handleClickSize / 2, y: cropArea.y - handleClickSize / 2, type: 'n' },
-        { x: cropArea.x + cropArea.width - handleClickSize / 2, y: cropArea.y + cropArea.height / 2 - handleClickSize / 2, type: 'e' },
-        { x: cropArea.x + cropArea.width / 2 - handleClickSize / 2, y: cropArea.y + cropArea.height - handleClickSize / 2, type: 's' },
-        { x: cropArea.x - handleClickSize / 2, y: cropArea.y + cropArea.height / 2 - handleClickSize / 2, type: 'w' }
-      ]
-
-      // Check if hovering over resize handles
-      let overHandle = false
-      for (let i = 0; i < handles.length; i++) {
-        const handle = handles[i]
-        if (x >= handle.x && x <= handle.x + handleClickSize && y >= handle.y && y <= handle.y + handleClickSize) {
-          overHandle = true
-          // Set appropriate resize cursor based on handle type
-          switch (handle.type) {
-            case 'nw':
-            case 'se':
-              setCursorStyle('nw-resize')
-              break
-            case 'ne':
-            case 'sw':
-              setCursorStyle('ne-resize')
-              break
-            case 'n':
-            case 's':
-              setCursorStyle('n-resize')
-              break
-            case 'e':
-            case 'w':
-              setCursorStyle('e-resize')
-              break
-          }
-          break
-        }
-      }
-
-      if (!overHandle) {
-        // Check if inside crop area (for moving crop area)
-        if (x >= cropArea.x && x <= cropArea.x + cropArea.width && 
-            y >= cropArea.y && y <= cropArea.y + cropArea.height) {
-          setCursorStyle('move')
-        } else {
-          // Outside crop area
-          setCursorStyle('default')
-        }
-      }
+      const handleType = getHandleAtPoint(x, y)
+      setHoveredHandle(handleType || '')
     }
 
     if (isDragging) {
-      setCursorStyle('move')
       const newX = Math.max(0, Math.min(x - dragStart.x, canvas.width - cropArea.width))
       const newY = Math.max(0, Math.min(y - dragStart.y, canvas.height - cropArea.height))
       setCropArea(prev => ({ ...prev, x: newX, y: newY }))
@@ -322,11 +312,23 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
     }
   }
 
-  const handleMouseUp = () => {
+  const handleEnd = () => {
     setIsDragging(false)
     setIsResizing(false)
     setResizeHandle('')
+    setHoveredHandle('')
   }
+
+  // Mouse event handlers
+  const handleMouseDown = (e: React.MouseEvent) => handleStart(e)
+  const handleMouseMove = (e: React.MouseEvent) => handleMove(e)
+  const handleMouseUp = () => handleEnd()
+  const handleMouseLeave = () => handleEnd()
+
+  // Touch event handlers
+  const handleTouchStart = (e: React.TouchEvent) => handleStart(e)
+  const handleTouchMove = (e: React.TouchEvent) => handleMove(e)
+  const handleTouchEnd = () => handleEnd()
 
   const handleZoomIn = () => {
     setScale(prev => Math.min(prev + 0.1, 3))
@@ -518,11 +520,17 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
             width={600}
             height={400}
             className="border border-border-custom rounded-lg w-full block"
-            style={{ cursor: cursorStyle }}
+            style={{ 
+              cursor: hoveredHandle || isDragging || isResizing ? 'grabbing' : 'crosshair',
+              touchAction: 'none' // Prevent touch scrolling on mobile
+            }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           />
         </div>
 
@@ -551,7 +559,12 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
               <RotateCw className="w-4 h-4" />
             </button>
             <div className="flex items-center space-x-2 text-sm text-secondary-text">
-              <span>Drag crop area or resize handles to adjust selection</span>
+              <span>
+                {isMobile 
+                  ? 'Touch and drag crop area or handles to adjust selection' 
+                  : 'Drag crop area or resize handles to adjust selection'
+                }
+              </span>
             </div>
           </div>
           

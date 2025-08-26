@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { X, Calendar, DollarSign, FileText, Share2, Edit, Plus, Package, Trash2, ChevronRight } from 'lucide-react'
 import { DeleteBoxModal } from './DeleteBoxModal'
 import { AddModelsToBoxModal } from './AddModelsToBoxModal'
@@ -6,6 +6,7 @@ import { EditBoxModal } from './EditBoxModal'
 import { RemoveModelFromBoxModal } from './RemoveModelFromBoxModal'
 import { ShareCollectionModal } from './ShareCollectionModal'
 import { supabase } from '../lib/supabase'
+import { formatLocalDate } from '../utils/timezone'
 
 interface ViewBoxModalProps {
   isOpen: boolean
@@ -195,7 +196,7 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return formatLocalDate(dateString, {
       month: '2-digit',
       day: '2-digit',
       year: '2-digit'

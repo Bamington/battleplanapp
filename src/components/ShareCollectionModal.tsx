@@ -38,12 +38,21 @@ export function ShareCollectionModal({ isOpen, onClose, onCollectionUpdated, box
     setError('')
 
     try {
-      const { error } = await supabase
+      // Update the box's public flag
+      const { error: boxError } = await supabase
         .from('boxes')
         .update({ public: !isPublic })
         .eq('id', box.id)
 
-      if (error) throw error
+      if (boxError) throw boxError
+
+      // Update all models in this collection to match the new public flag
+      const { error: modelsError } = await supabase
+        .from('models')
+        .update({ public: !isPublic })
+        .eq('box_id', box.id)
+
+      if (modelsError) throw modelsError
 
       // Update local state
       setIsPublic(!isPublic)

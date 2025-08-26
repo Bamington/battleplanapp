@@ -5,6 +5,7 @@ import { useDarkMode } from '../hooks/useDarkMode'
 import battleplanLogo from '/Battleplan-Logo-Purple.svg'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { formatLocalDate } from '../utils/timezone'
 
 interface PublicModelViewProps {
   modelId: string
@@ -126,7 +127,7 @@ export function PublicModelView({ modelId, onBack, breadcrumbs }: PublicModelVie
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return formatLocalDate(dateString, {
       month: '2-digit',
       day: '2-digit',
       year: '2-digit'

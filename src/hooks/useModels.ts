@@ -12,6 +12,7 @@ interface Model {
   notes: string | null
   painted_date: string | null
   purchase_date: string | null
+  created_at: string
   box: {
     id: string
     name: string
@@ -61,6 +62,7 @@ export function useModels() {
           notes,
           painted_date,
           purchase_date,
+          created_at,
           box:boxes(
             id,
             name,

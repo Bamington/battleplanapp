@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Calendar, Package, Users, Globe, User, Moon, Sun, ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useDarkMode } from '../hooks/useDarkMode'
+import { formatLocalDate } from '../utils/timezone'
 import { getBasePath } from '../utils/environment'
 import battleplanLogo from '/Battleplan-Logo-Purple.svg'
 import ReactMarkdown from 'react-markdown'
@@ -135,7 +136,7 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return formatLocalDate(dateString, {
       month: '2-digit',
       day: '2-digit',
       year: '2-digit'

@@ -1,18 +1,23 @@
 import React from 'react'
+import { formatLocalDate } from '../utils/timezone'
 
 interface BoxCardProps {
   name: string
   gameName: string
-  purchaseDate: string
-  imageUrl?: string
-  gameImage?: string | null
-  gameIcon?: string | null
+  modelCount: number
+  imageUrl: string | null
+  gameImage: string | null
+  gameIcon: string | null
   onViewBox: () => void
 }
 
-export function BoxCard({ name, gameName, purchaseDate, imageUrl, gameImage, gameIcon, onViewBox }: BoxCardProps) {
+export function BoxCard({ name, gameName, modelCount, imageUrl, gameImage, gameIcon, onViewBox }: BoxCardProps) {
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString()
+    return formatLocalDate(dateString)
+  }
+
+  const getModelCountText = (count: number) => {
+    return `${count} Model${count !== 1 ? 's' : ''}`
   }
 
   const getImageSrc = () => {
@@ -63,13 +68,11 @@ export function BoxCard({ name, gameName, purchaseDate, imageUrl, gameImage, gam
        </div>
               <div className="p-4 flex flex-col flex-1">
                    <div className="flex items-start justify-between mb-4 max-w-full">
-                       {/* Left side: Box name and purchase date in vertical flex */}
+                       {/* Left side: Box name and model count in vertical flex */}
                                                                                                        <div className="flex flex-col flex-1 min-w-0 mr-3 flex-shrink-0 min-w-[50%]">
                            <h3 className="text-lg font-bold text-title mb-1 break-words">{name}</h3>
-              {purchaseDate && purchaseDate.trim() !== '' && purchaseDate !== 'null' && purchaseDate !== 'undefined' && (
-                <p className="text-sm text-secondary-text">Purchased: {formatDate(purchaseDate)}</p>
-              )}
-           </div>
+                           <p className="text-sm text-secondary-text">{getModelCountText(modelCount)}</p>
+                       </div>
            
                                                                                                                                        {/* Right side: Game name and icon */}
                                                                                                                                <div className="flex items-center space-x-2 flex-shrink min-w-0 justify-end">

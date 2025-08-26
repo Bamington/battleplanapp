@@ -7,6 +7,7 @@ import { ShareModelModal } from './ShareModelModal'
 import { Toast } from './Toast'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { formatLocalDate } from '../utils/timezone'
 
 
 interface ViewModelModalProps {
@@ -53,6 +54,12 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
     setCurrentModel(model)
   }, [model])
 
+  // Handle model updates by refreshing the model data
+  const handleModelUpdated = async () => {
+    // Notify parent component to refresh data
+    onModelUpdated?.()
+  }
+
   // Prevent body scroll when modal is open
   React.useEffect(() => {
     if (isOpen) {
@@ -69,13 +76,16 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
   if (!isOpen || !model) return null
 
   const handleBackdropClick = (e: React.MouseEvent) => {
+    // Don't close if edit modal is open
+    if (showEditModal) return
+    
     if (e.target === e.currentTarget) {
       onClose()
     }
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return formatLocalDate(dateString, {
       month: '2-digit',
       day: '2-digit',
       year: '2-digit'
@@ -174,7 +184,9 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
   return (
     <>
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+        className={`fixed inset-0 bg-black flex items-center justify-center p-4 z-50 ${
+          showEditModal ? 'bg-opacity-25' : 'bg-opacity-50'
+        }`}
         onClick={handleBackdropClick}
       >
         <div className="bg-modal-bg max-w-2xl w-full overflow-y-auto md:rounded-lg md:max-w-2xl md:max-h-[90vh] fixed inset-0 md:relative md:inset-auto h-screen md:h-auto">
@@ -389,8 +401,8 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
       <ShareModelModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        onModelUpdated={onModelUpdated}
-        model={model}
+        onModelUpdated={handleModelUpdated}
+        model={currentModel}
       />
 
       <Toast
