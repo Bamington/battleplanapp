@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { getTodayLocalDate, formatDateToLocalString } from '../utils/timezone'
 
 interface DatePickerProps {
   value: string
@@ -13,7 +14,7 @@ interface DatePickerProps {
 export function DatePicker({ 
   value, 
   onChange, 
-  minDate = new Date().toISOString().split('T')[0],
+  minDate = getTodayLocalDate(),
   placeholder = "Select date",
   className = "",
   disabled = false
@@ -72,7 +73,7 @@ export function DatePicker({
   }
 
   const formatDate = (date: Date) => {
-    return date.toISOString().split('T')[0]
+    return formatDateToLocalString(date)
   }
 
   const isDateDisabled = (date: Date) => {

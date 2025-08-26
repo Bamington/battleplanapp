@@ -5,6 +5,7 @@ import { BookingDetailModal } from './BookingDetailModal'
 import { CancelBookingModal } from './CancelBookingModal'
 import { useAllBookings } from '../hooks/useAllBookings'
 import { supabase } from '../lib/supabase'
+import { isPastDate } from '../utils/timezone'
 
 interface Booking {
   id: string
@@ -97,22 +98,16 @@ export function AllBookingsPage({ onBack }: AllBookingsPageProps) {
 
   // Group bookings by date
   const groupedBookings = React.useMemo(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    
     const futureBookings: Booking[] = []
     const pastBookings: Booking[] = []
     
     bookings.forEach(booking => {
-      const bookingDate = new Date(booking.date)
-      bookingDate.setHours(0, 0, 0, 0)
-      
-      if (bookingDate >= today) {
-        // Future booking
-        futureBookings.push(booking)
-      } else {
+      if (isPastDate(booking.date)) {
         // Past booking
         pastBookings.push(booking)
+      } else {
+        // Future booking
+        futureBookings.push(booking)
       }
     })
     

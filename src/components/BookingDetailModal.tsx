@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { X, Calendar, Clock, MapPin, User, Gamepad2, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { formatLocalDate, formatLocalTime, getRelativeDate } from '../utils/timezone'
 
 interface Booking {
   id: string
@@ -64,42 +65,7 @@ export function BookingDetailModal({ isOpen, onClose, onBookingCancelled, bookin
     }
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const today = new Date()
-    const yesterday = new Date(today)
-    const tomorrow = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    
-    today.setHours(0, 0, 0, 0)
-    yesterday.setHours(0, 0, 0, 0)
-    tomorrow.setHours(0, 0, 0, 0)
-    date.setHours(0, 0, 0, 0)
-    
-    if (date.getTime() === today.getTime()) {
-      return 'Today'
-    } else if (date.getTime() === yesterday.getTime()) {
-      return 'Yesterday'
-    } else if (date.getTime() === tomorrow.getTime()) {
-      return 'Tomorrow'
-    } else {
-      return date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    }
-  }
 
-  const formatTime = (timeString: string) => {
-    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
 
   const formatCreatedDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -141,8 +107,8 @@ export function BookingDetailModal({ isOpen, onClose, onBookingCancelled, bookin
           <div className="flex items-center space-x-3">
             <Calendar className="w-5 h-5 text-secondary-text" />
             <div>
-              <p className="font-medium text-text">{formatDate(booking.date)}</p>
-              <p className="text-sm text-secondary-text">{booking.date}</p>
+              <p className="font-medium text-text">{getRelativeDate(booking.date)}</p>
+              <p className="text-sm text-secondary-text">{formatLocalDate(booking.date)}</p>
             </div>
           </div>
 
@@ -152,7 +118,7 @@ export function BookingDetailModal({ isOpen, onClose, onBookingCancelled, bookin
             <div>
               <p className="font-medium text-text">{booking.timeslot.name}</p>
               <p className="text-sm text-secondary-text">
-                {formatTime(booking.timeslot.start_time)} - {formatTime(booking.timeslot.end_time)}
+                {formatLocalTime(booking.timeslot.start_time)} - {formatLocalTime(booking.timeslot.end_time)}
               </p>
             </div>
           </div>

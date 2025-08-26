@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import { GameDropdown } from './GameDropdown'
 import { useRecentGames } from '../hooks/useRecentGames'
 import { DatePicker } from './DatePicker'
+import { getTodayLocalDate } from '../utils/timezone'
 
 interface Location {
   id: string
@@ -133,6 +134,13 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
       setBlockedDateInfo(null)
     }
   }, [selectedLocation, selectedDate])
+
+  // Clear timeslot when date becomes blocked
+  useEffect(() => {
+    if (blockedDateInfo) {
+      setSelectedTimeslot('')
+    }
+  }, [blockedDateInfo])
 
   useEffect(() => {
     // Check table availability when location, date, and timeslot are all selected
@@ -274,7 +282,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
 
     setCheckingBookingLimit(true)
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const today = getTodayLocalDate()
       
       const { data, error } = await supabase
         .from('bookings')
@@ -556,48 +564,50 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
             <DatePicker
               value={selectedDate}
               onChange={setSelectedDate}
-              minDate={new Date().toISOString().split('T')[0]}
+              minDate={getTodayLocalDate()}
               placeholder="Select a date"
             />
           </div>
 
-          {/* Timeslot */}
-          <div>
-            <label htmlFor="timeslot" className="block text-sm font-medium text-input-label font-overpass mb-2">
-              Timeslot
-            </label>
-            <div className="relative">
-              <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
-              <select
-                id="timeslot"
-                value={selectedTimeslot}
-                onChange={(e) => setSelectedTimeslot(e.target.value)}
-                disabled={!selectedLocation || !selectedDate}
-                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text disabled:opacity-50 disabled:cursor-not-allowed"
-                required
-              >
-                <option value="">
-                  {!selectedLocation ? 'Select location first' : 
-                   !selectedDate ? 'Select date first' : 
-                   availableTimeslots.length === 0 ? 'No timeslots available for this day' :
-                   'Select Timeslot'}
-                </option>
-                {availableTimeslots.map((timeslot) => (
-                  <option key={timeslot.id} value={timeslot.id}>
-                    {timeslot.isAllDay 
-                      ? `${timeslot.name} (All Day)` 
-                      : `${timeslot.name} (${formatTime(timeslot.start_time)} - ${formatTime(timeslot.end_time)})`
-                    }
+          {/* Timeslot - Only show if date is not blocked */}
+          {!blockedDateInfo && (
+            <div>
+              <label htmlFor="timeslot" className="block text-sm font-medium text-input-label font-overpass mb-2">
+                Timeslot
+              </label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
+                <select
+                  id="timeslot"
+                  value={selectedTimeslot}
+                  onChange={(e) => setSelectedTimeslot(e.target.value)}
+                  disabled={!selectedLocation || !selectedDate}
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text disabled:opacity-50 disabled:cursor-not-allowed"
+                  required
+                >
+                  <option value="">
+                    {!selectedLocation ? 'Select location first' : 
+                     !selectedDate ? 'Select date first' : 
+                     availableTimeslots.length === 0 ? 'No timeslots available for this day' :
+                     'Select Timeslot'}
                   </option>
-                ))}
-              </select>
+                  {availableTimeslots.map((timeslot) => (
+                    <option key={timeslot.id} value={timeslot.id}>
+                      {timeslot.isAllDay 
+                        ? `${timeslot.name} (All Day)` 
+                        : `${timeslot.name} (${formatTime(timeslot.start_time)} - ${formatTime(timeslot.end_time)})`
+                      }
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {selectedDate && availableTimeslots.length === 0 && selectedLocation && (
+                <p className="text-sm text-secondary-text mt-1">
+                  No timeslots available for {getSelectedDayOfWeek()} at this location.
+                </p>
+              )}
             </div>
-            {selectedDate && availableTimeslots.length === 0 && selectedLocation && (
-              <p className="text-sm text-secondary-text mt-1">
-                No timeslots available for {getSelectedDayOfWeek()} at this location.
-              </p>
-            )}
-          </div>
+          )}
 
           {/* Blocked Date Warning */}
           {checkingBlockedDate ? (
@@ -629,8 +639,8 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
             </div>
           )}
 
-          {/* Table Availability Banner */}
-          {selectedLocation && selectedDate && selectedTimeslot && (
+          {/* Table Availability Banner - Only show if date is not blocked */}
+          {!blockedDateInfo && selectedLocation && selectedDate && selectedTimeslot && (
             <div className={`p-4 rounded-lg border ${
               checkingAvailability 
                 ? 'bg-blue-50 border-blue-200' 

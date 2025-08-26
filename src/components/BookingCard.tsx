@@ -1,5 +1,6 @@
 import React from 'react'
 import { MapPin, Clock, X, User } from 'lucide-react'
+import { formatLocalTime } from '../utils/timezone'
 
 interface BookingCardProps {
   booking: {
@@ -32,13 +33,6 @@ interface BookingCardProps {
 }
 
 export function BookingCard({ booking, onClick, onCancelBooking, isPast = false }: BookingCardProps) {
-  const formatTime = (timeString: string) => {
-    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
 
   return (
     <div className="bg-bg-card rounded-lg shadow-sm border border-border-custom p-4 w-full">
@@ -52,7 +46,7 @@ export function BookingCard({ booking, onClick, onCancelBooking, isPast = false 
           <div>
             <span className="font-medium text-text text-sm">{booking.timeslot.name}</span>
             <p className="text-xs text-secondary-text">
-              {formatTime(booking.timeslot.start_time)} - {formatTime(booking.timeslot.end_time)}
+              {formatLocalTime(booking.timeslot.start_time)} - {formatLocalTime(booking.timeslot.end_time)}
             </p>
           </div>
         </div>

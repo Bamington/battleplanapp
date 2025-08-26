@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
+import { isPastDate } from '../utils/timezone'
 
 interface Booking {
   id: string
@@ -116,24 +117,16 @@ export function useAllBookings() {
       })) || []
 
       // Sort bookings: future bookings first (most recent date first), then past bookings (most recent date first)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      
       const sortedData = combinedData.sort((a, b) => {
-        const dateA = new Date(a.date)
-        const dateB = new Date(b.date)
-        dateA.setHours(0, 0, 0, 0)
-        dateB.setHours(0, 0, 0, 0)
-        
-        const aIsPast = dateA < today
-        const bIsPast = dateB < today
+        const aIsPast = isPastDate(a.date)
+        const bIsPast = isPastDate(b.date)
         
         // If one is past and one is future, future comes first
         if (aIsPast && !bIsPast) return 1
         if (!aIsPast && bIsPast) return -1
         
         // If both are future or both are past, sort by date (most recent first)
-        const dateComparison = dateB.getTime() - dateA.getTime()
+        const dateComparison = new Date(b.date).getTime() - new Date(a.date).getTime()
         if (dateComparison !== 0) return dateComparison
         
         // If dates are the same, sort by creation time (most recent first)
