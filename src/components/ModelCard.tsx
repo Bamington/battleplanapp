@@ -73,7 +73,7 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
   }
 
   return (
-    <div className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden max-w-[380px] flex flex-col h-full">
+    <div className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden max-w-[380px] flex flex-col h-full hover:shadow-[0_4px_12px_rgba(114,77,221,0.2)] transition-shadow duration-200">
       <div className="aspect-w-16 aspect-h-12 relative bg-bg-card-secondary">
         {(() => {
           const imageData = getImageSrc()
@@ -103,9 +103,9 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
         )}
       </div>
       <div className="p-4 flex flex-col flex-1">
-        <div className="flex items-start justify-between mb-4">
-          {/* Left side: Model name and box name in vertical flex */}
-          <div className="flex flex-col flex-1 min-w-0 mr-3">
+                 <div className="flex items-start justify-between mb-4 max-w-full">
+                     {/* Left side: Model name and box name in vertical flex */}
+                                                                                               <div className="flex flex-col flex-1 min-w-0 mr-3 flex-shrink-0 min-w-[50%]">
             <h3 className="text-lg font-bold text-title mb-1 break-words">{name}</h3>
             {model?.box && (
               <button
@@ -117,9 +117,9 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
             )}
           </div>
           
-          {/* Right side: Game name and icon */}
-          <div className="flex items-center space-x-2 flex-shrink-0 max-w-[30%]">
-            <span className="text-xs text-secondary-text font-bold">{gameName.toUpperCase()}</span>
+                                           {/* Right side: Game name and icon */}
+                                                                                                       <div className="flex items-center space-x-2 flex-shrink min-w-0 justify-end">
+                                                           <span className="text-xs text-secondary-text font-bold leading-tight break-words line-clamp-2 text-right">{gameName.toUpperCase()}</span>
             {isValidGameIcon(gameIcon) ? (
               <>
                 <img

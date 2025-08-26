@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { ChevronRight, Users, Gamepad2, MapPin, ArrowLeft } from 'lucide-react'
+import { ChevronRight, Users, Gamepad2, MapPin, ArrowLeft, Share2 } from 'lucide-react'
 import { ManageUsersPage } from './ManageUsersPage'
 import { ManageGamesPage } from './ManageGamesPage'
 import { ManageLocationsPage } from './ManageLocationsPage'
+import { SharePreviewPage } from './SharePreviewPage'
 import { useAuth } from '../hooks/useAuth'
 
 interface AdminPageProps {
@@ -10,7 +11,7 @@ interface AdminPageProps {
 }
 
 export function AdminPage({ onBack }: AdminPageProps) {
-  const [currentView, setCurrentView] = useState<'main' | 'users' | 'games' | 'locations'>('main')
+  const [currentView, setCurrentView] = useState<'main' | 'users' | 'games' | 'locations' | 'share-preview'>('main')
   const { user } = useAuth()
 
   if (currentView === 'users') {

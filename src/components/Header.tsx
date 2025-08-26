@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Menu, X, User, Plus, Settings, Moon, Sun, Shield, Package, Calendar, Ban } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useDarkMode } from '../hooks/useDarkMode'
+import { Toast } from './Toast'
 
 interface HeaderProps {
   onAddModel?: () => void
@@ -13,12 +14,32 @@ interface HeaderProps {
 export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: HeaderProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const [isNavigationMenuOpen, setIsNavigationMenuOpen] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+  const [showToast, setShowToast] = useState(false)
   const { isDarkMode, toggleDarkMode } = useDarkMode()
   const { user, signOut } = useAuth()
 
   const handleSignOut = async () => {
-    setIsProfileMenuOpen(false)
-    await signOut()
+    try {
+      console.log('Starting sign out process...')
+      setIsProfileMenuOpen(false)
+      const { error } = await signOut()
+      console.log('Sign out result:', { error })
+      if (error) {
+        console.error('Sign out error:', error)
+        setToastMessage('Failed to sign out. Please try again.')
+        setShowToast(true)
+      } else {
+        console.log('Sign out successful')
+        // Show success message
+        setToastMessage('Successfully signed out')
+        setShowToast(true)
+      }
+    } catch (err) {
+      console.error('Sign out error:', err)
+      setToastMessage('Failed to sign out. Please try again.')
+      setShowToast(true)
+    }
   }
 
   const navigationItems = [
@@ -296,6 +317,13 @@ export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: Hea
           }}
         />
       )}
+
+      {/* Toast */}
+      <Toast
+        message={toastMessage}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+      />
     </>
   )
 }

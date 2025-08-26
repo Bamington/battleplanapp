@@ -53,7 +53,7 @@ export function BoxCard({ name, gameName, purchaseDate, imageUrl, gameImage, gam
   }
 
      return (
-     <div className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden max-w-[380px] flex flex-col">
+     <div className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden max-w-[380px] flex flex-col hover:shadow-[0_4px_12px_rgba(114,77,221,0.2)] transition-shadow duration-200">
        <div className="aspect-w-16 aspect-h-12 relative bg-bg-card-secondary">
          <img
            src={getImageSrc()}
@@ -62,16 +62,18 @@ export function BoxCard({ name, gameName, purchaseDate, imageUrl, gameImage, gam
          />
        </div>
               <div className="p-4 flex flex-col flex-1">
-         <div className="flex items-start justify-between mb-4">
-           {/* Left side: Box name and purchase date in vertical flex */}
-           <div className="flex flex-col flex-1 min-w-0 mr-3">
-             <h3 className="text-lg font-bold text-title mb-1 break-words">{name}</h3>
-             <p className="text-sm text-secondary-text">Purchased: {formatDate(purchaseDate)}</p>
+                   <div className="flex items-start justify-between mb-4 max-w-full">
+                       {/* Left side: Box name and purchase date in vertical flex */}
+                                                                                                       <div className="flex flex-col flex-1 min-w-0 mr-3 flex-shrink-0 min-w-[50%]">
+                           <h3 className="text-lg font-bold text-title mb-1 break-words">{name}</h3>
+              {purchaseDate && purchaseDate.trim() !== '' && purchaseDate !== 'null' && purchaseDate !== 'undefined' && (
+                <p className="text-sm text-secondary-text">Purchased: {formatDate(purchaseDate)}</p>
+              )}
            </div>
            
-                                 {/* Right side: Game name and icon */}
-             <div className="flex items-center space-x-2 flex-shrink-0 max-w-[30%]">
-              <span className="text-xs text-secondary-text font-bold">{gameName.toUpperCase()}</span>
+                                                                                                                                       {/* Right side: Game name and icon */}
+                                                                                                                               <div className="flex items-center space-x-2 flex-shrink min-w-0 justify-end">
+                                                                   <span className="text-xs text-secondary-text font-bold leading-tight break-words line-clamp-2 text-right">{gameName.toUpperCase()}</span>
               {isValidGameIcon(gameIcon) ? (
                 <>
                   <img

@@ -5,7 +5,8 @@ import { useAuth } from '../hooks/useAuth';
 import { compressImage } from '../utils/imageCompression';
 import { ImageCropper } from './ImageCropper';
 import { GameDropdown } from './GameDropdown';
-import { MarkdownEditor } from './MarkdownEditor';
+import { RichTextEditor } from './RichTextEditor';
+
 
 interface Game {
   id: string;
@@ -429,10 +430,10 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
             </div>
 
             {/* Notes */}
-            <MarkdownEditor
+            <RichTextEditor
               value={formData.notes}
               onChange={(value) => setFormData({ ...formData, notes: value })}
-              placeholder="Optional notes about this model... (supports markdown formatting)"
+              placeholder="Optional notes about this model..."
               label="Notes"
               rows={4}
             />

@@ -18,7 +18,9 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   const fetchUserProfile = async (session: any) => {
+    console.log('fetchUserProfile called with session:', session ? 'exists' : 'null')
     if (!session?.user) {
+      console.log('No session or user, setting user to null')
       setUser(null)
       return
     }
@@ -68,7 +70,8 @@ export function useAuth() {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', { event, session: session ? 'exists' : 'null' })
       fetchUserProfile(session)
       setLoading(false)
     })
@@ -115,8 +118,59 @@ export function useAuth() {
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    return { error }
+    try {
+      console.log('Calling Supabase auth.signOut()...')
+      
+      // First check if there's an active session
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        console.log('No active session found, clearing user state directly')
+        setUser(null)
+        // Clear any remaining auth data from storage
+        localStorage.removeItem('supabase.auth.token')
+        sessionStorage.removeItem('supabase.auth.token')
+        // Also clear any other Supabase-related storage
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('supabase.')) {
+            localStorage.removeItem(key)
+          }
+        })
+        Object.keys(sessionStorage).forEach(key => {
+          if (key.startsWith('supabase.')) {
+            sessionStorage.removeItem(key)
+          }
+        })
+        return { error: null }
+      }
+      
+      const { error } = await supabase.auth.signOut()
+      console.log('Supabase signOut response:', { error })
+      if (error) {
+        console.error('Supabase sign out error:', error)
+      } else {
+        console.log('Supabase signOut successful')
+      }
+      return { error }
+    } catch (err) {
+      console.error('Sign out error:', err)
+      // If there's an error, still clear the user state
+      setUser(null)
+      // Clear any remaining auth data from storage
+      localStorage.removeItem('supabase.auth.token')
+      sessionStorage.removeItem('supabase.auth.token')
+      // Also clear any other Supabase-related storage
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('supabase.')) {
+          localStorage.removeItem(key)
+        }
+      })
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('supabase.')) {
+          sessionStorage.removeItem(key)
+        }
+      })
+      return { error: err }
+    }
   }
 
   const resetPassword = async (email: string) => {
