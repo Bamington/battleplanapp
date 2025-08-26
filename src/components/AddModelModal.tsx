@@ -3,6 +3,7 @@ import { X, Calendar, DollarSign, Hash, Image, Package } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { GameDropdown } from './GameDropdown'
+import { useRecentGames } from '../hooks/useRecentGames'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
 
@@ -52,6 +53,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
   const [fileSizeError, setFileSizeError] = useState('')
   const [compressionInfo, setCompressionInfo] = useState('')
   const { user } = useAuth()
+  const { addRecentGame } = useRecentGames()
 
   // Prevent body scroll when modal is open
   React.useEffect(() => {
@@ -95,6 +97,20 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
       setGames(data || [])
     } catch (err) {
       console.error('Error fetching games:', err)
+    }
+  }
+
+  const getFavoriteGames = () => {
+    if (!user?.fav_games || user.fav_games.length === 0) return []
+    return games.filter(game => user.fav_games?.includes(game.id))
+  }
+
+  const handleGameSelect = (gameId: string) => {
+    setSelectedGame(gameId)
+    // Add to recent games
+    const selectedGameData = games.find(game => game.id === gameId)
+    if (selectedGameData) {
+      addRecentGame(selectedGameData)
     }
   }
 
@@ -521,8 +537,9 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
               <GameDropdown
                 games={games}
                 selectedGame={selectedGame}
-                onGameSelect={setSelectedGame}
+                onGameSelect={handleGameSelect}
                 placeholder="Choose a Game"
+                favoriteGames={getFavoriteGames()}
               />
             </div>
           )}

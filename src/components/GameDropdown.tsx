@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { ChevronDown, Search } from 'lucide-react'
+import { useRecentGames } from '../hooks/useRecentGames'
 
 interface Game {
   id: string
@@ -12,14 +13,15 @@ interface GameDropdownProps {
   selectedGame: string
   onGameSelect: (gameId: string) => void
   placeholder?: string
-  recentGames?: Game[]
+  favoriteGames?: Game[]
 }
 
-export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = "Choose a Game", recentGames = [] }: GameDropdownProps) {
+export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = "Choose a Game", favoriteGames = [] }: GameDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const { recentGames } = useRecentGames()
 
   const selectedGameData = games.find(game => game.id === selectedGame)
   
@@ -28,13 +30,24 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
     game.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
   
-  // Separate recent games from other games
-  const recentGameIds = new Set(recentGames.map(g => g.id))
-  const filteredRecentGames = recentGames.filter(game =>
+  // Get the most recent non-favorite game
+  const favoriteGameIds = new Set(favoriteGames.map(g => g.id))
+  const mostRecentNonFavorite = recentGames.find(game => 
+    !favoriteGameIds.has(game.id) && 
+    filteredGames.some(fg => fg.id === game.id)
+  )
+  
+  // Filter games for each section
+  const filteredRecentGame = mostRecentNonFavorite ? 
+    filteredGames.filter(game => game.id === mostRecentNonFavorite.id) : []
+  
+  const filteredFavoriteGames = favoriteGames.filter(game =>
     game.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
+  
   const filteredOtherGames = filteredGames.filter(game =>
-    !recentGameIds.has(game.id)
+    game.id !== mostRecentNonFavorite?.id && 
+    !favoriteGameIds.has(game.id)
   )
 
   useEffect(() => {
@@ -123,23 +136,63 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
           
           {/* Games List */}
           <div className="max-h-48 overflow-y-auto">
-            {filteredRecentGames.length === 0 && filteredOtherGames.length === 0 ? (
+            {filteredRecentGame.length === 0 && filteredFavoriteGames.length === 0 && filteredOtherGames.length === 0 ? (
               <div className="px-4 py-3 text-secondary-text text-sm">
                 No games found matching "{searchTerm}"
               </div>
             ) : (
               <>
                 {/* Recent Games Section */}
-                {filteredRecentGames.length > 0 && (
+                {filteredRecentGame.length > 0 && (
                   <>
-                    <div className="px-4 py-2 bg-amber-50 border-b border-border-custom">
-                      <span className="text-xs font-semibold text-amber-800 uppercase tracking-wide">
-                        Recently Used
+                    <div className="px-4 py-2 bg-blue-50 border-b border-border-custom">
+                      <span className="text-xs font-semibold text-blue-800 uppercase tracking-wide">
+                        Recent Games
                       </span>
                     </div>
-                    {filteredRecentGames.map((game) => (
+                    {filteredRecentGame.map((game) => (
                       <button
                         key={`recent-${game.id}`}
+                        type="button"
+                        onClick={() => handleSelect(game.id)}
+                        className="w-full px-4 py-3 text-left hover:bg-bg-secondary flex items-center space-x-3 transition-colors bg-blue-25"
+                      >
+                        {game.icon ? (
+                          <img
+                            src={game.icon}
+                            alt=""
+                            className="w-6 h-6 object-contain flex-shrink-0"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              console.warn('Game list icon failed to load:', game.icon)
+                              target.style.display = 'none'
+                            }}
+                            onLoad={() => {
+                              console.warn('Game list icon loaded successfully:', game.icon)
+                            }}
+                          />
+                        ) : (
+                          <div className="w-6 h-6 bg-gray-200 rounded-full flex-shrink-0" />
+                        )}
+                        <span className="text-text">{game.name}</span>
+                      </button>
+                    ))}
+                  </>
+                )}
+                
+                {/* Favorite Games Section */}
+                {filteredFavoriteGames.length > 0 && (
+                  <>
+                    {(filteredRecentGame.length > 0) && (
+                      <div className="px-4 py-2 bg-amber-50 border-b border-border-custom">
+                        <span className="text-xs font-semibold text-amber-800 uppercase tracking-wide">
+                          Favorite Games
+                        </span>
+                      </div>
+                    )}
+                    {filteredFavoriteGames.map((game) => (
+                      <button
+                        key={`favorite-${game.id}`}
                         type="button"
                         onClick={() => handleSelect(game.id)}
                         className="w-full px-4 py-3 text-left hover:bg-bg-secondary flex items-center space-x-3 transition-colors bg-amber-25"
@@ -167,10 +220,10 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
                   </>
                 )}
                 
-                {/* Other Games Section */}
+                {/* All Games Section */}
                 {filteredOtherGames.length > 0 && (
                   <>
-                    {filteredRecentGames.length > 0 && (
+                    {(filteredRecentGame.length > 0 || filteredFavoriteGames.length > 0) && (
                       <div className="px-4 py-2 bg-bg-secondary border-b border-border-custom">
                         <span className="text-xs font-semibold text-secondary-text uppercase tracking-wide">
                           All Games

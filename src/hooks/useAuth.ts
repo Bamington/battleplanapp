@@ -8,6 +8,9 @@ interface User {
   is_admin: boolean
   is_location_admin: boolean
   user_name_public: string | null
+  onboarded: boolean | null
+  fav_games: string[] | null
+  fav_locations: string[] | null
 }
 
 export function useAuth() {
@@ -24,7 +27,7 @@ export function useAuth() {
       // Fetch user profile from users table
       const { data, error } = await supabase
         .from('users')
-        .select('is_admin, user_name_public')
+        .select('is_admin, user_name_public, onboarded, fav_games, fav_locations')
         .eq('id', session.user.id)
         .single()
 
@@ -45,6 +48,9 @@ export function useAuth() {
         is_admin: data?.is_admin || false,
         is_location_admin: isLocationAdmin,
         user_name_public: data?.user_name_public || null,
+        onboarded: data?.onboarded || false,
+        fav_games: data?.fav_games || null,
+        fav_locations: data?.fav_locations || null,
       })
     } catch (error) {
       console.error('Error fetching user profile:', error)

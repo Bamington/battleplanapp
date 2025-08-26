@@ -29,6 +29,7 @@ import { getBuildInfo } from './utils/buildTimestamp'
 import { ModelFilters } from './components/ModelFilters'
 import { BoxFilters } from './components/BoxFilters'
 import { PublicCollectionView } from './components/PublicCollectionView'
+import { OnboardingModal } from './components/OnboardingModal'
 
 function App() {
   // Check if we're on the auth callback route
@@ -277,6 +278,23 @@ function App() {
       setShowPasswordResetModal(true)
     }
   }, [needsPasswordReset])
+
+  // Add onboarding modal state
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false)
+  
+  // Check if user needs onboarding
+  useEffect(() => {
+    if (user && !authLoading && user.onboarded === false) {
+      setShowOnboardingModal(true)
+    }
+  }, [user, authLoading])
+
+  // Handle onboarding completion
+  const handleOnboardingComplete = () => {
+    setShowOnboardingModal(false)
+    // Refresh user data to get updated onboarded status
+    window.location.reload()
+  }
 
   if (authLoading) {
     return (
@@ -785,7 +803,7 @@ function App() {
                         <div className="flex items-center space-x-2 mt-1">
                           {(model.box?.game?.icon || model.game?.icon) ? (
                             <img
-                              src={model.box?.game?.icon || model.game?.icon}
+                              src={model.box?.game?.icon || model.game?.icon || undefined}
                               alt={`${model.box?.game?.name || model.game?.name || 'Unknown Game'} icon`}
                               className="w-4 h-4 object-contain rounded"
                               onError={(e) => {
@@ -907,6 +925,13 @@ function App() {
           onAddCollection={() => setAddBoxModal(true)}
         />
       )}
+
+      {/* Add onboarding modal */}
+      <OnboardingModal
+        isOpen={showOnboardingModal}
+        onClose={() => setShowOnboardingModal(false)}
+        onComplete={handleOnboardingComplete}
+      />
 
 
     </div>

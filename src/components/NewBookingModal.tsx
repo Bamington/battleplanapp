@@ -352,6 +352,20 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
     }
   }
 
+  const getFavoriteGames = () => {
+    if (!user?.fav_games || user.fav_games.length === 0) return []
+    return games.filter(game => user.fav_games?.includes(game.id))
+  }
+
+  const handleGameSelect = (gameId: string) => {
+    setSelectedGame(gameId)
+    // Add to recent games
+    const selectedGameData = games.find(game => game.id === gameId)
+    if (selectedGameData) {
+      addRecentGame(selectedGameData)
+    }
+  }
+
   const getSelectedDayOfWeek = () => {
     if (!selectedDate) return null
     const date = new Date(selectedDate)
@@ -526,9 +540,9 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
             <GameDropdown
               games={games}
               selectedGame={selectedGame}
-              onGameSelect={setSelectedGame}
+              onGameSelect={handleGameSelect}
               placeholder="Choose a Game (Optional)"
-              recentGames={recentGames}
+              favoriteGames={getFavoriteGames()}
             />
           </div>
 
