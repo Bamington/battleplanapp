@@ -35,19 +35,36 @@ export function useBookings() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { user } = useAuth()
+  const [hasInitialized, setHasInitialized] = useState(false)
+  const { user, loading: authLoading } = useAuth()
 
   useEffect(() => {
-    if (!user) {
-      setBookings([])
-      setLoading(false)
+    // Show skeleton loading while auth is loading
+    if (authLoading) {
+      setLoading(true)
+      setHasInitialized(false)
       return
     }
 
-    fetchBookings()
-  }, [user])
+    // Only proceed if auth has finished loading
+    if (!authLoading) {
+      if (!user) {
+        setBookings([])
+        setLoading(false)
+        setHasInitialized(true)
+        return
+      }
+
+      // Always show loading when user is available
+      setLoading(true)
+      fetchBookings()
+    }
+  }, [user, authLoading])
 
   const fetchBookings = async () => {
+    const startTime = Date.now()
+    const minLoadingTime = 500 // Minimum 500ms loading time for better UX
+    
     try {
       // First, get bookings with related data (except user)
       const { data: bookingsData, error: bookingsError } = await supabase
@@ -111,10 +128,17 @@ export function useBookings() {
       setBookings(bookingsWithUsers)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch bookings')
-    } finally {
-      setLoading(false)
-    }
+         } finally {
+       // Ensure minimum loading time for better UX
+       const elapsedTime = Date.now() - startTime
+       const remainingTime = Math.max(0, minLoadingTime - elapsedTime)
+       
+       setTimeout(() => {
+         setLoading(false)
+         setHasInitialized(true)
+       }, remainingTime)
+     }
   }
 
-  return { bookings, loading, error, refetch: fetchBookings }
+  return { bookings, loading, error, hasInitialized, refetch: fetchBookings }
 }

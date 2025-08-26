@@ -6,8 +6,12 @@ import { CancelBookingModal } from './CancelBookingModal'
 import { useBookings } from '../hooks/useBookings'
 import { supabase } from '../lib/supabase'
 
-export function BattleplanPage() {
-  const [showNewBookingModal, setShowNewBookingModal] = React.useState(false)
+interface BattleplanPageProps {
+  refreshTrigger?: number
+  onNewBooking?: () => void
+}
+
+export function BattleplanPage({ refreshTrigger = 0, onNewBooking }: BattleplanPageProps) {
   const [expandedDates, setExpandedDates] = React.useState<Set<string>>(new Set())
   const [lastSelectedLocation, setLastSelectedLocation] = React.useState<string>('')
   const [cancelModal, setCancelModal] = React.useState<{
@@ -18,15 +22,16 @@ export function BattleplanPage() {
     bookingId: null
   })
   const [cancelling, setCancelling] = React.useState(false)
-  const { bookings, loading, refetch } = useBookings()
+  const { bookings, loading, hasInitialized, refetch } = useBookings()
 
-  const handleBookingCreated = () => {
-    refetch()
-  }
+  // Refetch bookings when refreshTrigger changes
+  React.useEffect(() => {
+    if (refreshTrigger > 0) {
+      refetch()
+    }
+  }, [refreshTrigger, refetch])
 
-  const handleLocationSelected = (locationId: string) => {
-    setLastSelectedLocation(locationId)
-  }
+
 
   const handleCancelBooking = (bookingId: string) => {
     setCancelModal({
@@ -159,24 +164,64 @@ export function BattleplanPage() {
         {/* Bookings List */}
         <div className="mb-8">
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden animate-pulse">
-                  <div className="p-6 space-y-4">
-                    <div className="h-6 bg-secondary-text opacity-20 rounded"></div>
-                    <div className="h-4 bg-secondary-text opacity-20 rounded w-3/4"></div>
-                    <div className="h-4 bg-secondary-text opacity-20 rounded w-1/2"></div>
+            <div className="space-y-8">
+              {/* Skeleton for date groups */}
+              {Array.from({ length: 2 }).map((_, groupIndex) => (
+                <div key={groupIndex} className="space-y-4">
+                  {/* Skeleton date header */}
+                  <div className="w-full border-b border-border-custom pb-2 animate-pulse">
+                    <div className="h-6 bg-secondary-text opacity-20 rounded w-48"></div>
+                  </div>
+                  
+                  {/* Skeleton booking cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {Array.from({ length: groupIndex === 0 ? 3 : 2 }).map((_, cardIndex) => (
+                      <div key={cardIndex} className="bg-bg-card rounded-lg shadow-sm border border-border-custom p-4 animate-pulse">
+                        {/* Date and Timeslot skeleton */}
+                        <div className="flex items-center space-x-2 mb-3">
+                          <div className="w-4 h-4 bg-secondary-text opacity-20 rounded"></div>
+                          <div className="flex-1">
+                            <div className="h-4 bg-secondary-text opacity-20 rounded w-3/4 mb-1"></div>
+                            <div className="h-3 bg-secondary-text opacity-20 rounded w-1/2"></div>
+                          </div>
+                        </div>
+                        
+                        {/* Location skeleton */}
+                        <div className="flex items-start space-x-2 mb-3">
+                          <div className="w-4 h-4 bg-secondary-text opacity-20 rounded mt-0.5"></div>
+                          <div className="flex-1">
+                            <div className="h-4 bg-secondary-text opacity-20 rounded w-2/3 mb-1"></div>
+                            <div className="h-3 bg-secondary-text opacity-20 rounded w-full"></div>
+                          </div>
+                        </div>
+                        
+                        {/* User skeleton */}
+                        <div className="flex items-center space-x-2 mb-3">
+                          <div className="w-4 h-4 bg-secondary-text opacity-20 rounded"></div>
+                          <div className="flex-1">
+                            <div className="h-4 bg-secondary-text opacity-20 rounded w-1/2 mb-1"></div>
+                            <div className="h-3 bg-secondary-text opacity-20 rounded w-3/4"></div>
+                          </div>
+                        </div>
+                        
+                        {/* Game skeleton (optional) */}
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 bg-secondary-text opacity-20 rounded"></div>
+                          <div className="h-3 bg-secondary-text opacity-20 rounded w-1/3"></div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
             </div>
-          ) : bookings.length === 0 ? (
+          ) : hasInitialized && bookings.length === 0 ? (
             <div className="text-center py-12">
               <Calendar className="w-16 h-16 text-secondary-text mx-auto mb-4" />
               <p className="text-base text-secondary-text mb-4">No table bookings yet.</p>
               <div className="flex justify-center">
                 <button 
-                  onClick={() => setShowNewBookingModal(true)}
+                  onClick={onNewBooking}
                   className="btn-primary"
                 >
                   Book Your First Table
@@ -220,13 +265,7 @@ export function BattleplanPage() {
         </div>
       </div>
 
-      <NewBookingModal
-        isOpen={showNewBookingModal}
-        onClose={() => setShowNewBookingModal(false)}
-        onBookingCreated={handleBookingCreated}
-        lastSelectedLocation={lastSelectedLocation}
-        onLocationSelected={handleLocationSelected}
-      />
+
 
       <CancelBookingModal
         isOpen={cancelModal.isOpen}

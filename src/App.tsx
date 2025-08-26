@@ -82,6 +82,7 @@ function App() {
     isOpen: false,
     model: null
   })
+  const [refreshBookingsTrigger, setRefreshBookingsTrigger] = useState(0)
   const [viewBoxModal, setViewBoxModal] = useState<{
     isOpen: boolean
     box: any | null
@@ -407,7 +408,10 @@ function App() {
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />
-        <BattleplanPage />
+        <BattleplanPage 
+          refreshTrigger={refreshBookingsTrigger}
+          onNewBooking={() => setShowNewBookingModal(true)}
+        />
         <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
         
         {/* Bookings FAB - Only show on battleplan tab */}
@@ -420,7 +424,8 @@ function App() {
           isOpen={showNewBookingModal}
           onClose={() => setShowNewBookingModal(false)}
           onBookingCreated={() => {
-            // Refresh data if needed
+            // Trigger refresh of bookings data
+            setRefreshBookingsTrigger(prev => prev + 1)
             setShowNewBookingModal(false)
           }}
           lastSelectedLocation=""
@@ -884,7 +889,8 @@ function App() {
         isOpen={showNewBookingModal}
         onClose={() => setShowNewBookingModal(false)}
         onBookingCreated={() => {
-          // Refresh data if needed
+          // Trigger refresh of bookings data
+          setRefreshBookingsTrigger(prev => prev + 1)
           setShowNewBookingModal(false)
         }}
         lastSelectedLocation=""
