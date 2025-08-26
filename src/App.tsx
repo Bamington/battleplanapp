@@ -32,11 +32,15 @@ import { PublicCollectionView } from './components/PublicCollectionView'
 import { OnboardingModal } from './components/OnboardingModal'
 
 function App() {
+  // Get the base path from Vite config
+  const basePath = import.meta.env.BASE_URL || '/'
+  
   // Check if we're on the auth callback route
-  const isAuthCallback = window.location.pathname === '/auth/callback'
+  const isAuthCallback = window.location.pathname.endsWith('/auth/callback')
 
   // Check if we're on a shared collection route
-  const sharedCollectionMatch = window.location.pathname.match(/^\/shared\/collection\/(.+)$/)
+  // Handle both with and without base path for flexibility
+  const sharedCollectionMatch = window.location.pathname.match(/\/shared\/collection\/(.+)$/)
   const sharedCollectionId = sharedCollectionMatch ? sharedCollectionMatch[1] : null
 
   // Show auth callback component if on callback route
@@ -350,20 +354,7 @@ function App() {
   if (showAdminPage) {
     return (
       <div className="min-h-screen bg-bg-secondary">
-        <Header 
-          onAddModel={() => setAddModelModal(true)} 
-          onAdminClick={handleAdminClick}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
         <AdminPage onBack={() => setShowAdminPage(false)} />
-        <TabBar 
-          activeTab={activeTab} 
-          onTabChange={(tab) => {
-            setShowAdminPage(false)
-            setActiveTab(tab)
-          }} 
-        />
       </div>
     )
   }

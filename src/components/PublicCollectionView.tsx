@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react'
-import { Calendar, Package, Users, Globe, User, Moon, Sun } from 'lucide-react'
+import { Calendar, Package, Users, Globe, User, Moon, Sun, ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useDarkMode } from '../hooks/useDarkMode'
+import { getBasePath } from '../utils/environment'
 import battleplanLogo from '/Battleplan-Logo-Purple.svg'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 interface PublicCollectionViewProps {
   collectionId: string
+  onBack?: () => void
 }
 
 interface Collection {
@@ -15,7 +17,7 @@ interface Collection {
   name: string
   purchase_date: string | null
   image_url: string | null
-  public: boolean
+  public: boolean | null
   game: {
     id: string
     name: string
@@ -38,7 +40,7 @@ interface Model {
   } | null
 }
 
-export function PublicCollectionView({ collectionId }: PublicCollectionViewProps) {
+export function PublicCollectionView({ collectionId, onBack }: PublicCollectionViewProps) {
   const [collection, setCollection] = useState<Collection | null>(null)
   const [models, setModels] = useState<Model[]>([])
   const [loading, setLoading] = useState(true)
@@ -140,33 +142,37 @@ export function PublicCollectionView({ collectionId }: PublicCollectionViewProps
     })
   }
 
-  const getImageSrc = () => {
-    if (!collection) return ''
-    
-    // Check if we have a valid collection image URL
-    if (collection.image_url && 
-        typeof collection.image_url === 'string' &&
-        collection.image_url.trim() !== '' && 
-        collection.image_url !== 'undefined' && 
-        collection.image_url !== 'null' &&
-        (collection.image_url.startsWith('http') || collection.image_url.startsWith('/'))) {
-      return collection.image_url
-    }
-    
-    // Try to use the game's image as fallback
-    const gameImage = collection.game?.image
-    if (gameImage && 
-        typeof gameImage === 'string' &&
-        gameImage.trim() !== '' && 
-        gameImage !== 'undefined' && 
-        gameImage !== 'null' &&
-        gameImage.startsWith('http')) {
-      return gameImage
-    }
-    
-    // Final fallback to default image
-    return 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
-  }
+     const getImageSrc = () => {
+     if (!collection) return ''
+     
+     // Check if we have a valid collection image URL
+     if (collection.image_url && 
+         typeof collection.image_url === 'string' &&
+         collection.image_url.trim() !== '' && 
+         collection.image_url !== 'undefined' && 
+         collection.image_url !== 'null' &&
+         (collection.image_url.startsWith('http') || collection.image_url.startsWith('/'))) {
+       return collection.image_url
+     }
+     
+     // Try to use the game's image as fallback
+     const gameImage = collection.game?.image
+     if (gameImage && 
+         typeof gameImage === 'string' &&
+         gameImage.trim() !== '' && 
+         gameImage !== 'undefined' && 
+         gameImage !== 'null' &&
+         gameImage.startsWith('http')) {
+       return gameImage
+     }
+     
+     // Final fallback to default image
+     return 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+   }
+
+   const getLogoImageSrc = () => {
+     return isDarkMode ? '/Logo White.svg' : '/Battleplan-Logo-Purple.svg'
+   }
 
   const getModelImageSrc = (model: Model) => {
     // Check if we have a valid model image URL
@@ -239,12 +245,12 @@ export function PublicCollectionView({ collectionId }: PublicCollectionViewProps
               : error || 'Something went wrong while loading the collection.'
             }
           </p>
-                     <button
-             onClick={handleBackClick}
-             className="btn-secondary"
-           >
-             <span>Go Back</span>
-           </button>
+          <button
+            onClick={onBack || handleBackClick}
+            className="btn-secondary"
+          >
+            <span>Go Back</span>
+          </button>
         </div>
       </div>
     )
@@ -256,75 +262,94 @@ export function PublicCollectionView({ collectionId }: PublicCollectionViewProps
 
      return (
      <div className="min-h-screen bg-bg-primary">
-               {/* Custom Header for Public Collection View */}
-        <header className="bg-bg-primary shadow-sm border-b border-border-custom relative z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              {/* Left side - Empty for spacing */}
-              <div className="flex items-center">
-                {/* Empty div for spacing */}
-              </div>
+       {onBack ? (
+         <>
+           {/* Preview Banner */}
+           <div className="bg-[var(--color-brand)] text-white px-4 py-3">
+             <div className="max-w-4xl mx-auto flex items-center justify-between">
+               <button
+                 onClick={onBack}
+                 className="flex items-center space-x-2 text-white hover:text-white/80 transition-colors"
+               >
+                 <ArrowLeft className="w-4 h-4" />
+                 <span className="text-sm font-medium">Back</span>
+               </button>
+               <span className="text-sm font-medium">This is just a preview.</span>
+               <div className="w-16"></div> {/* Spacer for centering */}
+             </div>
+           </div>
+         </>
+       ) : (
+         /* Custom Header for Public Collection View */
+         <header className="bg-bg-primary shadow-sm border-b border-border-custom relative z-50">
+           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+             <div className="flex justify-between items-center h-16">
+               {/* Left side - Empty for spacing */}
+               <div className="flex items-center">
+                 {/* Empty div for spacing */}
+               </div>
 
-              {/* Center - Logo */}
-              <div className="flex items-center justify-center flex-1">
-                <img 
-                  src={battleplanLogo}
-                  alt="Battleplan" 
-                  className="max-h-[300px] w-auto"
-                />
-              </div>
+               {/* Center - Logo */}
+               <div className="flex items-center justify-center flex-1">
+                 <img 
+                   src={battleplanLogo}
+                   alt="Battleplan" 
+                   className="max-h-[300px] w-auto"
+                 />
+               </div>
 
-              {/* Right side - Profile Menu */}
-              <div className="relative profile-dropdown">
-                <button
-                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                  className="text-secondary-text hover:text-text focus:outline-none p-2"
-                >
-                  <User className="w-6 h-6 text-icon hover:text-icon-hover" />
-                </button>
+               {/* Right side - Profile Menu */}
+               <div className="relative profile-dropdown">
+                 <button
+                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                   className="text-secondary-text hover:text-text focus:outline-none p-2"
+                 >
+                   <User className="w-6 h-6 text-icon hover:text-icon-hover" />
+                 </button>
 
-                {/* Profile Menu Dropdown */}
-                {isProfileMenuOpen && (
-                  <div className="absolute right-0 top-12 bg-bg-primary border border-border-custom rounded-lg shadow-lg py-2 z-[60] min-w-[200px]">
-                    <button
-                      onClick={() => {
-                        setIsProfileMenuOpen(false)
-                        window.location.href = '/'
-                      }}
-                      className="w-full px-4 py-2 text-left text-text hover:bg-bg-secondary transition-colors"
-                    >
-                      <span>Log In</span>
-                    </button>
-                    <div className="border-t border-border-custom my-1"></div>
-                    <div className="flex items-center justify-between px-4 py-2">
-                      <div className="flex items-center space-x-3">
-                        {isDarkMode ? <Moon className="w-5 h-5 text-icon" /> : <Sun className="w-5 h-5 text-icon" />}
-                        <span className="text-base font-semibold text-text">
-                          {isDarkMode ? 'Dark Mode' : 'Light Mode'}
-                        </span>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleDarkMode()
-                        }}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
-                          isDarkMode ? 'bg-brand' : 'bg-gray-200'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            isDarkMode ? 'translate-x-6' : 'translate-x-1'
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </header>
+                 {/* Profile Menu Dropdown */}
+                 {isProfileMenuOpen && (
+                   <div className="absolute right-0 top-12 bg-bg-primary border border-border-custom rounded-lg shadow-lg py-2 z-[60] min-w-[200px]">
+                     <button
+                       onClick={() => {
+                         setIsProfileMenuOpen(false)
+                         window.location.href = getBasePath()
+                       }}
+                       className="w-full px-4 py-2 text-left text-text hover:bg-bg-secondary transition-colors"
+                     >
+                       <span>Log In</span>
+                     </button>
+                     <div className="border-t border-border-custom my-1"></div>
+                     <div className="flex items-center justify-between px-4 py-2">
+                       <div className="flex items-center space-x-3">
+                         {isDarkMode ? <Moon className="w-5 h-5 text-icon" /> : <Sun className="w-5 h-5 text-icon" />}
+                         <span className="text-base font-semibold text-text">
+                           {isDarkMode ? 'Dark Mode' : 'Light Mode'}
+                         </span>
+                       </div>
+                       <button
+                         onClick={(e) => {
+                           e.stopPropagation()
+                           toggleDarkMode()
+                         }}
+                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
+                           isDarkMode ? 'bg-brand' : 'bg-gray-200'
+                         }`}
+                       >
+                         <span
+                           className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                             isDarkMode ? 'translate-x-6' : 'translate-x-1'
+                           }`}
+                         />
+                       </button>
+                     </div>
+                   </div>
+                 )}
+               </div>
+             </div>
+           </div>
+         </header>
+       )}
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Collection Header */}
@@ -482,10 +507,17 @@ export function PublicCollectionView({ collectionId }: PublicCollectionViewProps
                   </div>
                 </div>
               ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
+                         </div>
+           )}
+         </div>
+
+         {/* Footer */}
+         <div className="mt-12 pt-8 border-t border-border-custom">
+           <div className="flex items-center justify-center space-x-4">
+             <img src={getLogoImageSrc()} alt="BattlePlan" className="h-8" />
+           </div>
+         </div>
+       </div>
+     </div>
+   )
+ }

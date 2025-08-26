@@ -23,6 +23,13 @@ export const getBaseUrl = (): string => {
 }
 
 /**
+ * Get the base path for the current environment
+ */
+export const getBasePath = (): string => {
+  return import.meta.env.BASE_URL || '/'
+}
+
+/**
  * Get the auth callback URL for the current environment
  */
 export const getAuthCallbackUrl = (): string => {

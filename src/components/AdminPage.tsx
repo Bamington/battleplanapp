@@ -4,6 +4,8 @@ import { ManageUsersPage } from './ManageUsersPage'
 import { ManageGamesPage } from './ManageGamesPage'
 import { ManageLocationsPage } from './ManageLocationsPage'
 import { SharePreviewPage } from './SharePreviewPage'
+import { Header } from './Header'
+import { TabBar } from './TabBar'
 import { useAuth } from '../hooks/useAuth'
 
 interface AdminPageProps {
@@ -13,6 +15,14 @@ interface AdminPageProps {
 export function AdminPage({ onBack }: AdminPageProps) {
   const [currentView, setCurrentView] = useState<'main' | 'users' | 'games' | 'locations' | 'share-preview'>('main')
   const { user } = useAuth()
+
+  const handleAdminClick = () => {
+    // This is a no-op since we're already in admin
+  }
+
+  const handleTabChange = (tab: string) => {
+    // This is a no-op since we're in admin mode
+  }
 
   if (currentView === 'users') {
     return <ManageUsersPage onBack={() => setCurrentView('main')} />
@@ -26,57 +36,86 @@ export function AdminPage({ onBack }: AdminPageProps) {
     return <ManageLocationsPage onBack={() => setCurrentView('main')} isLocationAdmin={user?.is_location_admin || false} />
   }
 
+  if (currentView === 'share-preview') {
+    return <SharePreviewPage onBack={() => setCurrentView('main')} />
+  }
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
-      <div className="mb-8">
-        <button
-          onClick={onBack}
-          className="flex items-center space-x-2 text-secondary-text hover:text-text transition-colors mb-4"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span>Back to Collection</span>
-        </button>
-        <h1 className="text-4xl font-bold text-title">ADMIN PANEL</h1>
-      </div>
-
-      <div className="space-y-4 max-w-md">
-        {user?.is_admin && (
+    <div className="min-h-screen bg-bg-secondary">
+      <Header 
+        onAddModel={() => {}} 
+        onAdminClick={handleAdminClick}
+        activeTab="collection"
+        onTabChange={handleTabChange}
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+        <div className="mb-8">
           <button
-            onClick={() => setCurrentView('users')}
+            onClick={onBack}
+            className="flex items-center space-x-2 text-secondary-text hover:text-text transition-colors mb-4"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Back to Collection</span>
+          </button>
+          <h1 className="text-4xl font-bold text-title">ADMIN PANEL</h1>
+        </div>
+
+        <div className="space-y-4 max-w-md">
+          {user?.is_admin && (
+            <button
+              onClick={() => setCurrentView('users')}
+              className="w-full bg-bg-card border border-border-custom rounded-lg p-6 hover:bg-bg-secondary transition-colors flex items-center justify-between"
+            >
+              <div className="flex items-center space-x-4">
+                <Users className="w-6 h-6 text-secondary-text" />
+                <span className="text-lg font-semibold text-text">Manage Users</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-icon" />
+            </button>
+          )}
+
+          {user?.is_admin && (
+            <button
+              onClick={() => setCurrentView('games')}
+              className="w-full bg-bg-card border border-border-custom rounded-lg p-6 hover:bg-bg-secondary transition-colors flex items-center justify-between"
+            >
+              <div className="flex items-center space-x-4">
+                <Gamepad2 className="w-6 h-6 text-secondary-text" />
+                <span className="text-lg font-semibold text-text">Manage Games</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-icon" />
+            </button>
+          )}
+
+          <button
+            onClick={() => setCurrentView('locations')}
             className="w-full bg-bg-card border border-border-custom rounded-lg p-6 hover:bg-bg-secondary transition-colors flex items-center justify-between"
           >
             <div className="flex items-center space-x-4">
-              <Users className="w-6 h-6 text-secondary-text" />
-              <span className="text-lg font-semibold text-text">Manage Users</span>
+              <MapPin className="w-6 h-6 text-secondary-text" />
+              <span className="text-lg font-semibold text-text">Manage Locations</span>
             </div>
             <ChevronRight className="w-5 h-5 text-icon" />
           </button>
-        )}
 
-        {user?.is_admin && (
           <button
-            onClick={() => setCurrentView('games')}
+            onClick={() => setCurrentView('share-preview')}
             className="w-full bg-bg-card border border-border-custom rounded-lg p-6 hover:bg-bg-secondary transition-colors flex items-center justify-between"
           >
             <div className="flex items-center space-x-4">
-              <Gamepad2 className="w-6 h-6 text-secondary-text" />
-              <span className="text-lg font-semibold text-text">Manage Games</span>
+              <Share2 className="w-6 h-6 text-secondary-text" />
+              <span className="text-lg font-semibold text-text">Share Preview</span>
             </div>
             <ChevronRight className="w-5 h-5 text-icon" />
           </button>
-        )}
-
-        <button
-          onClick={() => setCurrentView('locations')}
-          className="w-full bg-bg-card border border-border-custom rounded-lg p-6 hover:bg-bg-secondary transition-colors flex items-center justify-between"
-        >
-          <div className="flex items-center space-x-4">
-            <MapPin className="w-6 h-6 text-secondary-text" />
-            <span className="text-lg font-semibold text-text">Manage Locations</span>
-          </div>
-          <ChevronRight className="w-5 h-5 text-icon" />
-        </button>
+        </div>
       </div>
+      <TabBar 
+        activeTab="collection" 
+        onTabChange={(tab) => {
+          // This is a no-op since we're in admin mode
+        }} 
+      />
     </div>
   )
 }
