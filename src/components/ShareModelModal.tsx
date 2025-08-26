@@ -4,18 +4,18 @@ import { supabase } from '../lib/supabase'
 import { getShareUrl } from '../utils/environment'
 import { Toast } from './Toast'
 
-interface ShareCollectionModalProps {
+interface ShareModelModalProps {
   isOpen: boolean
   onClose: () => void
-  onCollectionUpdated?: () => void
-  box: {
+  onModelUpdated?: () => void
+  model: {
     id: string
     name: string
-    public: boolean
+    public: boolean | null
   } | null
 }
 
-export function ShareCollectionModal({ isOpen, onClose, onCollectionUpdated, box }: ShareCollectionModalProps) {
+export function ShareModelModal({ isOpen, onClose, onModelUpdated, model }: ShareModelModalProps) {
   const [isPublic, setIsPublic] = useState(false)
   const [loading, setLoading] = useState(false)
   const [copying, setCopying] = useState(false)
@@ -23,25 +23,25 @@ export function ShareCollectionModal({ isOpen, onClose, onCollectionUpdated, box
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
 
-  // Update local state when box changes
+  // Update local state when model changes
   useEffect(() => {
-    if (box) {
+    if (model) {
       // Fallback to false if public property doesn't exist yet
-      setIsPublic(box.public ?? false)
+      setIsPublic(model.public ?? false)
     }
-  }, [box])
+  }, [model])
 
   const handlePublicToggle = async () => {
-    if (!box) return
+    if (!model) return
 
     setLoading(true)
     setError('')
 
     try {
       const { error } = await supabase
-        .from('boxes')
+        .from('models')
         .update({ public: !isPublic })
-        .eq('id', box.id)
+        .eq('id', model.id)
 
       if (error) throw error
 
@@ -49,36 +49,36 @@ export function ShareCollectionModal({ isOpen, onClose, onCollectionUpdated, box
       setIsPublic(!isPublic)
       
       // Notify parent component
-      onCollectionUpdated?.()
+      onModelUpdated?.()
       
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update collection visibility')
+      setError(err instanceof Error ? err.message : 'Failed to update model visibility')
     } finally {
       setLoading(false)
     }
   }
 
   const handleCopyUrl = async () => {
-    if (!box) return
+    if (!model) return
     
     setCopying(true)
     setError('')
     
     try {
       // Generate the public share URL using environment-specific base URL
-      const shareUrl = getShareUrl(`/shared/collection/${box.id}`)
+      const shareUrl = getShareUrl(`/shared/model/${model.id}`)
       
       // Copy to clipboard
       await navigator.clipboard.writeText(shareUrl)
       
       // Show success toast
-      setToastMessage(`${box.name}'s URL has been copied to your clipboard!`)
+      setToastMessage(`${model.name}'s URL has been copied to your clipboard!`)
       setShowToast(true)
       
     } catch (error) {
       console.error('Error copying URL:', error)
       // Fallback for older browsers that don't support clipboard API
-      const shareUrl = getShareUrl(`/shared/collection/${box.id}`)
+      const shareUrl = getShareUrl(`/shared/model/${model.id}`)
       const textArea = document.createElement('textarea')
       textArea.value = shareUrl
       document.body.appendChild(textArea)
@@ -87,7 +87,7 @@ export function ShareCollectionModal({ isOpen, onClose, onCollectionUpdated, box
       document.body.removeChild(textArea)
       
       // Show success toast for fallback method too
-      setToastMessage(`${box.name}'s URL has been copied to your clipboard!`)
+      setToastMessage(`${model.name}'s URL has been copied to your clipboard!`)
       setShowToast(true)
     } finally {
       setCopying(false)
@@ -100,7 +100,7 @@ export function ShareCollectionModal({ isOpen, onClose, onCollectionUpdated, box
     }
   }
 
-  if (!isOpen || !box) return null
+  if (!isOpen || !model) return null
 
   return (
     <div 
@@ -109,7 +109,7 @@ export function ShareCollectionModal({ isOpen, onClose, onCollectionUpdated, box
     >
       <div className="bg-modal-bg rounded-lg max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-title">Share {box.name}</h2>
+          <h2 className="text-lg font-bold text-title">Share {model.name}</h2>
           <button
             onClick={onClose}
             className="text-secondary-text hover:text-text transition-colors"
@@ -121,7 +121,7 @@ export function ShareCollectionModal({ isOpen, onClose, onCollectionUpdated, box
         <div className="space-y-6">
           {/* Description */}
           <div className="text-sm text-secondary-text">
-            Sharing a collection makes it visible to other users who have the link to it. Additionally, models inside a shared collection also become visible.
+            Sharing a model makes it visible to other users who have the link to it.
           </div>
 
           {/* Make Public Switch */}
@@ -134,7 +134,7 @@ export function ShareCollectionModal({ isOpen, onClose, onCollectionUpdated, box
                     Make Public
                   </label>
                   <p className="text-xs text-secondary-text">
-                    Allow anyone to view this collection
+                    Allow anyone to view this model
                   </p>
                 </div>
               </div>
@@ -160,7 +160,7 @@ export function ShareCollectionModal({ isOpen, onClose, onCollectionUpdated, box
               <div className="flex items-center space-x-2">
                 <Globe className="w-4 h-4 text-green-600" />
                 <span className="text-sm text-green-800">
-                  This collection is now public and can be viewed by anyone with the link.
+                  This model is now public and can be viewed by anyone with the link.
                 </span>
               </div>
             </div>
@@ -171,23 +171,23 @@ export function ShareCollectionModal({ isOpen, onClose, onCollectionUpdated, box
               <div className="flex items-center space-x-2">
                 <Lock className="w-4 h-4 text-gray-600" />
                 <span className="text-sm text-gray-800">
-                  This collection is private and only visible to you.
+                  This model is private and only visible to you.
                 </span>
               </div>
             </div>
           )}
 
-                     {/* Copy URL Button - Only show when public */}
-           {isPublic && (
-             <button
-               onClick={handleCopyUrl}
-               disabled={copying}
-               className="btn-secondary btn-full btn-with-icon"
-             >
-               <Copy className="w-4 h-4" />
-               <span>{copying ? 'Copying...' : 'Copy URL'}</span>
-             </button>
-           )}
+          {/* Copy URL Button - Only show when public */}
+          {isPublic && (
+            <button
+              onClick={handleCopyUrl}
+              disabled={copying}
+              className="btn-secondary btn-full btn-with-icon"
+            >
+              <Copy className="w-4 h-4" />
+              <span>{copying ? 'Copying...' : 'Copy URL'}</span>
+            </button>
+          )}
 
           {/* Error Message */}
           {error && (

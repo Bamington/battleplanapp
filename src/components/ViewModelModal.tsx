@@ -3,10 +3,11 @@ import { X, Share2, Edit, Trash2, Calendar, Hash, Palette, FileText, Package, Ga
 import { supabase } from '../lib/supabase'
 import { DeleteModelModal } from './DeleteModelModal'
 import { EditModelModal } from './EditModelModal'
+import { ShareModelModal } from './ShareModelModal'
 import { Toast } from './Toast'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { getShareUrl } from '../utils/environment'
+
 
 interface ViewModelModalProps {
   isOpen: boolean
@@ -22,6 +23,7 @@ interface ViewModelModalProps {
     image_url: string
     game_id: string | null
     notes: string | null
+    public: boolean | null
     box: {
       id: string
       name: string
@@ -39,8 +41,8 @@ interface ViewModelModalProps {
 export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated, onViewBox, model }: ViewModelModalProps) {
   const [showDeleteModal, setShowDeleteModal] = React.useState(false)
   const [showEditModal, setShowEditModal] = React.useState(false)
+  const [showShareModal, setShowShareModal] = React.useState(false)
   const [deleting, setDeleting] = React.useState(false)
-  const [sharing, setSharing] = React.useState(false)
   const [showToast, setShowToast] = React.useState(false)
   const [currentModel, setCurrentModel] = React.useState(model)
 
@@ -150,37 +152,8 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
     }
   }
 
-  const handleShareModel = async () => {
-    if (!model) return
-    
-    setSharing(true)
-    
-    try {
-      // Generate the public share URL using environment-specific base URL
-      const shareUrl = getShareUrl(`/shared/model/${model.id}`)
-      
-      // Copy to clipboard
-      await navigator.clipboard.writeText(shareUrl)
-      
-      // Show success toast
-      setShowToast(true)
-      
-    } catch (error) {
-      console.error('Error sharing model:', error)
-      // Fallback for older browsers that don't support clipboard API
-      const shareUrl = getShareUrl(`/shared/model/${model.id}`)
-      const textArea = document.createElement('textarea')
-      textArea.value = shareUrl
-      document.body.appendChild(textArea)
-      textArea.select()
-      document.execCommand('copy')
-      document.body.removeChild(textArea)
-      
-      // Show success toast for fallback method too
-      setShowToast(true)
-    } finally {
-      setSharing(false)
-    }
+  const handleShareModel = () => {
+    setShowShareModal(true)
   }
 
   const handleEditSuccess = async () => {
@@ -379,11 +352,10 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
               <div className="space-y-3">
                 <button
                   onClick={handleShareModel}
-                  disabled={sharing}
                   className="btn-primary btn-full btn-with-icon"
                 >
                   <Share2 className="w-4 h-4" />
-                  <span>{sharing ? 'Copying Link...' : 'Share Model'}</span>
+                  <span>Share Model</span>
                 </button>
                 <button
                   onClick={handleDeleteClick}
@@ -409,6 +381,13 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         onModelUpdated={handleEditSuccess}
+        model={model}
+      />
+
+      <ShareModelModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        onModelUpdated={onModelUpdated}
         model={model}
       />
 

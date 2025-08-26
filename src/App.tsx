@@ -29,6 +29,7 @@ import { getBuildInfo } from './utils/buildTimestamp'
 import { ModelFilters } from './components/ModelFilters'
 import { BoxFilters } from './components/BoxFilters'
 import { PublicCollectionView } from './components/PublicCollectionView'
+import { PublicModelView } from './components/PublicModelView'
 import { OnboardingModal } from './components/OnboardingModal'
 
 function App() {
@@ -43,6 +44,11 @@ function App() {
   const sharedCollectionMatch = window.location.pathname.match(/\/shared\/collection\/(.+)$/)
   const sharedCollectionId = sharedCollectionMatch ? sharedCollectionMatch[1] : null
 
+  // Check if we're on a shared model route
+  // Handle both with and without base path for flexibility
+  const sharedModelMatch = window.location.pathname.match(/\/shared\/model\/(.+)$/)
+  const sharedModelId = sharedModelMatch ? sharedModelMatch[1] : null
+
   // Show auth callback component if on callback route
   if (isAuthCallback) {
     return <AuthCallback />
@@ -51,6 +57,11 @@ function App() {
   // Show shared collection view if on shared collection route
   if (sharedCollectionId) {
     return <PublicCollectionView collectionId={sharedCollectionId as string} />
+  }
+
+  // Show shared model view if on shared model route
+  if (sharedModelId) {
+    return <PublicModelView modelId={sharedModelId as string} />
   }
 
   const [activeTab, setActiveTab] = useState('collection')

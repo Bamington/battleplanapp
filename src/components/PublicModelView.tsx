@@ -18,6 +18,7 @@ interface Model {
   count: number
   image_url: string
   notes: string | null
+  public: boolean | null
   game: {
     id: string
     name: string
@@ -67,7 +68,7 @@ export function PublicModelView({ modelId, onBack }: PublicModelViewProps) {
       setLoading(true)
       setError(null)
 
-      // Fetch the model details
+      // Fetch the model details - only public models
       const { data: modelData, error: modelError } = await supabase
         .from('models')
         .select(`
@@ -77,6 +78,7 @@ export function PublicModelView({ modelId, onBack }: PublicModelViewProps) {
           count,
           image_url,
           notes,
+          public,
           game:games(
             id,
             name,
@@ -90,10 +92,17 @@ export function PublicModelView({ modelId, onBack }: PublicModelViewProps) {
           )
         `)
         .eq('id', modelId)
+        .eq('public', true)
         .single()
 
       if (modelError) {
-        throw modelError
+        if (modelError.code === 'PGRST116') {
+          // No rows returned - model not found or not public
+          setError('Model not found or not publicly accessible')
+        } else {
+          throw modelError
+        }
+        return
       }
 
       // Transform the data to handle array responses from Supabase
@@ -121,7 +130,7 @@ export function PublicModelView({ modelId, onBack }: PublicModelViewProps) {
   }
 
   const getImageSrc = () => {
-    return isDarkMode ? '/Logo White.svg' : '/Battleplan-Logo-Purple.svg'
+    return isDarkMode ? 'Logo White.svg' : 'Battleplan-Logo-Purple.svg'
   }
 
   if (loading) {

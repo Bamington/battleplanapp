@@ -170,9 +170,9 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
      return 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
    }
 
-   const getLogoImageSrc = () => {
-     return isDarkMode ? '/Logo White.svg' : '/Battleplan-Logo-Purple.svg'
-   }
+       const getLogoImageSrc = () => {
+      return isDarkMode ? 'Logo White.svg' : 'Battleplan-Logo-Purple.svg'
+    }
 
   const getModelImageSrc = (model: Model) => {
     // Check if we have a valid model image URL

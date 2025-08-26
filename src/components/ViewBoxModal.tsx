@@ -174,6 +174,13 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
     }
   }
 
+  const handleCollectionShared = () => {
+    // Just refresh the box data without closing the modal
+    if (onModelsUpdated) {
+      onModelsUpdated()
+    }
+  }
+
   if (!isOpen || !box) return null
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -554,7 +561,7 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
       <ShareCollectionModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        onCollectionUpdated={handleBoxUpdated}
+        onCollectionUpdated={handleCollectionShared}
         box={box}
       />
     </>
