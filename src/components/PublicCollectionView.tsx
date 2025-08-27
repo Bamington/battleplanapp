@@ -20,6 +20,11 @@ interface Collection {
   purchase_date: string | null
   image_url: string | null
   public: boolean | null
+  user_id: string
+  user?: {
+    id: string
+    username: string | null
+  } | null
   game: {
     id: string
     name: string
@@ -84,6 +89,7 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
           purchase_date,
           image_url,
           public,
+          user_id,
           game:games(
             id,
             name,
@@ -103,6 +109,22 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
           throw collectionError
         }
         return
+      }
+
+      // Fetch user information separately
+      if (collectionData.user_id) {
+        const { data: userData, error: userError } = await supabase
+          .from('public_usernames')
+          .select('id, user_name_public')
+          .eq('id', collectionData.user_id)
+          .single()
+
+        if (!userError && userData) {
+          collectionData.user = {
+            id: userData.id,
+            username: userData.user_name_public
+          }
+        }
       }
 
       setCollection(collectionData)
@@ -301,6 +323,9 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
         {/* Collection Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-title mb-4 text-center">{collection.name}</h1>
+          {collection.user?.username && (
+            <p className="text-secondary-text text-center">by {collection.user.username}</p>
+          )}
         </div>
 
         {/* Collection Details */}

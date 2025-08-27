@@ -5,6 +5,7 @@ interface Version {
   id: number
   ver_number: number
   created_at: string
+  ver_notes?: string | null
 }
 
 export function useVersion() {
@@ -23,16 +24,43 @@ export function useVersion() {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1)
-        .single()
 
       if (fetchError) {
+        // If it's a permission error or table doesn't exist, just show a default version
+        if (fetchError.code === '42501' || fetchError.code === '42P01' || fetchError.code === 'PGRST116') {
+          console.warn('Version table not accessible, using default version')
+          setCurrentVersion({
+            id: 0,
+            ver_number: 1.00,
+            created_at: new Date().toISOString(),
+            ver_notes: 'Default version'
+          })
+          return
+        }
         throw fetchError
       }
 
-      setCurrentVersion(data)
+      // If no version exists, don't try to create one (let admins handle this)
+      if (!data || data.length === 0) {
+        console.warn('No version found in database, using default version')
+        setCurrentVersion({
+          id: 0,
+          ver_number: 1.00,
+          created_at: new Date().toISOString(),
+          ver_notes: 'Default version'
+        })
+      } else {
+        setCurrentVersion(data[0])
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch version')
       console.error('Error fetching version:', err)
+      // Set a default version instead of showing error
+      setCurrentVersion({
+        id: 0,
+        ver_number: 1.00,
+        created_at: new Date().toISOString(),
+        ver_notes: 'Default version'
+      })
     } finally {
       setLoading(false)
     }
@@ -49,14 +77,17 @@ export function useVersion() {
         .select('ver_number')
         .order('created_at', { ascending: false })
         .limit(1)
-        .single()
 
       if (fetchError) {
+        // If permission denied, show appropriate message
+        if (fetchError.code === '42501') {
+          throw new Error('Only administrators can create new versions')
+        }
         throw fetchError
       }
 
       // Calculate new version number
-      const newVersionNumber = (latestVersion?.ver_number || 1.0) + 0.1
+      const newVersionNumber = (latestVersion && latestVersion.length > 0 ? latestVersion[0].ver_number : 1.0) + 0.1
 
       // Insert new version
       const { data, error: insertError } = await supabase
@@ -69,6 +100,10 @@ export function useVersion() {
         .single()
 
       if (insertError) {
+        // If permission denied, show appropriate message
+        if (insertError.code === '42501') {
+          throw new Error('Only administrators can create new versions')
+        }
         throw insertError
       }
 

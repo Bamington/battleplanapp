@@ -61,7 +61,7 @@ async function updateVersion() {
 
     // Calculate new version number
     const currentVersion = latestVersion?.ver_number || 1.0;
-    const newVersionNumber = currentVersion + 0.1;
+    const newVersionNumber = parseFloat((currentVersion + 0.1).toFixed(2));
 
     // Insert new version
     const { data, error: insertError } = await supabase

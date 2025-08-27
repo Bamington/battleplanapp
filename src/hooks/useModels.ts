@@ -16,6 +16,7 @@ interface Model {
   lore_name?: string | null
   lore_description?: string | null
   painting_notes?: string | null
+  public?: boolean | null
   box: {
     id: string
     name: string
@@ -69,6 +70,7 @@ export function useModels() {
           lore_name,
           lore_description,
           painting_notes,
+          public,
           box:boxes(
             id,
             name,

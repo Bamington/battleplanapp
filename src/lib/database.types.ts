@@ -241,6 +241,7 @@ export type Database = {
           name: string
           notes: string | null
           painted_date: string | null
+          painting_notes: string | null
           public: boolean | null
           purchase_date: string | null
           status: string | null
@@ -258,6 +259,7 @@ export type Database = {
           name: string
           notes?: string | null
           painted_date?: string | null
+          painting_notes?: string | null
           public?: boolean | null
           purchase_date?: string | null
           status?: string | null
@@ -275,6 +277,7 @@ export type Database = {
           name?: string
           notes?: string | null
           painted_date?: string | null
+          painting_notes?: string | null
           public?: boolean | null
           purchase_date?: string | null
           status?: string | null
@@ -296,6 +299,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      roles: {
+        Row: {
+          booking_limit: number | null
+          created_at: string
+          id: number
+          role_name: string | null
+          users_assigned: string[] | null
+        }
+        Insert: {
+          booking_limit?: number | null
+          created_at?: string
+          id?: number
+          role_name?: string | null
+          users_assigned?: string[] | null
+        }
+        Update: {
+          booking_limit?: number | null
+          created_at?: string
+          id?: number
+          role_name?: string | null
+          users_assigned?: string[] | null
+        }
+        Relationships: []
       }
       timeslots: {
         Row: {
@@ -372,20 +399,39 @@ export type Database = {
         Row: {
           created_at: string
           id: number
+          ver_notes: string | null
+          ver_number: number | null
         }
         Insert: {
           created_at?: string
           id?: number
+          ver_notes?: string | null
+          ver_number?: number | null
         }
         Update: {
           created_at?: string
           id?: number
+          ver_notes?: string | null
+          ver_number?: number | null
         }
         Relationships: []
       }
     }
     Views: {
-      [_ in never]: never
+      public_usernames: {
+        Row: {
+          id: string
+          user_name_public: string | null
+        }
+        Insert: {
+          id: string
+          user_name_public?: string | null
+        }
+        Update: {
+          id?: string
+          user_name_public?: string | null
+        }
+      }
     }
     Functions: {
       is_admin_user: {
