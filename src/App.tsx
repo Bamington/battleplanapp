@@ -32,6 +32,7 @@ import { PublicCollectionView } from './components/PublicCollectionView'
 import { PublicModelView } from './components/PublicModelView'
 import { OnboardingModal } from './components/OnboardingModal'
 import { SettingsPage } from './components/SettingsPage'
+import { Footer } from './components/Footer'
 import { formatLocalDate } from './utils/timezone'
 
 function App() {
@@ -417,6 +418,7 @@ function App() {
             </div>
           </div>
         </div>
+        <Footer />
         <AuthModal
           isOpen={authModal.isOpen}
           onClose={() => setAuthModal({ isOpen: false, mode: 'login' })}
@@ -431,6 +433,7 @@ function App() {
     return (
       <div className="min-h-screen bg-bg-secondary">
         <AdminPage onBack={() => setShowAdminPage(false)} />
+        <Footer />
       </div>
     )
   }
@@ -440,6 +443,7 @@ function App() {
     return (
       <div className="min-h-screen bg-bg-secondary">
         <SettingsPage onBack={() => setShowSettingsPage(false)} />
+        <Footer />
       </div>
     )
   }
@@ -456,6 +460,7 @@ function App() {
           onTabChange={setActiveTab}
         />
         <AboutPage onBack={() => setActiveTab('collection')} />
+        <Footer />
         <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
     )
@@ -473,6 +478,7 @@ function App() {
           onTabChange={setActiveTab}
         />
         <AllBookingsPage onBack={() => setActiveTab('collection')} />
+        <Footer />
         <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
     )
@@ -490,6 +496,7 @@ function App() {
           onTabChange={setActiveTab}
         />
         <BlockedDatesPage onBack={() => setActiveTab('collection')} />
+        <Footer />
         <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
     )
@@ -510,6 +517,7 @@ function App() {
           refreshTrigger={refreshBookingsTrigger}
           onNewBooking={() => setShowNewBookingModal(true)}
         />
+        <Footer />
         <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
         
         {/* Bookings FAB - Only show on battleplan tab */}
@@ -934,6 +942,8 @@ function App() {
           </section>
         )}
       </main>
+
+      <Footer />
 
       <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
 

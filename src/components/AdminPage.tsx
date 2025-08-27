@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { ChevronRight, Users, Gamepad2, MapPin, ArrowLeft, Share2 } from 'lucide-react'
+import { ChevronRight, Users, Gamepad2, MapPin, ArrowLeft, Share2, GitBranch } from 'lucide-react'
 import { ManageUsersPage } from './ManageUsersPage'
 import { ManageGamesPage } from './ManageGamesPage'
 import { ManageLocationsPage } from './ManageLocationsPage'
@@ -7,6 +7,7 @@ import { SharePreviewPage } from './SharePreviewPage'
 import { Header } from './Header'
 import { TabBar } from './TabBar'
 import { useAuth } from '../hooks/useAuth'
+import { useVersion } from '../hooks/useVersion'
 
 interface AdminPageProps {
   onBack: () => void
@@ -15,6 +16,7 @@ interface AdminPageProps {
 export function AdminPage({ onBack }: AdminPageProps) {
   const [currentView, setCurrentView] = useState<'main' | 'users' | 'games' | 'locations' | 'share-preview'>('main')
   const { user } = useAuth()
+  const { currentVersion, createNewVersion, loading: versionLoading } = useVersion()
 
   const handleAdminClick = () => {
     // This is a no-op since we're already in admin
@@ -109,6 +111,37 @@ export function AdminPage({ onBack }: AdminPageProps) {
             </div>
             <ChevronRight className="w-5 h-5 text-icon" />
           </button>
+
+          {user?.is_admin && (
+            <div className="bg-bg-card border border-border-custom rounded-lg p-6">
+              <div className="flex items-center space-x-4 mb-4">
+                <GitBranch className="w-6 h-6 text-secondary-text" />
+                <span className="text-lg font-semibold text-text">Version Management</span>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-secondary-text">Current Version:</span>
+                  <span className="font-mono text-text">
+                    {versionLoading ? 'Loading...' : currentVersion ? `v${currentVersion.ver_number}` : 'Unknown'}
+                  </span>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      await createNewVersion()
+                      alert('Version incremented successfully!')
+                    } catch (error) {
+                      alert('Failed to increment version: ' + error)
+                    }
+                  }}
+                  disabled={versionLoading}
+                  className="w-full bg-[var(--color-brand)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-brand)]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {versionLoading ? 'Updating...' : 'Increment Version'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <TabBar 

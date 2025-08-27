@@ -7,6 +7,7 @@ import { getBasePath } from '../utils/environment'
 import battleplanLogo from '/Battleplan-Logo-Purple.svg'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { Footer } from './Footer'
 
 interface PublicCollectionViewProps {
   collectionId: string
@@ -170,10 +171,6 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
      // Final fallback to default image
      return 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
    }
-
-       const getLogoImageSrc = () => {
-      return isDarkMode ? 'Logo White.svg' : 'Battleplan-Logo-Purple.svg'
-    }
 
   const getModelImageSrc = (model: Model) => {
     // Check if we have a valid model image URL
@@ -453,12 +450,7 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
           )}
         </div>
 
-        {/* Footer */}
-        <div className="mt-12 pt-8 border-t border-border-custom">
-          <div className="flex items-center justify-center space-x-4">
-            <img src={getLogoImageSrc()} alt="BattlePlan" className="h-8" />
-          </div>
-        </div>
+        <Footer />
       </div>
     </div>
   )

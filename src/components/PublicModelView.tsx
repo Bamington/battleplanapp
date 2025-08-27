@@ -6,6 +6,7 @@ import battleplanLogo from '/Battleplan-Logo-Purple.svg'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { formatLocalDate } from '../utils/timezone'
+import { Footer } from './Footer'
 
 interface PublicModelViewProps {
   modelId: string
@@ -134,10 +135,6 @@ export function PublicModelView({ modelId, onBack, breadcrumbs }: PublicModelVie
     })
   }
 
-  const getLogoImageSrc = () => {
-    return isDarkMode ? 'Logo White.svg' : 'Battleplan-Logo-Purple.svg'
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-bg-secondary">
@@ -262,12 +259,7 @@ export function PublicModelView({ modelId, onBack, breadcrumbs }: PublicModelVie
              </div>
            )}
 
-           {/* Footer */}
-           <div className="mt-12 pt-8 border-t border-border-custom">
-             <div className="flex items-center justify-center space-x-4">
-               <img src={getLogoImageSrc()} alt="BattlePlan" className="h-8" />
-             </div>
-           </div>
+           <Footer />
          </div>
        </main>
     </div>
