@@ -45,18 +45,15 @@ export function MultiSelectDropdown({
     if (isOpen && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect()
       const spaceBelow = window.innerHeight - rect.bottom
-      const spaceAbove = rect.top
       const margin = 20 // Margin from bottom of screen
       const maxHeight = Math.min(400, spaceBelow - margin) // Max height with margin
       
-      // Check if dropdown should render above or below
-      const shouldRenderAbove = spaceBelow < maxHeight + margin && spaceAbove > spaceBelow
-      
+      // Always position below the input field, extending downward
       setDropdownPosition({
-        top: shouldRenderAbove ? rect.top - Math.min(400, spaceAbove - margin) : rect.bottom,
+        top: rect.bottom,
         left: rect.left,
         width: rect.width,
-        maxHeight: shouldRenderAbove ? Math.min(400, spaceAbove - margin) : maxHeight
+        maxHeight: maxHeight
       })
     }
   }, [isOpen])
@@ -136,8 +133,15 @@ export function MultiSelectDropdown({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search..."
-              className="w-full pl-10 pr-4 py-2 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text text-sm"
+              className="w-full pl-10 pr-12 py-2 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text text-sm"
             />
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-icon hover:text-text transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}

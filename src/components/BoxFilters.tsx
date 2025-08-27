@@ -1,5 +1,6 @@
-import React from 'react'
-import { Filter, X, Check } from 'lucide-react'
+import React, { useState } from 'react'
+import { Filter, X, Check, ChevronDown, ChevronRight } from 'lucide-react'
+import { MultiSelectDropdown } from './MultiSelectDropdown'
 
 interface Game {
   id: string
@@ -36,6 +37,7 @@ export function BoxFilters({
   onSearchChange,
   onClearFilters
 }: BoxFiltersProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
   const hasActiveFilters = selectedGames.length > 0 || searchQuery.length > 0
 
   // Calculate available game options with counts
@@ -59,6 +61,16 @@ export function BoxFilters({
 
   const availableGames = getAvailableGames()
 
+  // Convert to MultiSelectDropdown format
+  const gameOptions = availableGames.map(game => {
+    const gameData = games.find(g => g.id === game.id)
+    return {
+      id: game.id,
+      name: `${game.name} (${game.count})`,
+      icon: gameData?.icon || null
+    }
+  })
+
   // Get filter display names
   const getSelectedGameNames = () => {
     return availableGames
@@ -81,56 +93,65 @@ export function BoxFilters({
           <Filter className="w-5 h-5 text-secondary-text" />
           <h3 className="text-lg font-semibold text-title">Filters</h3>
         </div>
-        {hasActiveFilters && (
+        <div className="flex items-center space-x-2">
+          {hasActiveFilters && (
+            <button
+              onClick={onClearFilters}
+              className="flex items-center space-x-1 text-sm text-secondary-text hover:text-text transition-colors"
+            >
+              <X className="w-4 h-4 text-icon" />
+              <span>Clear all</span>
+            </button>
+          )}
           <button
-            onClick={onClearFilters}
+            onClick={() => setIsExpanded(!isExpanded)}
             className="flex items-center space-x-1 text-sm text-secondary-text hover:text-text transition-colors"
           >
-            <X className="w-4 h-4 text-icon" />
-            <span>Clear all</span>
+            {isExpanded ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
+            <span>{isExpanded ? 'Collapse' : 'Expand'}</span>
           </button>
-        )}
-      </div>
-
-      {/* Search Field */}
-      <div className="mb-4">
-                  <label className="block text-sm font-medium text-input-label font-overpass mb-2">
-            Search Collections
-          </label>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search by collection name..."
-          className="w-full px-3 py-2 border border-border-custom rounded-lg bg-bg-primary text-text placeholder-secondary-text focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Game Filter */}
-        <div>
-          <label className="block text-sm font-medium text-input-label font-overpass mb-2">
-            Games
-          </label>
-          <div className="max-h-48 overflow-y-auto border border-border-custom rounded-lg bg-bg-primary">
-            {availableGames.map((game) => (
-              <label
-                key={game.id}
-                className="flex items-center space-x-2 px-3 py-2 hover:bg-bg-secondary cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedGames.includes(game.id)}
-                  onChange={() => handleGameToggle(game.id)}
-                  className="rounded border-border-custom text-blue-500 focus:ring-blue-500"
-                />
-                <span className="text-sm text-text flex-1">{game.name}</span>
-                <span className="text-xs text-secondary-text">({game.count})</span>
-              </label>
-            ))}
-          </div>
         </div>
       </div>
+
+      {isExpanded && (
+        <>
+          {/* Search Field */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-input-label font-overpass mb-2">
+              Search Collections
+            </label>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Search by collection name..."
+              className="w-full px-3 py-2 border border-border-custom rounded-lg bg-bg-primary text-text placeholder-secondary-text focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Game Filter */}
+            <div>
+              <label className="block text-sm font-medium text-input-label font-overpass mb-2">
+                Games
+              </label>
+              <MultiSelectDropdown
+                options={gameOptions}
+                selectedOptions={selectedGames}
+                onSelectionChange={onGamesChange}
+                placeholder="Select games..."
+                maxSelections={10}
+                searchable={true}
+                type="game"
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Active Filter Pills */}
       {hasActiveFilters && (

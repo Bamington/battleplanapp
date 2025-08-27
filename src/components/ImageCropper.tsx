@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { X } from 'lucide-react'
+import { X, Moon, Sun } from 'lucide-react'
 
 interface ImageCropperProps {
   isOpen: boolean
@@ -14,6 +14,7 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
   const [cropArea, setCropArea] = useState({ x: 100, y: 100, width: 200, height: 200 })
   const [zoom, setZoom] = useState(1)
   const [rotation, setRotation] = useState(0)
+  const [exposure, setExposure] = useState(0)
 
   // Mobile detection
   const isMobile = window.innerWidth <= 768
@@ -78,10 +79,19 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
           e.preventDefault()
           setRotation(prev => prev - 90)
           break
+        case 'e':
+          e.preventDefault()
+          setExposure(prev => Math.max(-100, prev - 10))
+          break
+        case 'd':
+          e.preventDefault()
+          setExposure(prev => Math.min(100, prev + 10))
+          break
         case '0':
           e.preventDefault()
           setZoom(1)
           setRotation(0)
+          setExposure(0)
           break
       }
     }
@@ -98,9 +108,10 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
         setImage(img)
         // Set initial crop area
         setCropArea({ x: 100, y: 100, width: 200, height: 200 })
-        // Reset zoom and rotation
+        // Reset zoom, rotation, and exposure
         setZoom(1)
         setRotation(0)
+        setExposure(0)
       }
       img.src = URL.createObjectURL(imageFile)
       return () => URL.revokeObjectURL(img.src)
@@ -133,6 +144,22 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
     const scaledHeight = image.height * zoom
     ctx.drawImage(image, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight)
     
+    // Apply exposure effect if needed
+    if (exposure !== 0) {
+      const imageData = ctx.getImageData(-scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight)
+      const data = imageData.data
+      
+      // Apply exposure adjustment
+      const factor = 1 + (exposure / 100)
+      for (let i = 0; i < data.length; i += 4) {
+        data[i] = Math.min(255, Math.max(0, data[i] * factor))     // Red
+        data[i + 1] = Math.min(255, Math.max(0, data[i + 1] * factor)) // Green
+        data[i + 2] = Math.min(255, Math.max(0, data[i + 2] * factor)) // Blue
+      }
+      
+      ctx.putImageData(imageData, -scaledWidth / 2, -scaledHeight / 2)
+    }
+    
     // Restore context state
     ctx.restore()
 
@@ -163,7 +190,7 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
     ctx.strokeRect(cropArea.x + cropArea.width - handleSize/2, cropArea.y + cropArea.height - handleSize/2, handleSize, handleSize)
 
 
-  }, [image, cropArea, isMobile, zoom, rotation])
+  }, [image, cropArea, isMobile, zoom, rotation, exposure])
 
   // Handle touch events
   const handleTouchStart = (touch: any) => {
@@ -844,7 +871,7 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
           <div className={`mt-4 ${isMobile ? 'space-y-4' : 'space-y-3'}`}>
             {/* Instructions */}
             <div className="text-xs text-secondary-text text-center">
-              <span className="hidden sm:inline">Keyboard shortcuts: +/- zoom, r/l rotate, 0 reset</span>
+              <span className="hidden sm:inline">Keyboard shortcuts: +/- zoom, r/l rotate, e/d exposure, 0 reset</span>
             </div>
             
             {/* Controls Row */}
@@ -901,12 +928,40 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
                 </button>
               </div>
 
+              {/* Exposure Controls */}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setExposure(Math.max(-100, exposure - 10))}
+                  className="btn-ghost btn-sm w-8 h-8 p-0 flex-shrink-0"
+                  disabled={exposure <= -100}
+                >
+                  <Moon className="w-4 h-4" />
+                </button>
+                <input
+                  type="range"
+                  min="-100"
+                  max="100"
+                  step="1"
+                  value={exposure}
+                  onChange={(e) => setExposure(parseInt(e.target.value))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 slider"
+                />
+                <button
+                  onClick={() => setExposure(Math.min(100, exposure + 10))}
+                  className="btn-ghost btn-sm w-8 h-8 p-0 flex-shrink-0"
+                  disabled={exposure >= 100}
+                >
+                  <Sun className="w-4 h-4" />
+                </button>
+              </div>
+
               {/* Reset Button - Only show when values have changed */}
-              {(zoom !== 1 || rotation !== 0 || cropArea.x !== 100 || cropArea.y !== 100 || cropArea.width !== 200 || cropArea.height !== 200) && (
+              {(zoom !== 1 || rotation !== 0 || exposure !== 0 || cropArea.x !== 100 || cropArea.y !== 100 || cropArea.width !== 200 || cropArea.height !== 200) && (
                 <button
                   onClick={() => {
                     setZoom(1)
                     setRotation(0)
+                    setExposure(0)
                     setCropArea({ x: 100, y: 100, width: 200, height: 200 })
                   }}
                   className="btn-secondary w-full"

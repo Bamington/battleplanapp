@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { X, Calendar, DollarSign, Hash, Image, Package } from 'lucide-react'
+import { X, Calendar, DollarSign, Hash, Image, Package, Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { GameDropdown } from './GameDropdown'
@@ -56,6 +56,9 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
   const [compressionInfo, setCompressionInfo] = useState('')
   const { user } = useAuth()
   const { addRecentGame } = useRecentGames()
+
+  // Mobile detection
+  const isMobile = window.innerWidth <= 768
 
   // Prevent body scroll when modal is open
   React.useEffect(() => {
@@ -217,6 +220,59 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
       }
     } else {
       setSelectedImages(files)
+    }
+  }
+
+  const handleCameraCapture = async () => {
+    try {
+      // Check if camera is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setFileSizeError('Camera is not available on this device')
+        return
+      }
+
+      // Create a hidden file input for camera capture
+      const cameraInput = document.createElement('input')
+      cameraInput.type = 'file'
+      cameraInput.accept = 'image/*'
+      cameraInput.capture = 'environment' // Use back camera by default
+      
+      cameraInput.onchange = (e) => {
+        const target = e.target as HTMLInputElement
+        if (target.files && target.files.length > 0) {
+          const file = target.files[0]
+          
+          // Validate file type
+          if (!isValidImageFile(file)) {
+            setFileSizeError('Please select a valid image file (JPEG, PNG, or WebP)')
+            return
+          }
+
+          const maxSize = 50 * 1024 * 1024 // 50MB in bytes
+          
+          if (file.size > maxSize) {
+            setFileSizeError(`Your image must be 50MB or less. Current size: ${formatFileSize(file.size)}`)
+          } else {
+            setSelectedImages(target.files)
+            setFileSizeError('')
+            setCompressionInfo('')
+            
+            // Show image cropper for the captured image
+            setImageForCropping(file)
+            setShowImageCropper(true)
+            
+            // Show compression info for larger files
+            if (file.size > 1024 * 1024) { // Files larger than 1MB
+              setCompressionInfo(`Original size: ${formatFileSize(file.size)}. Image will be automatically compressed before upload.`)
+            }
+          }
+        }
+      }
+      
+      cameraInput.click()
+    } catch (error) {
+      console.error('Error accessing camera:', error)
+      setFileSizeError('Unable to access camera. Please try again or use the file upload option.')
     }
   }
 
@@ -671,6 +727,21 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
                   className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-brand)]/10 file:text-[var(--color-brand)] hover:file:bg-[var(--color-brand)]/20 bg-bg-primary text-text"
                 />
               </div>
+            
+            {/* Camera option for mobile */}
+            {isMobile && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={handleCameraCapture}
+                  className="w-full flex items-center justify-center space-x-2 py-3 px-4 border border-border-custom rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors bg-bg-primary text-text"
+                >
+                  <Camera className="w-5 h-5 text-icon" />
+                  <span>Take Photo with Camera</span>
+                </button>
+              </div>
+            )}
+            
             <p className="text-xs text-secondary-text mt-1">
               You can upload more images later.
             </p>
