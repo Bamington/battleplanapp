@@ -231,45 +231,185 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
         return
       }
 
-      // Create a hidden file input for camera capture
-      const cameraInput = document.createElement('input')
-      cameraInput.type = 'file'
-      cameraInput.accept = 'image/*'
-      cameraInput.capture = 'environment' // Use back camera by default
-      
-      cameraInput.onchange = (e) => {
-        const target = e.target as HTMLInputElement
-        if (target.files && target.files.length > 0) {
-          const file = target.files[0]
-          
-          // Validate file type
-          if (!isValidImageFile(file)) {
-            setFileSizeError('Please select a valid image file (JPEG, PNG, or WebP)')
-            return
-          }
+      // Request camera access
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment', // Use back camera by default
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        } 
+      })
 
-          const maxSize = 50 * 1024 * 1024 // 50MB in bytes
+      // Create a video element to display the camera feed
+      const video = document.createElement('video')
+      video.srcObject = stream
+      video.autoplay = true
+      video.style.position = 'fixed'
+      video.style.top = '0'
+      video.style.left = '0'
+      video.style.width = '100%'
+      video.style.height = '100%'
+      video.style.zIndex = '9999'
+      video.style.objectFit = 'cover'
+      video.style.backgroundColor = '#000'
+
+      // Create canvas for capturing
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        throw new Error('Could not get canvas context')
+      }
+
+      // Create capture button
+      const captureBtn = document.createElement('button')
+      captureBtn.textContent = '📸 Take Photo'
+      captureBtn.style.position = 'fixed'
+      captureBtn.style.bottom = '20px'
+      captureBtn.style.left = '50%'
+      captureBtn.style.transform = 'translateX(-50%)'
+      captureBtn.style.zIndex = '10000'
+      captureBtn.style.padding = '12px 24px'
+      captureBtn.style.backgroundColor = '#007bff'
+      captureBtn.style.color = 'white'
+      captureBtn.style.border = 'none'
+      captureBtn.style.borderRadius = '8px'
+      captureBtn.style.fontSize = '16px'
+      captureBtn.style.fontWeight = 'bold'
+
+      // Create cancel button
+      const cancelBtn = document.createElement('button')
+      cancelBtn.textContent = '❌ Cancel'
+      cancelBtn.style.position = 'fixed'
+      cancelBtn.style.top = '20px'
+      cancelBtn.style.right = '20px'
+      cancelBtn.style.zIndex = '10000'
+      cancelBtn.style.padding = '8px 16px'
+      cancelBtn.style.backgroundColor = '#dc3545'
+      cancelBtn.style.color = 'white'
+      cancelBtn.style.border = 'none'
+      cancelBtn.style.borderRadius = '6px'
+      cancelBtn.style.fontSize = '14px'
+
+      // Create camera switch button
+      const switchBtn = document.createElement('button')
+      switchBtn.textContent = '🔄 Switch Camera'
+      switchBtn.style.position = 'fixed'
+      switchBtn.style.top = '20px'
+      switchBtn.style.left = '20px'
+      switchBtn.style.zIndex = '10000'
+      switchBtn.style.padding = '8px 16px'
+      switchBtn.style.backgroundColor = '#6c757d'
+      switchBtn.style.color = 'white'
+      switchBtn.style.border = 'none'
+      switchBtn.style.borderRadius = '6px'
+      switchBtn.style.fontSize = '14px'
+
+      let currentFacingMode = 'environment'
+
+      // Function to switch camera
+      const switchCamera = async () => {
+        // Stop current stream
+        stream.getTracks().forEach(track => track.stop())
+        
+        // Switch facing mode
+        currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment'
+        
+        try {
+          // Get new stream
+          const newStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              facingMode: currentFacingMode,
+              width: { ideal: 1920 },
+              height: { ideal: 1080 }
+            } 
+          })
           
-          if (file.size > maxSize) {
-            setFileSizeError(`Your image must be 50MB or less. Current size: ${formatFileSize(file.size)}`)
-          } else {
-            setSelectedImages(target.files)
-            setFileSizeError('')
-            setCompressionInfo('')
-            
-            // Show image cropper for the captured image
-            setImageForCropping(file)
-            setShowImageCropper(true)
-            
-            // Show compression info for larger files
-            if (file.size > 1024 * 1024) { // Files larger than 1MB
-              setCompressionInfo(`Original size: ${formatFileSize(file.size)}. Image will be automatically compressed before upload.`)
-            }
-          }
+          // Update video source
+          video.srcObject = newStream
+          
+          // Update stream reference
+          Object.assign(stream, newStream)
+        } catch (error) {
+          console.error('Error switching camera:', error)
         }
       }
-      
-      cameraInput.click()
+
+      // Function to capture photo
+      const capturePhoto = () => {
+        // Set canvas size to match video dimensions
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+        
+        // Draw video frame to canvas
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+        
+        // Convert canvas to blob
+        canvas.toBlob((blob) => {
+          if (blob) {
+            // Create file from blob
+            const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { 
+              type: 'image/jpeg' 
+            })
+            
+            // Validate file
+            if (!isValidImageFile(file)) {
+              setFileSizeError('Please select a valid image file (JPEG, PNG, or WebP)')
+              return
+            }
+
+            const maxSize = 50 * 1024 * 1024 // 50MB in bytes
+            
+            if (file.size > maxSize) {
+              setFileSizeError(`Your image must be 50MB or less. Current size: ${formatFileSize(file.size)}`)
+            } else {
+              // Create FileList-like object
+              const dataTransfer = new DataTransfer()
+              dataTransfer.items.add(file)
+              setSelectedImages(dataTransfer.files)
+              setFileSizeError('')
+              setCompressionInfo('')
+              
+              // Show image cropper for the captured image
+              setImageForCropping(file)
+              setShowImageCropper(true)
+              
+              // Show compression info for larger files
+              if (file.size > 1024 * 1024) { // Files larger than 1MB
+                setCompressionInfo(`Original size: ${formatFileSize(file.size)}. Image will be automatically compressed before upload.`)
+              }
+            }
+          }
+          
+          // Clean up
+          cleanup()
+        }, 'image/jpeg', 0.9)
+      }
+
+      // Function to cleanup
+      const cleanup = () => {
+        stream.getTracks().forEach(track => track.stop())
+        document.body.removeChild(video)
+        document.body.removeChild(captureBtn)
+        document.body.removeChild(cancelBtn)
+        document.body.removeChild(switchBtn)
+      }
+
+      // Add event listeners
+      captureBtn.addEventListener('click', capturePhoto)
+      cancelBtn.addEventListener('click', cleanup)
+      switchBtn.addEventListener('click', switchCamera)
+
+      // Add elements to DOM
+      document.body.appendChild(video)
+      document.body.appendChild(captureBtn)
+      document.body.appendChild(cancelBtn)
+      document.body.appendChild(switchBtn)
+
+      // Wait for video to be ready
+      video.addEventListener('loadedmetadata', () => {
+        // Video is ready to play
+      })
+
     } catch (error) {
       console.error('Error accessing camera:', error)
       setFileSizeError('Unable to access camera. Please try again or use the file upload option.')
