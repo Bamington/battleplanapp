@@ -87,6 +87,9 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
           notes,
           painted_date,
           purchase_date,
+          lore_name,
+          lore_description,
+          painting_notes,
           game:games(
             id,
             name,

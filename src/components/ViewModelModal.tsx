@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
-import { X, Share2, Edit, Trash2, Calendar, Hash, Palette, FileText, Package, Gamepad2 } from 'lucide-react'
+import { X, Share2, Edit, Trash2, Calendar, Hash, Palette, FileText, Package, Gamepad2, Info, BookOpen, Brush } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { DeleteModelModal } from './DeleteModelModal'
 import { EditModelModal } from './EditModelModal'
 import { ShareModelModal } from './ShareModelModal'
 import { Toast } from './Toast'
+import { TabSelector } from './TabSelector'
+import { RichTextEditor } from './RichTextEditor'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { formatLocalDate } from '../utils/timezone'
@@ -27,16 +29,23 @@ interface ViewModelModalProps {
     painted_date: string | null
     purchase_date: string | null
     public: boolean | null
+    lore_name?: string | null
+    lore_description?: string | null
+    painting_notes?: string | null
     box: {
       id: string
       name: string
       purchase_date: string
       game: {
         name: string
+        image?: string
+        icon?: string
       } | null
     } | null
     game: {
       name: string
+      image?: string
+      icon?: string
     } | null
   } | null
 }
@@ -48,10 +57,57 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
   const [deleting, setDeleting] = React.useState(false)
   const [showToast, setShowToast] = React.useState(false)
   const [currentModel, setCurrentModel] = React.useState(model)
+  const [activeTab, setActiveTab] = React.useState<'details' | 'lore' | 'painting'>('details')
+  const [loreData, setLoreData] = React.useState({
+    lore_name: '',
+    lore_description: ''
+  })
+  const [originalLoreData, setOriginalLoreData] = React.useState({
+    lore_name: '',
+    lore_description: ''
+  })
+  const [paintingData, setPaintingData] = React.useState({
+    painting_notes: ''
+  })
+  const [originalPaintingData, setOriginalPaintingData] = React.useState({
+    painting_notes: ''
+  })
+
+  // Define tabs configuration
+  const tabs = [
+    {
+      id: 'details',
+      label: 'Details',
+      icon: Info
+    },
+    {
+      id: 'lore',
+      label: 'Lore',
+      icon: BookOpen
+    },
+    {
+      id: 'painting',
+      label: 'Painting',
+      icon: Brush
+    }
+  ]
 
   // Update current model when prop changes
   React.useEffect(() => {
     setCurrentModel(model)
+    if (model) {
+      const newLoreData = {
+        lore_name: model.lore_name || '',
+        lore_description: model.lore_description || ''
+      }
+      const newPaintingData = {
+        painting_notes: model.painting_notes || ''
+      }
+      setLoreData(newLoreData)
+      setOriginalLoreData(newLoreData)
+      setPaintingData(newPaintingData)
+      setOriginalPaintingData(newPaintingData)
+    }
   }, [model])
 
   // Handle model updates by refreshing the model data
@@ -179,6 +235,52 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
     }
   }
 
+  const handleSaveLore = async () => {
+    if (!currentModel) return
+
+    const { error } = await supabase
+      .from('models')
+      .update({
+        lore_name: loreData.lore_name,
+        lore_description: loreData.lore_description
+      })
+      .eq('id', currentModel.id)
+
+    if (error) {
+      console.error('Error saving lore:', error)
+      // You could add error handling UI here
+    } else {
+      setCurrentModel(prev => prev ? { ...prev, lore_name: loreData.lore_name, lore_description: loreData.lore_description } : null)
+      setOriginalLoreData(loreData)
+    }
+  }
+
+  const handleSavePainting = async () => {
+    if (!currentModel) return
+
+    const { error } = await supabase
+      .from('models')
+      .update({
+        painting_notes: paintingData.painting_notes
+      })
+      .eq('id', currentModel.id)
+
+    if (error) {
+      console.error('Error saving painting notes:', error)
+      // You could add error handling UI here
+    } else {
+      setCurrentModel(prev => prev ? { ...prev, painting_notes: paintingData.painting_notes } : null)
+      setOriginalPaintingData(paintingData)
+    }
+  }
+
+  // Check if lore data has changed
+  const hasLoreChanges = loreData.lore_name !== originalLoreData.lore_name || 
+                        loreData.lore_description !== originalLoreData.lore_description
+
+  // Check if painting data has changed
+  const hasPaintingChanges = paintingData.painting_notes !== originalPaintingData.painting_notes
+
   if (!isOpen || !currentModel) return null
 
   return (
@@ -301,65 +403,159 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
               </div>
             </div>
 
-            {/* Details Cards */}
-            <div className="space-y-3">
-              {/* Model Count */}
-              <div className="bg-bg-secondary rounded-lg p-4 flex items-center space-x-3">
-                <Hash className="w-5 h-5 text-secondary-text" />
-                <span className="text-base text-text font-medium">
-                  {getStatusText(model.status, model.count)}
-                </span>
-              </div>
+            {/* Tab Selector */}
+            <TabSelector
+              tabs={tabs}
+              activeTab={activeTab}
+              onTabChange={(tabId) => setActiveTab(tabId as 'details' | 'lore' | 'painting')}
+              className="mb-6"
+            />
 
-              {/* Purchase Date - only show if purchase date exists */}
-              {model.box?.purchase_date && (
-              <div className="bg-bg-secondary rounded-lg p-4 flex items-center space-x-3">
-                <Calendar className="w-5 h-5 text-secondary-text" />
-                <span className="text-base text-text font-medium">
-                  Purchased {formatDate(model.box.purchase_date)}
-                </span>
-              </div>
-              )}
-
-              {/* Painted Date - only show if painted date exists */}
-              {getPaintedDate() && (
+            {/* Tab Content */}
+            {activeTab === 'details' && (
+              <div className="space-y-3">
+                {/* Model Count */}
                 <div className="bg-bg-secondary rounded-lg p-4 flex items-center space-x-3">
-                  <Palette className="w-5 h-5 text-secondary-text" />
+                  <Hash className="w-5 h-5 text-secondary-text" />
                   <span className="text-base text-text font-medium">
-                    Painted {formatDate(getPaintedDate()!)}
+                    {getStatusText(model.status, model.count)}
                   </span>
                 </div>
-              )}
 
-              {/* Notes - only show if notes exist */}
-              {getPaintNotes() && (
-                <div className="bg-bg-secondary rounded-lg p-4 flex items-start space-x-3">
-                  <FileText className="w-5 h-5 text-secondary-text mt-0.5" />
-                  <div className="flex-1">
-                    <ReactMarkdown 
-                      remarkPlugins={[remarkGfm]}
-                      className="prose prose-sm max-w-none dark:prose-invert"
-                      components={{
-                        p: ({ children }) => <p className="mb-2 last:mb-0 text-base text-text">{children}</p>,
-                        h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-text">{children}</h1>,
-                        h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-text">{children}</h2>,
-                        h3: ({ children }) => <h3 className="text-sm font-bold mb-1 text-text">{children}</h3>,
-                        ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
-                        ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
-                        li: ({ children }) => <li className="text-sm text-text">{children}</li>,
-                        strong: ({ children }) => <strong className="font-semibold text-text">{children}</strong>,
-                        em: ({ children }) => <em className="italic text-text">{children}</em>,
-                        code: ({ children }) => <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
-                        pre: ({ children }) => <pre className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs font-mono overflow-x-auto mb-2">{children}</pre>,
-                        blockquote: ({ children }) => <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-3 italic mb-2 text-text">{children}</blockquote>,
-                      }}
-                    >
-                      {getPaintNotes()}
-                    </ReactMarkdown>
-                  </div>
+                {/* Purchase Date - only show if purchase date exists */}
+                {model.box?.purchase_date && (
+                <div className="bg-bg-secondary rounded-lg p-4 flex items-center space-x-3">
+                  <Calendar className="w-5 h-5 text-secondary-text" />
+                  <span className="text-base text-text font-medium">
+                    Purchased {formatDate(model.box.purchase_date)}
+                  </span>
                 </div>
-              )}
-            </div>
+                )}
+
+                {/* Painted Date - only show if painted date exists */}
+                {getPaintedDate() && (
+                  <div className="bg-bg-secondary rounded-lg p-4 flex items-center space-x-3">
+                    <Palette className="w-5 h-5 text-secondary-text" />
+                    <span className="text-base text-text font-medium">
+                      Painted {formatDate(getPaintedDate()!)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'lore' && (
+              <div className="space-y-3">
+                {/* Lore Name */}
+                <div className="bg-bg-secondary rounded-lg p-4">
+                  <label className="block text-sm font-medium text-text mb-2">
+                    Lore Name
+                  </label>
+                  <input
+                    type="text"
+                    value={loreData.lore_name}
+                    onChange={(e) => setLoreData({ ...loreData, lore_name: e.target.value })}
+                    placeholder="Enter lore name..."
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+
+                {/* Lore Description */}
+                <div className="bg-bg-secondary rounded-lg p-4">
+                  <RichTextEditor
+                    value={loreData.lore_description}
+                    onChange={(value) => setLoreData({ ...loreData, lore_description: value })}
+                    placeholder="Enter lore description..."
+                    label="Lore Description"
+                    rows={6}
+                  />
+                </div>
+
+                {/* Save Button */}
+                <div className="pt-4">
+                  <button
+                    onClick={handleSaveLore}
+                    disabled={!hasLoreChanges}
+                    className="btn-secondary btn-full w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Save Lore
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'painting' && (
+              <div className="space-y-3">
+                {/* Painted Date - only show if painted date exists */}
+                {getPaintedDate() && (
+                  <div className="bg-bg-secondary rounded-lg p-4 flex items-center space-x-3">
+                    <Palette className="w-5 h-5 text-secondary-text" />
+                    <span className="text-base text-text font-medium">
+                      Painted {formatDate(getPaintedDate()!)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Painting Information */}
+                <div className="bg-bg-secondary rounded-lg p-4">
+                  <RichTextEditor
+                    value={paintingData.painting_notes}
+                    onChange={(value) => setPaintingData({ ...paintingData, painting_notes: value })}
+                    placeholder="Enter painting information..."
+                    label="Painting Information"
+                    rows={6}
+                  />
+                </div>
+
+                {/* Save Button */}
+                <div className="pt-4">
+                  <button
+                    onClick={handleSavePainting}
+                    disabled={!hasPaintingChanges}
+                    className="btn-secondary btn-full w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Save Painting Information
+                  </button>
+                </div>
+
+                {/* Notes - only show if notes exist */}
+                {getPaintNotes() && (
+                  <div className="bg-bg-secondary rounded-lg p-4 flex items-start space-x-3">
+                    <FileText className="w-5 h-5 text-secondary-text mt-0.5" />
+                    <div className="flex-1">
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          p: ({ children }) => <p className="mb-2 last:mb-0 text-base text-text">{children}</p>,
+                          h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-text">{children}</h1>,
+                          h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-text">{children}</h2>,
+                          h3: ({ children }) => <h3 className="text-sm font-bold mb-1 text-text">{children}</h3>,
+                          ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                          ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                          li: ({ children }) => <li className="text-sm text-text">{children}</li>,
+                          strong: ({ children }) => <strong className="font-semibold text-text">{children}</strong>,
+                          em: ({ children }) => <em className="italic text-text">{children}</em>,
+                          code: ({ children }) => <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                          pre: ({ children }) => <pre className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs font-mono overflow-x-auto mb-2">{children}</pre>,
+                          blockquote: ({ children }) => <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-3 italic mb-2 text-text">{children}</blockquote>,
+                        }}
+                      >
+                        {getPaintNotes()}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                )}
+
+                {!getPaintedDate() && !getPaintNotes() && !paintingData.painting_notes && (
+                  <div className="bg-bg-secondary rounded-lg p-4">
+                    <div className="text-center text-secondary-text">
+                      <Brush className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p>No painting information available</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="pt-6">

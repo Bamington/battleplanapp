@@ -231,19 +231,46 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
         return
       }
 
-      // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment', // Use back camera by default
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        } 
-      })
+      // Clear any previous errors
+      setFileSizeError('')
+
+      // Try to get camera access with more flexible constraints
+      let stream: MediaStream
+      try {
+        // First try with environment camera (back camera)
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 }
+          } 
+        })
+      } catch (environmentError) {
+        console.log('Back camera failed, trying front camera:', environmentError)
+        try {
+          // Fallback to user camera (front camera)
+          stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              facingMode: 'user',
+              width: { ideal: 1280, max: 1920 },
+              height: { ideal: 720, max: 1080 }
+            } 
+          })
+        } catch (userError) {
+          console.log('Front camera failed, trying any available camera:', userError)
+          // Last resort: try any available camera
+          stream = await navigator.mediaDevices.getUserMedia({ 
+            video: true 
+          })
+        }
+      }
 
       // Create a video element to display the camera feed
       const video = document.createElement('video')
       video.srcObject = stream
       video.autoplay = true
+      video.playsInline = true // Important for iOS
+      video.muted = true // Required for autoplay on some devices
       video.style.position = 'fixed'
       video.style.top = '0'
       video.style.left = '0'
@@ -275,6 +302,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
       captureBtn.style.borderRadius = '8px'
       captureBtn.style.fontSize = '16px'
       captureBtn.style.fontWeight = 'bold'
+      captureBtn.style.touchAction = 'manipulation'
 
       // Create cancel button
       const cancelBtn = document.createElement('button')
@@ -289,6 +317,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
       cancelBtn.style.border = 'none'
       cancelBtn.style.borderRadius = '6px'
       cancelBtn.style.fontSize = '14px'
+      cancelBtn.style.touchAction = 'manipulation'
 
       // Create camera switch button
       const switchBtn = document.createElement('button')
@@ -303,95 +332,131 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
       switchBtn.style.border = 'none'
       switchBtn.style.borderRadius = '6px'
       switchBtn.style.fontSize = '14px'
+      switchBtn.style.touchAction = 'manipulation'
 
-      let currentFacingMode = 'environment'
+      let currentFacingMode = stream.getVideoTracks()[0]?.getSettings().facingMode || 'environment'
 
       // Function to switch camera
       const switchCamera = async () => {
-        // Stop current stream
-        stream.getTracks().forEach(track => track.stop())
-        
-        // Switch facing mode
-        currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment'
-        
         try {
+          // Stop current stream
+          stream.getTracks().forEach(track => track.stop())
+          
+          // Switch facing mode
+          const newFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment'
+          currentFacingMode = newFacingMode
+          
           // Get new stream
           const newStream = await navigator.mediaDevices.getUserMedia({ 
             video: { 
-              facingMode: currentFacingMode,
-              width: { ideal: 1920 },
-              height: { ideal: 1080 }
+              facingMode: newFacingMode,
+              width: { ideal: 1280, max: 1920 },
+              height: { ideal: 720, max: 1080 }
             } 
           })
           
           // Update video source
           video.srcObject = newStream
-          
-          // Update stream reference
-          Object.assign(stream, newStream)
+          stream = newStream
         } catch (error) {
           console.error('Error switching camera:', error)
+          // Try to get any available camera as fallback
+          try {
+            const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true })
+            stream.getTracks().forEach(track => track.stop())
+            video.srcObject = fallbackStream
+            stream = fallbackStream
+          } catch (fallbackError) {
+            console.error('Fallback camera also failed:', fallbackError)
+          }
         }
       }
 
       // Function to capture photo
       const capturePhoto = () => {
-        // Set canvas size to match video dimensions
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-        
-        // Draw video frame to canvas
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-        
-        // Convert canvas to blob
-        canvas.toBlob((blob) => {
-          if (blob) {
-            // Create file from blob
-            const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { 
-              type: 'image/jpeg' 
-            })
-            
-            // Validate file
-            if (!isValidImageFile(file)) {
-              setFileSizeError('Please select a valid image file (JPEG, PNG, or WebP)')
-              return
-            }
+        try {
+          // Wait for video to be ready
+          if (video.videoWidth === 0 || video.videoHeight === 0) {
+            console.log('Video not ready yet, waiting...')
+            setTimeout(capturePhoto, 100)
+            return
+          }
 
-            const maxSize = 50 * 1024 * 1024 // 50MB in bytes
-            
-            if (file.size > maxSize) {
-              setFileSizeError(`Your image must be 50MB or less. Current size: ${formatFileSize(file.size)}`)
-            } else {
-              // Create FileList-like object
-              const dataTransfer = new DataTransfer()
-              dataTransfer.items.add(file)
-              setSelectedImages(dataTransfer.files)
-              setFileSizeError('')
-              setCompressionInfo('')
+          // Set canvas size to match video dimensions
+          canvas.width = video.videoWidth
+          canvas.height = video.videoHeight
+          
+          // Draw video frame to canvas
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+          
+          // Convert canvas to blob
+          canvas.toBlob((blob) => {
+            if (blob) {
+              // Create file from blob
+              const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { 
+                type: 'image/jpeg' 
+              })
               
-              // Show image cropper for the captured image
-              setImageForCropping(file)
-              setShowImageCropper(true)
+              // Validate file
+              if (!isValidImageFile(file)) {
+                setFileSizeError('Please select a valid image file (JPEG, PNG, or WebP)')
+                return
+              }
+
+              const maxSize = 50 * 1024 * 1024 // 50MB in bytes
               
-              // Show compression info for larger files
-              if (file.size > 1024 * 1024) { // Files larger than 1MB
-                setCompressionInfo(`Original size: ${formatFileSize(file.size)}. Image will be automatically compressed before upload.`)
+              if (file.size > maxSize) {
+                setFileSizeError(`Your image must be 50MB or less. Current size: ${formatFileSize(file.size)}`)
+              } else {
+                // Create FileList-like object
+                const dataTransfer = new DataTransfer()
+                dataTransfer.items.add(file)
+                setSelectedImages(dataTransfer.files)
+                setFileSizeError('')
+                setCompressionInfo('')
+                
+                // Show image cropper for the captured image
+                setImageForCropping(file)
+                setShowImageCropper(true)
+                
+                // Show compression info for larger files
+                if (file.size > 1024 * 1024) { // Files larger than 1MB
+                  setCompressionInfo(`Original size: ${formatFileSize(file.size)}. Image will be automatically compressed before upload.`)
+                }
               }
             }
-          }
-          
-          // Clean up
+            
+            // Clean up
+            cleanup()
+          }, 'image/jpeg', 0.9)
+        } catch (error) {
+          console.error('Error capturing photo:', error)
+          setFileSizeError('Error capturing photo. Please try again.')
           cleanup()
-        }, 'image/jpeg', 0.9)
+        }
       }
 
       // Function to cleanup
       const cleanup = () => {
-        stream.getTracks().forEach(track => track.stop())
-        document.body.removeChild(video)
-        document.body.removeChild(captureBtn)
-        document.body.removeChild(cancelBtn)
-        document.body.removeChild(switchBtn)
+        try {
+          if (stream) {
+            stream.getTracks().forEach(track => track.stop())
+          }
+          if (document.body.contains(video)) {
+            document.body.removeChild(video)
+          }
+          if (document.body.contains(captureBtn)) {
+            document.body.removeChild(captureBtn)
+          }
+          if (document.body.contains(cancelBtn)) {
+            document.body.removeChild(cancelBtn)
+          }
+          if (document.body.contains(switchBtn)) {
+            document.body.removeChild(switchBtn)
+          }
+        } catch (error) {
+          console.error('Error during cleanup:', error)
+        }
       }
 
       // Add event listeners
@@ -407,12 +472,32 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
 
       // Wait for video to be ready
       video.addEventListener('loadedmetadata', () => {
-        // Video is ready to play
+        console.log('Video ready, dimensions:', video.videoWidth, 'x', video.videoHeight)
+      })
+
+      video.addEventListener('error', (e) => {
+        console.error('Video error:', e)
+        setFileSizeError('Error loading camera feed. Please try again.')
+        cleanup()
       })
 
     } catch (error) {
       console.error('Error accessing camera:', error)
-      setFileSizeError('Unable to access camera. Please try again or use the file upload option.')
+      
+      // Provide more specific error messages
+      if (error instanceof DOMException) {
+        if (error.name === 'NotAllowedError') {
+          setFileSizeError('Camera access denied. Please allow camera permissions and try again.')
+        } else if (error.name === 'NotFoundError') {
+          setFileSizeError('No camera found on this device.')
+        } else if (error.name === 'NotReadableError') {
+          setFileSizeError('Camera is already in use by another application.')
+        } else {
+          setFileSizeError(`Camera error: ${error.message}`)
+        }
+      } else {
+        setFileSizeError('Unable to access camera. Please try again or use the file upload option.')
+      }
     }
   }
 

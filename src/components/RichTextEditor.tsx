@@ -21,11 +21,18 @@ export function RichTextEditor({
 
   // Initialize content when value changes
   useEffect(() => {
-    if (editableRef.current && value && !isInitialized) {
-      editableRef.current.textContent = value
+    if (editableRef.current && value) {
+      // Convert markdown to plain text for display
+      const plainText = value
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
+        .replace(/\*(.*?)\*/g, '$1') // Remove italic
+        .replace(/__(.*?)__/g, '$1') // Remove underline
+        .replace(/^- (.*)/gm, '$1') // Remove bullet points
+        .replace(/^\d+\. (.*)/gm, '$1') // Remove numbered lists
+      editableRef.current.textContent = plainText
       setIsInitialized(true)
     }
-  }, [value, isInitialized])
+  }, [value])
 
   const formatText = (command: string, value?: string) => {
     if (!editableRef.current) return

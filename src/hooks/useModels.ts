@@ -13,6 +13,9 @@ interface Model {
   painted_date: string | null
   purchase_date: string | null
   created_at: string
+  lore_name?: string | null
+  lore_description?: string | null
+  painting_notes?: string | null
   box: {
     id: string
     name: string
@@ -63,6 +66,9 @@ export function useModels() {
           painted_date,
           purchase_date,
           created_at,
+          lore_name,
+          lore_description,
+          painting_notes,
           box:boxes(
             id,
             name,
