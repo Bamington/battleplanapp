@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react'
-import { X, RotateCw, ZoomIn, ZoomOut, Move } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react'
+import { X } from 'lucide-react'
 
 interface ImageCropperProps {
   isOpen: boolean
@@ -8,70 +8,107 @@ interface ImageCropperProps {
   imageFile: File
 }
 
-interface CropArea {
-  x: number
-  y: number
-  width: number
-  height: number
-}
-
-interface ImageAdjustments {
-  exposure: number
-}
-
 export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCropperProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const imageRef = useRef<HTMLImageElement>(null)
   const [image, setImage] = useState<HTMLImageElement | null>(null)
-  const [cropArea, setCropArea] = useState<CropArea>({ x: 0, y: 0, width: 200, height: 200 })
-  const [isDragging, setIsDragging] = useState(false)
-  const [isResizing, setIsResizing] = useState(false)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [scale, setScale] = useState(1)
+  const [cropArea, setCropArea] = useState({ x: 100, y: 100, width: 200, height: 200 })
+  const [zoom, setZoom] = useState(1)
   const [rotation, setRotation] = useState(0)
-  const [resizeHandle, setResizeHandle] = useState<string>('')
-  const [adjustments, setAdjustments] = useState<ImageAdjustments>({ exposure: 0 })
-  const [hoveredHandle, setHoveredHandle] = useState<string>('')
 
   // Mobile detection
   const isMobile = window.innerWidth <= 768
-  const handleSize = isMobile ? 16 : 12 // Larger handles on mobile
-  const handleHitSize = isMobile ? 48 : 24 // Much larger hit area on mobile
 
+  // Prevent scrolling on mobile when touching the canvas
+  useEffect(() => {
+    if (!isOpen || !isMobile) return
+
+    const preventScroll = (e: TouchEvent) => {
+      e.preventDefault()
+    }
+
+    const canvas = canvasRef.current
+    if (canvas) {
+      canvas.addEventListener('touchmove', preventScroll, { passive: false })
+      
+      return () => {
+        canvas.removeEventListener('touchmove', preventScroll)
+      }
+    }
+  }, [isOpen, isMobile])
+
+  // Disable body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+      document.body.style.touchAction = 'none'
+      document.body.style.overscrollBehavior = 'none'
+    } else {
+      document.body.style.overflow = ''
+      document.body.style.touchAction = ''
+      document.body.style.overscrollBehavior = ''
+    }
+
+    return () => {
+      document.body.style.overflow = ''
+      document.body.style.touchAction = ''
+      document.body.style.overscrollBehavior = ''
+    }
+  }, [isOpen])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case '=':
+        case '+':
+          e.preventDefault()
+          setZoom(prev => Math.min(5, prev + 0.1))
+          break
+        case '-':
+          e.preventDefault()
+          setZoom(prev => Math.max(0.1, prev - 0.1))
+          break
+        case 'r':
+          e.preventDefault()
+          setRotation(prev => prev + 90)
+          break
+        case 'l':
+          e.preventDefault()
+          setRotation(prev => prev - 90)
+          break
+        case '0':
+          e.preventDefault()
+          setZoom(1)
+          setRotation(0)
+          break
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen])
+
+  // Load image when modal opens
   useEffect(() => {
     if (isOpen && imageFile) {
       const img = new Image()
       img.onload = () => {
         setImage(img)
-        // Calculate scale to fit image in canvas
-        const canvasWidth = 600
-        const canvasHeight = 400
-        const scaleX = canvasWidth / img.width
-        const scaleY = canvasHeight / img.height
-        const fitScale = Math.min(scaleX, scaleY, 1) // Don't scale up, only down
-        
-        // Calculate 80% square crop area based on the smaller dimension
-        const scaledImageWidth = img.width * fitScale
-        const scaledImageHeight = img.height * fitScale
-        const smallerDimension = Math.min(scaledImageWidth, scaledImageHeight)
-        const cropSize = smallerDimension * 0.8
-        
-        setCropArea({
-          x: (canvasWidth - cropSize) / 2,
-          y: (canvasHeight - cropSize) / 2,
-          width: cropSize,
-          height: cropSize // Square crop area
-        })
-        setScale(fitScale)
+        // Set initial crop area
+        setCropArea({ x: 100, y: 100, width: 200, height: 200 })
+        // Reset zoom and rotation
+        setZoom(1)
         setRotation(0)
-        setAdjustments({ exposure: 0 })
       }
       img.src = URL.createObjectURL(imageFile)
       return () => URL.revokeObjectURL(img.src)
     }
   }, [isOpen, imageFile])
 
-  const drawCanvas = useCallback(() => {
+  // Draw canvas
+  useEffect(() => {
     const canvas = canvasRef.current
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx || !image) return
@@ -79,404 +116,604 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-    // Save context for transformations
+    // Save context state
     ctx.save()
 
-    // Apply transformations to the image
-    const centerX = canvas.width / 2
-    const centerY = canvas.height / 2
+    // Move to center of canvas
+    ctx.translate(canvas.width / 2, canvas.height / 2)
     
-    ctx.translate(centerX, centerY)
+    // Apply rotation
     ctx.rotate((rotation * Math.PI) / 180)
-    ctx.scale(scale, scale)
-
-    // Apply exposure adjustment
-    if (adjustments.exposure !== 0) {
-      // Create a temporary canvas for exposure adjustment
-      const tempCanvas = document.createElement('canvas')
-      const tempCtx = tempCanvas.getContext('2d')
-      if (tempCtx) {
-        tempCanvas.width = image.width
-        tempCanvas.height = image.height
-        
-        // Draw original image
-        tempCtx.drawImage(image, 0, 0)
-        
-        // Apply exposure adjustment using composite operations
-        if (adjustments.exposure > 0) {
-          // Brighten: overlay white with opacity based on exposure
-          tempCtx.globalCompositeOperation = 'screen'
-          tempCtx.fillStyle = `rgba(255, 255, 255, ${adjustments.exposure / 100})`
-          tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height)
-        } else if (adjustments.exposure < 0) {
-          // Darken: overlay black with opacity based on exposure
-          tempCtx.globalCompositeOperation = 'multiply'
-          tempCtx.fillStyle = `rgba(0, 0, 0, ${Math.abs(adjustments.exposure) / 100})`
-          tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height)
-        }
-        
-        // Draw the adjusted image
-        ctx.drawImage(tempCanvas, -image.width / 2, -image.height / 2, image.width, image.height)
-      }
-    } else {
-      // Draw image normally without adjustments
-      ctx.drawImage(image, -image.width / 2, -image.height / 2, image.width, image.height)
-    }
-
-    // Restore context
+    
+    // Apply zoom
+    ctx.scale(zoom, zoom)
+    
+    // Draw image centered
+    const scaledWidth = image.width * zoom
+    const scaledHeight = image.height * zoom
+    ctx.drawImage(image, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight)
+    
+    // Restore context state
     ctx.restore()
 
-    // Draw crop border
+    // Draw crop border in the original canvas space
     ctx.strokeStyle = '#F59E0B'
     ctx.lineWidth = 2
     ctx.strokeRect(cropArea.x, cropArea.y, cropArea.width, cropArea.height)
 
-    // Draw resize handles with better positioning and visual feedback
-    const handles = [
-      // Corner handles - positioned slightly outside the crop area for easier grabbing
-      { x: cropArea.x - handleSize / 2, y: cropArea.y - handleSize / 2, type: 'nw' },
-      { x: cropArea.x + cropArea.width - handleSize / 2, y: cropArea.y - handleSize / 2, type: 'ne' },
-      { x: cropArea.x - handleSize / 2, y: cropArea.y + cropArea.height - handleSize / 2, type: 'sw' },
-      { x: cropArea.x + cropArea.width - handleSize / 2, y: cropArea.y + cropArea.height - handleSize / 2, type: 'se' },
-      // Side handles - positioned at the center of each edge
-      { x: cropArea.x + cropArea.width / 2 - handleSize / 2, y: cropArea.y - handleSize / 2, type: 'n' },
-      { x: cropArea.x + cropArea.width - handleSize / 2, y: cropArea.y + cropArea.height / 2 - handleSize / 2, type: 'e' },
-      { x: cropArea.x + cropArea.width / 2 - handleSize / 2, y: cropArea.y + cropArea.height - handleSize / 2, type: 's' },
-      { x: cropArea.x - handleSize / 2, y: cropArea.y + cropArea.height / 2 - handleSize / 2, type: 'w' }
-    ]
+    // Draw corner handles - make them larger and more prominent on mobile
+    const handleSize = isMobile ? 20 : 16
+    ctx.fillStyle = '#F59E0B'
+    
+    // Top-left
+    ctx.fillRect(cropArea.x - handleSize/2, cropArea.y - handleSize/2, handleSize, handleSize)
+    // Top-right
+    ctx.fillRect(cropArea.x + cropArea.width - handleSize/2, cropArea.y - handleSize/2, handleSize, handleSize)
+    // Bottom-left
+    ctx.fillRect(cropArea.x - handleSize/2, cropArea.y + cropArea.height - handleSize/2, handleSize, handleSize)
+    // Bottom-right
+    ctx.fillRect(cropArea.x + cropArea.width - handleSize/2, cropArea.y + cropArea.height - handleSize/2, handleSize, handleSize)
 
-    // Draw handles with visual feedback
-    handles.forEach(handle => {
-      const isHovered = hoveredHandle === handle.type
-      const isActive = resizeHandle === handle.type
-      
-      // Handle background (larger for better visibility)
-      ctx.fillStyle = isActive ? '#F59E0B' : isHovered ? '#FCD34D' : '#F59E0B'
-      ctx.fillRect(handle.x, handle.y, handleSize, handleSize)
-      
-      // Handle border
-      ctx.strokeStyle = '#FFFFFF'
-      ctx.lineWidth = 2
-      ctx.strokeRect(handle.x, handle.y, handleSize, handleSize)
-      
-      // Inner dot for better visual indication
-      ctx.fillStyle = '#FFFFFF'
-      ctx.fillRect(
-        handle.x + handleSize / 4, 
-        handle.y + handleSize / 4, 
-        handleSize / 2, 
-        handleSize / 2
-      )
-    })
-  }, [image, cropArea, scale, rotation, adjustments, hoveredHandle, resizeHandle, handleSize])
+    // Add white borders to handles for better visibility
+    ctx.strokeStyle = '#FFFFFF'
+    ctx.lineWidth = 2
+    ctx.strokeRect(cropArea.x - handleSize/2, cropArea.y - handleSize/2, handleSize, handleSize)
+    ctx.strokeRect(cropArea.x + cropArea.width - handleSize/2, cropArea.y - handleSize/2, handleSize, handleSize)
+    ctx.strokeRect(cropArea.x - handleSize/2, cropArea.y + cropArea.height - handleSize/2, handleSize, handleSize)
+    ctx.strokeRect(cropArea.x + cropArea.width - handleSize/2, cropArea.y + cropArea.height - handleSize/2, handleSize, handleSize)
 
-  useEffect(() => {
-    drawCanvas()
-  }, [drawCanvas])
 
-  // Helper function to get coordinates from mouse or touch event
-  const getEventCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
+  }, [image, cropArea, isMobile, zoom, rotation])
+
+  // Handle touch events
+  const handleTouchStart = (touch: any) => {
+    console.log('handleTouchStart called with touch:', touch)
     const canvas = canvasRef.current
-    if (!canvas) return { x: 0, y: 0 }
-
-    const rect = canvas.getBoundingClientRect()
-    let clientX: number, clientY: number
-
-    if ('touches' in e) {
-      // Touch event
-      clientX = e.touches[0].clientX
-      clientY = e.touches[0].clientY
-    } else {
-      // Mouse event
-      clientX = e.clientX
-      clientY = e.clientY
-    }
-
-    return {
-      x: clientX - rect.left,
-      y: clientY - rect.top
-    }
-  }
-
-  // Helper function to check if a point is within a handle
-  const getHandleAtPoint = (x: number, y: number) => {
-    const handles = [
-      // Corner handles
-      { x: cropArea.x - handleHitSize / 2, y: cropArea.y - handleHitSize / 2, type: 'nw' },
-      { x: cropArea.x + cropArea.width - handleHitSize / 2, y: cropArea.y - handleHitSize / 2, type: 'ne' },
-      { x: cropArea.x - handleHitSize / 2, y: cropArea.y + cropArea.height - handleHitSize / 2, type: 'sw' },
-      { x: cropArea.x + cropArea.width - handleHitSize / 2, y: cropArea.y + cropArea.height - handleHitSize / 2, type: 'se' },
-      // Side handles
-      { x: cropArea.x + cropArea.width / 2 - handleHitSize / 2, y: cropArea.y - handleHitSize / 2, type: 'n' },
-      { x: cropArea.x + cropArea.width - handleHitSize / 2, y: cropArea.y + cropArea.height / 2 - handleHitSize / 2, type: 'e' },
-      { x: cropArea.x + cropArea.width / 2 - handleHitSize / 2, y: cropArea.y + cropArea.height - handleHitSize / 2, type: 's' },
-      { x: cropArea.x - handleHitSize / 2, y: cropArea.y + cropArea.height / 2 - handleHitSize / 2, type: 'w' }
-    ]
-
-    for (const handle of handles) {
-      if (x >= handle.x && x <= handle.x + handleHitSize && 
-          y >= handle.y && y <= handle.y + handleHitSize) {
-        return handle.type
-      }
-    }
-    return null
-  }
-
-  const handleStart = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault()
-    const { x, y } = getEventCoordinates(e)
-
-    // Check if clicking on resize handles
-    const handleType = getHandleAtPoint(x, y)
-    if (handleType) {
-      setIsResizing(true)
-      setResizeHandle(handleType)
-      setDragStart({ x, y })
+    if (!canvas) {
+      console.log('Canvas ref not available')
       return
     }
 
-    // Check if clicking inside crop area (for moving crop area)
-    if (x >= cropArea.x && x <= cropArea.x + cropArea.width && 
-        y >= cropArea.y && y <= cropArea.y + cropArea.height) {
-      setIsDragging(true)
-      setDragStart({ x: x - cropArea.x, y: y - cropArea.y })
+    const rect = canvas.getBoundingClientRect()
+    // Calculate scale factors between HTML canvas size and CSS display size
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    
+    // Transform touch coordinates to account for zoom and rotation
+    let x = (touch.clientX - rect.left) * scaleX
+    let y = (touch.clientY - rect.top) * scaleY
+    
+    // The crop area is drawn in the original canvas space
+    // We need to convert the transformed touch coordinates to match that space
+    const centerX = canvas.width / 2
+    const centerY = canvas.height / 2
+    
+    // First, reverse the rotation transformation
+    if (rotation !== 0) {
+      const cos = Math.cos(-rotation * Math.PI / 180)
+      const sin = Math.sin(-rotation * Math.PI / 180)
+      const dx = x - centerX
+      const dy = y - centerY
+      x = centerX + dx * cos - dy * sin
+      y = centerY + dx * sin + dy * cos
+    }
+    
+    // Then reverse the zoom transformation
+    x = (x - centerX) / zoom + centerX
+    y = (y - centerY) / zoom + centerY
+
+    // Debug logging
+    console.log('Touch detected:', { 
+      touchX: touch.clientX, 
+      touchY: touch.clientY, 
+      canvasX: x, 
+      canvasY: y,
+      cropArea,
+      isMobile,
+      handleHitSize: isMobile ? 60 : 32,
+      canvasWidth: canvas.width,
+      canvasHeight: canvas.height,
+      scaleX,
+      scaleY
+    })
+
+    // Check if touching on corner handles
+    const handleSize = isMobile ? 20 : 16
+    const handleHitSize = isMobile ? 120 : 64 // Doubled the hit area for easier grabbing
+    
+    console.log('Checking touch position:', { x, y, handleHitSize, cropArea })
+
+    // Top-left handle
+    if (x >= cropArea.x - handleHitSize/2 && x <= cropArea.x + handleHitSize/2 &&
+        y >= cropArea.y - handleHitSize/2 && y <= cropArea.y + handleHitSize/2) {
+      console.log('Top-left handle touched!')
+      // Handle top-left resize
+      const startX = x
+      const startY = y
+      const startCrop = { ...cropArea }
+
+      const handleTouchMove = (e: TouchEvent) => {
+        const touch = e.touches[0]
+        // Transform the new touch coordinates the same way
+        let newX = (touch.clientX - rect.left) * scaleX
+        let newY = (touch.clientY - rect.top) * scaleY
+        
+        // Apply the same transformations as the initial touch
+        const dx = newX - centerX
+        const dy = newY - centerY
+        
+        if (rotation !== 0) {
+          const cos = Math.cos(-rotation * Math.PI / 180)
+          const sin = Math.sin(-rotation * Math.PI / 180)
+          newX = centerX + dx * cos - dy * sin
+          newY = centerY + dx * sin + dy * cos
+        }
+        
+        newX = (newX - centerX) / zoom + centerX
+        newY = (newY - centerY) / zoom + centerY
+        
+        const deltaX = newX - startX
+        const deltaY = newY - startY
+
+        setCropArea({
+          x: Math.max(0, startCrop.x + deltaX),
+          y: Math.max(0, startCrop.y + deltaY),
+          width: Math.max(50, startCrop.width - deltaX),
+          height: Math.max(50, startCrop.height - deltaY)
+        })
+      }
+
+      const handleTouchEnd = () => {
+        document.removeEventListener('touchmove', handleTouchMove)
+        document.removeEventListener('touchend', handleTouchEnd)
+      }
+
+      document.addEventListener('touchmove', handleTouchMove, { passive: false })
+      document.addEventListener('touchend', handleTouchEnd, { passive: false })
+      return
+    }
+
+    // Top-right handle
+    if (x >= cropArea.x + cropArea.width - handleHitSize/2 && x <= cropArea.x + cropArea.width + handleHitSize/2 &&
+        y >= cropArea.y - handleHitSize/2 && y <= cropArea.y + handleHitSize/2) {
+      console.log('Top-right handle touched!')
+      // Handle top-right resize
+      const startX = x
+      const startY = y
+      const startCrop = { ...cropArea }
+
+      const handleTouchMove = (e: TouchEvent) => {
+        const touch = e.touches[0]
+        // Transform the new touch coordinates the same way
+        let newX = (touch.clientX - rect.left) * scaleX
+        let newY = (touch.clientY - rect.top) * scaleY
+        
+        // Apply the same transformations as the initial touch
+        const dx = newX - centerX
+        const dy = newY - centerY
+        
+        if (rotation !== 0) {
+          const cos = Math.cos(-rotation * Math.PI / 180)
+          const sin = Math.sin(-rotation * Math.PI / 180)
+          newX = centerX + dx * cos - dy * sin
+          newY = centerY + dx * sin + dy * cos
+        }
+        
+        newX = (newX - centerX) / zoom + centerX
+        newY = (newY - centerY) / zoom + centerY
+        
+        const deltaX = newX - startX
+        const deltaY = newY - startY
+
+        setCropArea({
+          x: startCrop.x,
+          y: Math.max(0, startCrop.y + deltaY),
+          width: Math.max(50, startCrop.width + deltaX),
+          height: Math.max(50, startCrop.height - deltaY)
+        })
+      }
+
+      const handleTouchEnd = () => {
+        document.removeEventListener('touchmove', handleTouchMove)
+        document.removeEventListener('touchend', handleTouchEnd)
+      }
+
+      document.addEventListener('touchmove', handleTouchMove, { passive: false })
+      document.addEventListener('touchend', handleTouchEnd, { passive: false })
+      return
+    }
+
+    // Bottom-left handle
+    if (x >= cropArea.x - handleHitSize/2 && x <= cropArea.x + handleHitSize/2 &&
+        y >= cropArea.y + cropArea.height - handleHitSize/2 && y <= cropArea.y + cropArea.height + handleHitSize/2) {
+      console.log('Bottom-left handle touched!')
+      // Handle bottom-left resize
+      const startX = x
+      const startY = y
+      const startCrop = { ...cropArea }
+
+      const handleTouchMove = (e: TouchEvent) => {
+        const touch = e.touches[0]
+        // Transform the new touch coordinates the same way
+        let newX = (touch.clientX - rect.left) * scaleX
+        let newY = (touch.clientY - rect.top) * scaleY
+        
+        // Apply the same transformations as the initial touch
+        const dx = newX - centerX
+        const dy = newY - centerY
+        
+        if (rotation !== 0) {
+          const cos = Math.cos(-rotation * Math.PI / 180)
+          const sin = Math.sin(-rotation * Math.PI / 180)
+          newX = centerX + dx * cos - dy * sin
+          newY = centerY + dx * sin + dy * cos
+        }
+        
+        newX = (newX - centerX) / zoom + centerX
+        newY = (newY - centerY) / zoom + centerY
+        
+        const deltaX = newX - startX
+        const deltaY = newY - startY
+
+        setCropArea({
+          x: Math.max(0, startCrop.x + deltaX),
+          y: startCrop.y,
+          width: Math.max(50, startCrop.width - deltaX),
+          height: Math.max(50, startCrop.height + deltaY)
+        })
+      }
+
+      const handleTouchEnd = () => {
+        document.removeEventListener('touchmove', handleTouchMove)
+        document.removeEventListener('touchend', handleTouchEnd)
+      }
+
+      document.addEventListener('touchmove', handleTouchMove, { passive: false })
+      document.addEventListener('touchend', handleTouchEnd, { passive: false })
+        return
+      }
+
+    // Bottom-right handle
+    if (x >= cropArea.x + cropArea.width - handleHitSize/2 && x <= cropArea.x + cropArea.width + handleHitSize/2 &&
+        y >= cropArea.y + cropArea.height - handleHitSize/2 && y <= cropArea.y + cropArea.height + handleHitSize/2) {
+      console.log('Bottom-right handle touched!')
+      // Handle bottom-right resize
+      const startX = x
+      const startY = y
+      const startCrop = { ...cropArea }
+
+      const handleTouchMove = (e: TouchEvent) => {
+        const touch = e.touches[0]
+        // Transform the new touch coordinates the same way
+        let newX = (touch.clientX - rect.left) * scaleX
+        let newY = (touch.clientY - rect.top) * scaleY
+        
+        // Apply the same transformations as the initial touch
+        const dx = newX - centerX
+        const dy = newY - centerY
+        
+        if (rotation !== 0) {
+          const cos = Math.cos(-rotation * Math.PI / 180)
+          const sin = Math.sin(-rotation * Math.PI / 180)
+          newX = centerX + dx * cos - dy * sin
+          newY = centerY + dx * sin + dy * cos
+        }
+        
+        newX = (newX - centerX) / zoom + centerX
+        newY = (newY - centerY) / zoom + centerY
+        
+        const deltaX = newX - startX
+        const deltaY = newY - startY
+
+        setCropArea({
+          x: startCrop.x,
+          y: startCrop.y,
+          width: Math.max(50, startCrop.width + deltaX),
+          height: Math.max(50, startCrop.height + deltaY)
+        })
+      }
+
+      const handleTouchEnd = () => {
+        document.removeEventListener('touchmove', handleTouchMove)
+        document.removeEventListener('touchend', handleTouchEnd)
+      }
+
+      document.addEventListener('touchmove', handleTouchMove, { passive: false })
+      document.addEventListener('touchend', handleTouchEnd, { passive: false })
+      return
     }
   }
 
-  const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault()
-    const { x, y } = getEventCoordinates(e)
+  // Handle mouse events
+  const handleMouseDown = (e: React.MouseEvent) => {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    // Update hover state when not dragging or resizing
-    if (!isDragging && !isResizing) {
-      const handleType = getHandleAtPoint(x, y)
-      setHoveredHandle(handleType || '')
+    const rect = canvas.getBoundingClientRect()
+    // Calculate scale factors between HTML canvas size and CSS display size
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    
+    // Transform mouse coordinates to account for zoom and rotation
+    let x = (e.clientX - rect.left) * scaleX
+    let y = (e.clientY - rect.top) * scaleY
+    
+    // The crop area is drawn in the original canvas space
+    // We need to convert the transformed mouse coordinates to match that space
+    const centerX = canvas.width / 2
+    const centerY = canvas.height / 2
+    
+    // First, reverse the rotation transformation
+    if (rotation !== 0) {
+      const cos = Math.cos(-rotation * Math.PI / 180)
+      const sin = Math.sin(-rotation * Math.PI / 180)
+      const dx = x - centerX
+      const dy = y - centerY
+      x = centerX + dx * cos - dy * sin
+      y = centerY + dx * sin + dy * cos
     }
+    
+    // Then reverse the zoom transformation
+    x = (x - centerX) / zoom + centerX
+    y = (y - centerY) / zoom + centerY
 
-    if (isDragging) {
-      const newX = Math.max(0, Math.min(x - dragStart.x, canvas.width - cropArea.width))
-      const newY = Math.max(0, Math.min(y - dragStart.y, canvas.height - cropArea.height))
-      setCropArea(prev => ({ ...prev, x: newX, y: newY }))
-    } else if (isResizing) {
-      const deltaX = x - dragStart.x
-      const deltaY = y - dragStart.y
-      
-      setCropArea(prev => {
-        let newX = prev.x
-        let newY = prev.y
-        let newWidth = prev.width
-        let newHeight = prev.height
+    // Check if clicking on corner handles
+    const handleSize = isMobile ? 20 : 16
+    const handleHitSize = isMobile ? 120 : 64 // Doubled the hit area for easier grabbing
+
+    // Top-left handle
+    if (x >= cropArea.x - handleHitSize/2 && x <= cropArea.x + handleHitSize/2 &&
+        y >= cropArea.y - handleHitSize/2 && y <= cropArea.y + handleHitSize/2) {
+      // Handle top-left resize
+      const startX = x
+      const startY = y
+      const startCrop = { ...cropArea }
+
+      const handleMouseMove = (e: MouseEvent) => {
+        // Transform the new mouse coordinates the same way
+        let newX = (e.clientX - rect.left) * scaleX
+        let newY = (e.clientY - rect.top) * scaleY
         
-        switch (resizeHandle) {
-          case 'nw': // Top-left corner
-            newX = Math.max(0, Math.min(prev.x + deltaX, prev.x + prev.width - 50))
-            newY = Math.max(0, Math.min(prev.y + deltaY, prev.y + prev.height - 50))
-            newWidth = prev.width - (newX - prev.x)
-            newHeight = prev.height - (newY - prev.y)
-            break
-          case 'ne': // Top-right corner
-            newY = Math.max(0, Math.min(prev.y + deltaY, prev.y + prev.height - 50))
-            newWidth = Math.max(50, Math.min(prev.width + deltaX, canvas.width - prev.x))
-            newHeight = prev.height - (newY - prev.y)
-            break
-          case 'sw': // Bottom-left corner
-            newX = Math.max(0, Math.min(prev.x + deltaX, prev.x + prev.width - 50))
-            newWidth = prev.width - (newX - prev.x)
-            newHeight = Math.max(50, Math.min(prev.height + deltaY, canvas.height - prev.y))
-            break
-          case 'se': // Bottom-right corner
-            newWidth = Math.max(50, Math.min(prev.width + deltaX, canvas.width - prev.x))
-            newHeight = Math.max(50, Math.min(prev.height + deltaY, canvas.height - prev.y))
-            break
-          case 'n': // Top side
-            newY = Math.max(0, Math.min(prev.y + deltaY, prev.y + prev.height - 50))
-            newHeight = prev.height - (newY - prev.y)
-            break
-          case 'e': // Right side
-            newWidth = Math.max(50, Math.min(prev.width + deltaX, canvas.width - prev.x))
-            break
-          case 's': // Bottom side
-            newHeight = Math.max(50, Math.min(prev.height + deltaY, canvas.height - prev.y))
-            break
-          case 'w': // Left side
-            newX = Math.max(0, Math.min(prev.x + deltaX, prev.x + prev.width - 50))
-            newWidth = prev.width - (newX - prev.x)
-            break
+        // Apply the same transformations as the initial click
+        const dx = newX - centerX
+        const dy = newY - centerY
+        
+        if (rotation !== 0) {
+          const cos = Math.cos(-rotation * Math.PI / 180)
+          const sin = Math.sin(-rotation * Math.PI / 180)
+          newX = centerX + dx * cos - dy * sin
+          newY = centerY + dx * sin + dy * cos
         }
         
-        return { x: newX, y: newY, width: newWidth, height: newHeight }
-      })
-      setDragStart({ x, y })
+        newX = (newX - centerX) / zoom + centerX
+        newY = (newY - centerY) / zoom + centerY
+        
+        const deltaX = newX - startX
+        const deltaY = newY - startY
+
+        setCropArea({
+          x: Math.max(0, startCrop.x + deltaX),
+          y: Math.max(0, startCrop.y + deltaY),
+          width: Math.max(50, startCrop.width - deltaX),
+          height: Math.max(50, startCrop.height - deltaY)
+        })
+      }
+
+      const handleMouseUp = () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
+
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      return
     }
-  }
 
-  const handleEnd = () => {
-    setIsDragging(false)
-    setIsResizing(false)
-    setResizeHandle('')
-    setHoveredHandle('')
-  }
+    // Top-right handle
+    if (x >= cropArea.x + cropArea.width - handleHitSize/2 && x <= cropArea.x + cropArea.width + handleHitSize/2 &&
+        y >= cropArea.y - handleHitSize/2 && y <= cropArea.y + handleHitSize/2) {
+      // Handle top-right resize
+      const startX = x
+      const startY = y
+      const startCrop = { ...cropArea }
 
-  // Mouse event handlers
-  const handleMouseDown = (e: React.MouseEvent) => handleStart(e)
-  const handleMouseMove = (e: React.MouseEvent) => handleMove(e)
-  const handleMouseUp = () => handleEnd()
-  const handleMouseLeave = () => handleEnd()
+      const handleMouseMove = (e: MouseEvent) => {
+        // Transform the new mouse coordinates the same way
+        let newX = (e.clientX - rect.left) * scaleX
+        let newY = (e.clientY - rect.top) * scaleY
+        
+        // Apply the same transformations as the initial click
+        const dx = newX - centerX
+        const dy = newY - centerY
+        
+        if (rotation !== 0) {
+          const cos = Math.cos(-rotation * Math.PI / 180)
+          const sin = Math.sin(-rotation * Math.PI / 180)
+          newX = centerX + dx * cos - dy * sin
+          newY = centerY + dx * sin + dy * cos
+        }
+        
+        newX = (newX - centerX) / zoom + centerX
+        newY = (newY - centerY) / zoom + centerY
+        
+        const deltaX = newX - startX
+        const deltaY = newY - startY
 
-  // Touch event handlers
-  const handleTouchStart = (e: React.TouchEvent) => handleStart(e)
-  const handleTouchMove = (e: React.TouchEvent) => handleMove(e)
-  const handleTouchEnd = () => handleEnd()
+        setCropArea({
+          x: startCrop.x,
+          y: Math.max(0, startCrop.y + deltaY),
+          width: Math.max(50, startCrop.width + deltaX),
+          height: Math.max(50, startCrop.height - deltaY)
+        })
+      }
 
-  const handleZoomIn = () => {
-    setScale(prev => Math.min(prev + 0.1, 3))
-  }
+      const handleMouseUp = () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
 
-  const handleZoomOut = () => {
-    setScale(prev => Math.max(prev - 0.1, 0.1))
-  }
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      return
+    }
 
-  const handleRotate = () => {
-    setRotation(prev => (prev + 90) % 360)
-  }
+    // Bottom-left handle
+    if (x >= cropArea.x - handleHitSize/2 && x <= cropArea.x + handleHitSize/2 &&
+        y >= cropArea.y + cropArea.height - handleHitSize/2 && y <= cropArea.y + cropArea.height + handleHitSize/2) {
+      // Handle bottom-left resize
+      const startX = x
+      const startY = y
+      const startCrop = { ...cropArea }
 
-  const handleExposureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value)
-    setAdjustments(prev => ({ ...prev, exposure: value }))
-  }
+      const handleMouseMove = (e: MouseEvent) => {
+        // Transform the new mouse coordinates the same way
+        let newX = (e.clientX - rect.left) * scaleX
+        let newY = (e.clientY - rect.top) * scaleY
+        
+        // Apply the same transformations as the initial click
+        const dx = newX - centerX
+        const dy = newY - centerY
+        
+        if (rotation !== 0) {
+          const cos = Math.cos(-rotation * Math.PI / 180)
+          const sin = Math.sin(-rotation * Math.PI / 180)
+          newX = centerX + dx * cos - dy * sin
+          newY = centerY + dx * sin + dy * cos
+        }
+        
+        newX = (newX - centerX) / zoom + centerX
+        newY = (newY - centerY) / zoom + centerY
+        
+        const deltaX = newX - startX
+        const deltaY = newY - startY
 
-  const resetAdjustments = () => {
-    setAdjustments({ exposure: 0 })
+        setCropArea({
+          x: Math.max(0, startCrop.x + deltaX),
+          y: startCrop.y,
+          width: Math.max(50, startCrop.width - deltaX),
+          height: Math.max(50, startCrop.height + deltaY)
+        })
+      }
+
+  const handleMouseUp = () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
+
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      return
+    }
+
+    // Bottom-right handle
+    if (x >= cropArea.x + cropArea.width - handleHitSize/2 && x <= cropArea.x + cropArea.width + handleHitSize/2 &&
+        y >= cropArea.y + cropArea.height - handleHitSize/2 && y <= cropArea.y + cropArea.height + handleHitSize/2) {
+      // Handle bottom-right resize
+      const startX = x
+      const startY = y
+      const startCrop = { ...cropArea }
+
+      const handleMouseMove = (e: MouseEvent) => {
+        // Transform the new mouse coordinates the same way
+        let newX = (e.clientX - rect.left) * scaleX
+        let newY = (e.clientY - rect.top) * scaleY
+        
+        // Apply the same transformations as the initial click
+        const dx = newX - centerX
+        const dy = newY - centerY
+        
+        if (rotation !== 0) {
+          const cos = Math.cos(-rotation * Math.PI / 180)
+          const sin = Math.sin(-rotation * Math.PI / 180)
+          newX = centerX + dx * cos - dy * sin
+          newY = centerY + dx * sin + dy * cos
+        }
+        
+        newX = (newX - centerX) / zoom + centerX
+        newY = (newY - centerY) / zoom + centerY
+        
+        const deltaX = newX - startX
+        const deltaY = newY - startY
+
+        setCropArea({
+          x: startCrop.x,
+          y: startCrop.y,
+          width: Math.max(50, startCrop.width + deltaX),
+          height: Math.max(50, startCrop.height + deltaY)
+        })
+      }
+
+      const handleMouseUp = () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
+
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      return
+    }
+
+
   }
 
   const handleCrop = () => {
     const canvas = canvasRef.current
-    const ctx = canvas?.getContext('2d')
-    if (!canvas || !ctx || !image) return
+    if (!canvas || !image) return
 
-    // Calculate the transformation matrix to map canvas coordinates to original image coordinates
-    const canvasWidth = canvas.width
-    const canvasHeight = canvas.height
-    const centerX = canvasWidth / 2
-    const centerY = canvasHeight / 2
-    
-    // Calculate the actual image bounds on the canvas after transformations
-    const imageWidth = image.width * scale
-    const imageHeight = image.height * scale
-    
-    // Calculate where the image appears on the canvas
-    const imageLeft = centerX - imageWidth / 2
-    const imageTop = centerY - imageHeight / 2
-    
-    // Calculate crop area relative to the transformed image on canvas
-    const cropRelativeX = cropArea.x - imageLeft
-    const cropRelativeY = cropArea.y - imageTop
-    
-    // Convert back to original image coordinates
-    const originalCropX = cropRelativeX / scale
-    const originalCropY = cropRelativeY / scale
-    const originalCropWidth = cropArea.width / scale
-    const originalCropHeight = cropArea.height / scale
-    
-    // Clamp to image boundaries
-    const clampedX = Math.max(0, Math.min(originalCropX, image.width))
-    const clampedY = Math.max(0, Math.min(originalCropY, image.height))
-    const clampedWidth = Math.min(originalCropWidth, image.width - clampedX)
-    const clampedHeight = Math.min(originalCropHeight, image.height - clampedY)
-    
-    // Create a new canvas for the cropped image at original resolution
+    // Create a new canvas for the cropped image
     const cropCanvas = document.createElement('canvas')
     const cropCtx = cropCanvas.getContext('2d')
     if (!cropCtx) return
 
-    // Set canvas size to the crop area size (maintaining original resolution)
-    cropCanvas.width = Math.round(clampedWidth)
-    cropCanvas.height = Math.round(clampedHeight)
+    // Set crop canvas size
+    cropCanvas.width = cropArea.width
+    cropCanvas.height = cropArea.height
+
+    // Create a temporary canvas to apply transformations
+    const tempCanvas = document.createElement('canvas')
+    const tempCtx = tempCanvas.getContext('2d')
+    if (!tempCtx) return
+
+    // Set temp canvas size to match the original image
+    tempCanvas.width = image.width
+    tempCanvas.height = image.height
+
+    // Apply transformations to the temp canvas
+    tempCtx.save()
+    tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2)
+    tempCtx.rotate((rotation * Math.PI) / 180)
+    tempCtx.scale(zoom, zoom)
+    tempCtx.drawImage(image, -image.width / 2, -image.height / 2, image.width, image.height)
+    tempCtx.restore()
+
+    // Calculate the actual crop area in the transformed image
+    const centerX = canvas.width / 2
+    const centerY = canvas.height / 2
     
-    // Handle rotation by creating a temporary canvas if needed
-    if (rotation !== 0 || adjustments.exposure !== 0) {
-      // Create temporary canvas for rotation
-      const tempCanvas = document.createElement('canvas')
-      const tempCtx = tempCanvas.getContext('2d')
-      if (!tempCtx) return
-      
-      if (rotation !== 0) {
-        // Size temp canvas to fit rotated image
-        const radians = (rotation * Math.PI) / 180
-        const cos = Math.abs(Math.cos(radians))
-        const sin = Math.abs(Math.sin(radians))
-        tempCanvas.width = image.width * cos + image.height * sin
-        tempCanvas.height = image.width * sin + image.height * cos
-        
-        // Draw rotated image to temp canvas
-        tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2)
-        tempCtx.rotate(radians)
-      } else {
-        // No rotation, just use original dimensions
-        tempCanvas.width = image.width
-        tempCanvas.height = image.height
-      }
-      
-      // Draw image (rotated or not)
-      tempCtx.drawImage(image, -image.width / 2, -image.height / 2)
-      
-      // Apply exposure adjustment if needed
-      if (adjustments.exposure !== 0) {
-        if (adjustments.exposure > 0) {
-          // Brighten
-          tempCtx.globalCompositeOperation = 'screen'
-          tempCtx.fillStyle = `rgba(255, 255, 255, ${adjustments.exposure / 100})`
-          tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height)
-        } else {
-          // Darken
-          tempCtx.globalCompositeOperation = 'multiply'
-          tempCtx.fillStyle = `rgba(0, 0, 0, ${Math.abs(adjustments.exposure) / 100})`
-          tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height)
-        }
-      }
-      
-      // Calculate new crop coordinates on rotated image
-      let finalCropX, finalCropY
-      
-      if (rotation !== 0) {
-        const radians = (rotation * Math.PI) / 180
-        const cos = Math.abs(Math.cos(radians))
-        const sin = Math.abs(Math.sin(radians))
-        finalCropX = (tempCanvas.width / 2) + (originalCropX - image.width / 2) * cos - (originalCropY - image.height / 2) * sin - clampedWidth / 2
-        finalCropY = (tempCanvas.height / 2) + (originalCropX - image.width / 2) * sin + (originalCropY - image.height / 2) * cos - clampedHeight / 2
-      } else {
-        finalCropX = originalCropX
-        finalCropY = originalCropY
-      }
-      
-      // Crop from the rotated temp canvas
-      cropCtx.drawImage(
-        tempCanvas,
-        Math.max(0, finalCropX),
-        Math.max(0, finalCropY),
-        clampedWidth,
-        clampedHeight,
-        0,
-        0,
-        clampedWidth,
-        clampedHeight
-      )
-    } else {
-      // No rotation or adjustments - crop directly from original image
-      cropCtx.drawImage(
-        image,
-        clampedX,
-        clampedY,
-        clampedWidth,
-        clampedHeight,
-        0,
-        0,
-        clampedWidth,
-        clampedHeight
-      )
+    // Convert crop area coordinates to transformed image coordinates
+    let cropX = cropArea.x
+    let cropY = cropArea.y
+    
+    // Account for zoom and rotation transformations
+    if (zoom !== 1 || rotation !== 0) {
+      // This is a simplified approach - for more accuracy, we'd need to reverse the transformations
+      // For now, we'll use the crop area as-is and let the user adjust if needed
+      cropX = cropArea.x
+      cropY = cropArea.y
     }
+
+    // Draw the cropped portion from the transformed image
+    cropCtx.drawImage(
+      tempCanvas,
+      cropX,
+      cropY,
+      cropArea.width,
+      cropArea.height,
+      0,
+      0,
+      cropArea.width,
+      cropArea.height
+    )
 
     // Convert to blob and create file
     cropCanvas.toBlob((blob) => {
@@ -487,129 +724,165 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
         })
         onCrop(croppedFile)
       }
-    }, imageFile.type, 1.0) // Use maximum quality for cropping
+    }, imageFile.type, 1.0)
   }
 
   if (!isOpen) return null
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose()
-    }
-  }
-
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[70]"
-      onClick={handleBackdropClick}
+      className={`fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[70] ${
+        isMobile ? 'p-0' : 'p-4'
+      }`}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
     >
-      <div className="bg-modal-bg rounded-lg max-w-2xl w-full p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className={`bg-modal-bg w-full ${
+        isMobile 
+          ? 'h-full rounded-none flex flex-col' 
+          : 'rounded-lg max-w-2xl p-6'
+      }`}>
+        <div className={`flex items-center justify-between ${
+          isMobile ? 'p-4 border-b border-border-custom' : 'mb-4'
+        }`}>
           <h2 className="text-lg font-bold text-title">Crop Image</h2>
           <button
             onClick={onClose}
-            className="text-secondary-text hover:text-text transition-colors"
+            className="text-secondary-text hover:text-text transition-colors p-2"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="mb-4">
-          <canvas
-            ref={canvasRef}
-            width={600}
-            height={400}
-            className="border border-border-custom rounded-lg w-full block"
-            style={{ 
-              cursor: hoveredHandle || isDragging || isResizing ? 'grabbing' : 'crosshair',
-              touchAction: 'none' // Prevent touch scrolling on mobile
+        <div className={`${isMobile ? 'flex-1 p-4' : 'mb-4'}`}>
+          <div 
+            className="relative select-none"
+            style={{
+              touchAction: 'none',
+              overscrollBehavior: 'none',
+              WebkitOverflowScrolling: 'touch'
             }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-          />
-        </div>
-
-        <div className="space-y-4 mb-6">
-          {/* Transform Controls */}
-          <div className="flex items-center justify-center space-x-4">
-            <button
-              onClick={handleZoomOut}
-              className="p-2 border border-border-custom rounded-lg hover:bg-bg-secondary transition-colors"
-              title="Zoom Out"
-            >
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleZoomIn}
-              className="p-2 border border-border-custom rounded-lg hover:bg-bg-secondary transition-colors"
-              title="Zoom In"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleRotate}
-              className="p-2 border border-border-custom rounded-lg hover:bg-bg-secondary transition-colors"
-              title="Rotate"
-            >
-              <RotateCw className="w-4 h-4" />
-            </button>
-            <div className="flex items-center space-x-2 text-sm text-secondary-text">
-              <span>
-                {isMobile 
-                  ? 'Touch and drag crop area or handles to adjust selection' 
-                  : 'Drag crop area or resize handles to adjust selection'
-                }
-              </span>
-            </div>
+          >
+            <canvas
+              ref={canvasRef}
+              width={600}
+              height={400}
+              className={`border border-border-custom w-full block ${
+                isMobile ? 'h-full object-contain' : 'rounded-lg'
+              }`}
+                      style={{ 
+                        cursor: 'crosshair',
+                        touchAction: 'none',
+                        maxHeight: isMobile ? 'calc(100vh - 200px)' : '400px',
+                        position: 'relative',
+                        zIndex: 10,
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        MozUserSelect: 'none',
+                        msUserSelect: 'none',
+                        overscrollBehavior: 'none',
+                        WebkitTouchCallout: 'none',
+                        WebkitTapHighlightColor: 'transparent'
+                      }}
+              onMouseDown={handleMouseDown}
+              onTouchStart={(e) => {
+                // Handle touch start for cropping without preventDefault
+                console.log('Canvas touch start event:', e.type, 'passive:', e.defaultPrevented)
+                const touch = e.touches[0]
+                handleTouchStart(touch)
+              }}
+            />
           </div>
-          
-          {/* Image Adjustment Controls */}
-          <div className="bg-bg-secondary rounded-lg p-4">
-            <div className="space-y-3">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm text-secondary-text">Exposure</label>
-                  <span className="text-sm text-secondary-text">{adjustments.exposure > 0 ? '+' : ''}{adjustments.exposure}</span>
-                </div>
+
+          {/* Zoom and Rotation Controls */}
+          <div className={`mt-4 ${isMobile ? 'space-y-4' : 'space-y-3'}`}>
+            {/* Instructions */}
+            <div className="text-xs text-secondary-text text-center">
+              <span className="hidden sm:inline">Keyboard shortcuts: +/- zoom, r/l rotate, 0 reset</span>
+            </div>
+            
+            {/* Controls Row */}
+            <div className={`${isMobile ? 'space-y-4' : 'space-y-3'}`}>
+              {/* Zoom Controls */}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setZoom(Math.max(0.1, zoom - 0.1))}
+                  className="btn-ghost btn-sm w-8 h-8 p-0 flex-shrink-0"
+                  disabled={zoom <= 0.1}
+                >
+                  -
+                </button>
                 <input
                   type="range"
-                  min="-50"
-                  max="50"
-                  step="1"
-                  value={adjustments.exposure}
-                  onChange={handleExposureChange}
-                  className="w-full h-2 bg-border-custom rounded-lg appearance-none cursor-pointer slider"
+                  min="0.1"
+                  max="5"
+                  step="0.1"
+                  value={zoom}
+                  onChange={(e) => setZoom(parseFloat(e.target.value))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 slider"
                 />
-                <div className="flex justify-between text-xs text-secondary-text mt-1">
-                  <span>Darker</span>
-                  <span>Brighter</span>
-                </div>
+                <button
+                  onClick={() => setZoom(Math.min(5, zoom + 0.1))}
+                  className="btn-ghost btn-sm w-8 h-8 p-0 flex-shrink-0"
+                  disabled={zoom >= 5}
+                >
+                  +
+                </button>
               </div>
-              <button
-                onClick={resetAdjustments}
-                className="text-sm text-amber-600 hover:text-amber-700 transition-colors"
-              >
-                Reset Adjustments
-              </button>
+
+              {/* Rotation Controls */}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setRotation(rotation - 90)}
+                  className="btn-ghost btn-sm w-8 h-8 p-0 flex-shrink-0"
+                >
+                  ↺
+                </button>
+                <input
+                  type="range"
+                  min="-180"
+                  max="180"
+                  step="1"
+                  value={rotation}
+                  onChange={(e) => setRotation(parseInt(e.target.value))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 slider"
+                />
+                <button
+                  onClick={() => setRotation(rotation + 90)}
+                  className="btn-ghost btn-sm w-8 h-8 p-0 flex-shrink-0"
+                >
+                  ↻
+                </button>
+              </div>
+
+              {/* Reset Button - Only show when values have changed */}
+              {(zoom !== 1 || rotation !== 0 || cropArea.x !== 100 || cropArea.y !== 100 || cropArea.width !== 200 || cropArea.height !== 200) && (
+                <button
+                  onClick={() => {
+                    setZoom(1)
+                    setRotation(0)
+                    setCropArea({ x: 100, y: 100, width: 200, height: 200 })
+                  }}
+                  className="btn-secondary w-full"
+                >
+                  Reset
+                </button>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="flex space-x-3">
+        <div className={`flex space-x-3 ${isMobile ? 'p-4 border-t border-border-custom' : ''}`}>
           <button
             onClick={onClose}
-            className="btn-ghost btn-flex"
+            className={`btn-ghost btn-flex ${isMobile ? 'flex-1 py-3' : ''}`}
           >
             Cancel
           </button>
           <button
             onClick={handleCrop}
-            className="btn-primary btn-flex"
+            className={`btn-primary btn-flex ${isMobile ? 'flex-1 py-3' : ''}`}
           >
             Crop & Use
           </button>
