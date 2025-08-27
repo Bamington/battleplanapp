@@ -45,6 +45,7 @@ export function AdminPage({ onBack }: AdminPageProps) {
       <Header 
         onAddModel={() => {}} 
         onAdminClick={handleAdminClick}
+        onSettingsClick={() => {}}
         activeTab="collection"
         onTabChange={handleTabChange}
       />

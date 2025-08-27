@@ -31,6 +31,7 @@ import { BoxFilters } from './components/BoxFilters'
 import { PublicCollectionView } from './components/PublicCollectionView'
 import { PublicModelView } from './components/PublicModelView'
 import { OnboardingModal } from './components/OnboardingModal'
+import { SettingsPage } from './components/SettingsPage'
 import { formatLocalDate } from './utils/timezone'
 
 function App() {
@@ -106,6 +107,7 @@ function App() {
   const [addBoxModal, setAddBoxModal] = useState(false)
   const [showNewBookingModal, setShowNewBookingModal] = useState(false)
   const [showAdminPage, setShowAdminPage] = useState(false)
+  const [showSettingsPage, setShowSettingsPage] = useState(false)
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false)
   const [preselectedBoxId, setPreselectedBoxId] = useState<string | null>(null)
   const [viewModelModal, setViewModelModal] = useState<{
@@ -346,6 +348,10 @@ function App() {
     setShowAdminPage(true)
   }
 
+  const handleSettingsClick = () => {
+    setShowSettingsPage(true)
+  }
+
   // Show password reset modal if user needs to set a new password
   useEffect(() => {
     if (needsPasswordReset) {
@@ -384,7 +390,7 @@ function App() {
   if (!user) {
     return (
       <div className="min-h-screen bg-bg-secondary">
-        <Header />
+        <Header onSettingsClick={handleSettingsClick} />
         <div className="max-w-4xl mx-auto px-4 py-16 text-center">
           <div className="bg-bg-card rounded-lg shadow-sm p-8">
             <h1 className="text-3xl font-bold text-title mb-4">Welcome to the Battleplan App Beta</h1>
@@ -429,6 +435,15 @@ function App() {
     )
   }
 
+  // Show Settings page
+  if (showSettingsPage) {
+    return (
+      <div className="min-h-screen bg-bg-secondary">
+        <SettingsPage onBack={() => setShowSettingsPage(false)} />
+      </div>
+    )
+  }
+
   // Render About page
   if (activeTab === 'about') {
     return (
@@ -436,6 +451,7 @@ function App() {
         <Header 
           onAddModel={() => setAddModelModal(true)} 
           onAdminClick={handleAdminClick}
+          onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />
@@ -452,6 +468,7 @@ function App() {
         <Header 
           onAddModel={() => setAddModelModal(true)} 
           onAdminClick={handleAdminClick}
+          onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />
@@ -468,6 +485,7 @@ function App() {
         <Header 
           onAddModel={() => setAddModelModal(true)} 
           onAdminClick={handleAdminClick}
+          onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />
@@ -484,6 +502,7 @@ function App() {
         <Header 
           onAddModel={() => setAddModelModal(true)} 
           onAdminClick={handleAdminClick}
+          onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />
@@ -522,6 +541,7 @@ function App() {
       <Header 
         onAddModel={() => setAddModelModal(true)} 
         onAdminClick={handleAdminClick}
+        onSettingsClick={handleSettingsClick}
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
@@ -836,14 +856,14 @@ function App() {
                             return model.image_url
                           }
                           
-                          const gameImage = model.box?.game?.image || model.game?.image
-                          if (gameImage && 
-                              typeof gameImage === 'string' &&
-                              gameImage.trim() !== '' && 
-                              gameImage !== 'undefined' && 
-                              gameImage !== 'null' &&
-                              gameImage.startsWith('http')) {
-                            return gameImage
+                          const gameIcon = model.box?.game?.icon || model.game?.icon
+                          if (gameIcon && 
+                              typeof gameIcon === 'string' &&
+                              gameIcon.trim() !== '' && 
+                              gameIcon !== 'undefined' && 
+                              gameIcon !== 'null' &&
+                              gameIcon.startsWith('http')) {
+                            return gameIcon
                           }
                           
                           return 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'

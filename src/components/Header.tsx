@@ -7,11 +7,12 @@ import { Toast } from './Toast'
 interface HeaderProps {
   onAddModel?: () => void
   onAdminClick?: () => void
+  onSettingsClick?: () => void
   activeTab?: string
   onTabChange?: (tab: string) => void
 }
 
-export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: HeaderProps) {
+export function Header({ onAddModel, onAdminClick, onSettingsClick, activeTab, onTabChange }: HeaderProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const [isNavigationMenuOpen, setIsNavigationMenuOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
@@ -79,11 +80,16 @@ export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: Hea
 
             {/* Center - Logo */}
             <div className="flex items-center justify-center flex-1">
-              <img 
-                src={isDarkMode ? "Battleplan-Logo-Purple.svg" : "Battleplan-Logo-Purple.svg"}
-                alt="Mini Myths Logo" 
-                className="max-h-[300px] w-auto"
-              />
+              <button
+                onClick={() => onTabChange?.('collection')}
+                className="hover:opacity-80 transition-opacity focus:outline-none"
+              >
+                <img 
+                  src={isDarkMode ? "Battleplan-Logo-Purple.svg" : "Battleplan-Logo-Purple.svg"}
+                  alt="Mini Myths Logo" 
+                  className="max-h-[300px] w-auto"
+                />
+              </button>
             </div>
 
             {/* Right side - Profile Menu */}
@@ -133,7 +139,7 @@ export function Header({ onAddModel, onAdminClick, activeTab, onTabChange }: Hea
               <button
                 onClick={() => {
                   setIsProfileMenuOpen(false)
-                  // TODO: Navigate to settings page when created
+                  onSettingsClick?.()
                 }}
                 className="flex items-center space-x-3 w-full text-left px-4 py-2 text-base font-semibold text-text hover:bg-bg-secondary transition-colors"
               >
