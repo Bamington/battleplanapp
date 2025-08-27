@@ -687,19 +687,64 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
     tempCtx.restore()
 
     // Calculate the actual crop area in the transformed image
-    const centerX = canvas.width / 2
-    const centerY = canvas.height / 2
+    // The crop area coordinates are in the display canvas space (600x400)
+    // We need to convert them to the original image space
     
-    // Convert crop area coordinates to transformed image coordinates
-    let cropX = cropArea.x
-    let cropY = cropArea.y
+    // Calculate scale factors between display canvas and original image
+    const displayCanvasWidth = 600
+    const displayCanvasHeight = 400
+    const scaleX = image.width / displayCanvasWidth
+    const scaleY = image.height / displayCanvasHeight
+    
+    // Convert crop area coordinates to original image space
+    let cropX = cropArea.x * scaleX
+    let cropY = cropArea.y * scaleY
+    let cropWidth = cropArea.width * scaleX
+    let cropHeight = cropArea.height * scaleY
     
     // Account for zoom and rotation transformations
     if (zoom !== 1 || rotation !== 0) {
-      // This is a simplified approach - for more accuracy, we'd need to reverse the transformations
-      // For now, we'll use the crop area as-is and let the user adjust if needed
-      cropX = cropArea.x
-      cropY = cropArea.y
+      // For zoom and rotation, we need to calculate the crop area in the transformed image
+      const imageCenterX = image.width / 2
+      const imageCenterY = image.height / 2
+      
+      // Apply the same transformations as the display canvas
+      const cos = Math.cos((rotation * Math.PI) / 180)
+      const sin = Math.sin((rotation * Math.PI) / 180)
+      
+      // Transform the crop area corners to find the bounding box in transformed space
+      const corners = [
+        { x: cropX, y: cropY },
+        { x: cropX + cropWidth, y: cropY },
+        { x: cropX, y: cropY + cropHeight },
+        { x: cropX + cropWidth, y: cropY + cropHeight }
+      ]
+      
+      const transformedCorners = corners.map(corner => {
+        const dx = corner.x - imageCenterX
+        const dy = corner.y - imageCenterY
+        
+        // Apply rotation
+        const rotatedX = imageCenterX + dx * cos - dy * sin
+        const rotatedY = imageCenterY + dx * sin + dy * cos
+        
+        // Apply zoom
+        const zoomedX = imageCenterX + (rotatedX - imageCenterX) * zoom
+        const zoomedY = imageCenterY + (rotatedY - imageCenterY) * zoom
+        
+        return { x: zoomedX, y: zoomedY }
+      })
+      
+      // Find the bounding box of transformed corners
+      const minX = Math.min(...transformedCorners.map(c => c.x))
+      const maxX = Math.max(...transformedCorners.map(c => c.x))
+      const minY = Math.min(...transformedCorners.map(c => c.y))
+      const maxY = Math.max(...transformedCorners.map(c => c.y))
+      
+      cropX = minX
+      cropY = minY
+      cropWidth = maxX - minX
+      cropHeight = maxY - minY
     }
 
     // Draw the cropped portion from the transformed image
@@ -707,8 +752,8 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
       tempCanvas,
       cropX,
       cropY,
-      cropArea.width,
-      cropArea.height,
+      cropWidth,
+      cropHeight,
       0,
       0,
       cropArea.width,
