@@ -9,6 +9,7 @@ interface Battle {
   game_name: string | null
   game_uid: string | null
   game_icon: string | null
+  image_url: string | null
   opp_name: string | null
   opp_id: string[] | null
   result: string | null

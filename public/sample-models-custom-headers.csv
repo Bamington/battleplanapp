@@ -4,3 +4,4 @@ model_name,painting_status,quantity,game,collection,description,buy_date,finish_
 "Tau Fire Warrior","Painted",3,"Warhammer 40k","Tau Fire Warriors","Custom paint scheme",2024-01-20,2024-01-25,true
 "Eldar Guardian","None",2,"Warhammer 40k","Eldar Guardians",,2024-03-01,,false
 "Chaos Space Marine","Partially Painted",1,"Warhammer 40k","Chaos Space Marines","Base coated",2024-02-15,2024-02-20,true
+

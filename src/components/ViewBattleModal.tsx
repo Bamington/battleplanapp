@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { X, Edit, Trash2, Calendar, User, Gamepad2, Trophy } from 'lucide-react'
+import { X, Edit, Trash2, Calendar, User, Gamepad2, Trophy, Image } from 'lucide-react'
 import { DeleteBattleModal } from './DeleteBattleModal'
 import { EditBattleModal } from './EditBattleModal'
 import { formatLocalDate } from '../utils/timezone'
@@ -11,6 +11,7 @@ interface Battle {
   game_name: string | null
   game_uid: string | null
   game_icon: string | null
+  image_url: string | null
   opp_name: string | null
   opp_id: string[] | null
   result: string | null
@@ -109,8 +110,29 @@ export function ViewBattleModal({ isOpen, onClose, onBattleDeleted, onBattleUpda
               </h3>
             </div>
 
-            {/* Battle Details Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Battle Image */}
+                {battle.image_url && (
+                  <div className="col-span-full mb-6">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <Image className="w-5 h-5 text-icon" />
+                      <h3 className="text-lg font-semibold text-text">Battle Image</h3>
+                    </div>
+                    <div className="relative">
+                      <img
+                        src={battle.image_url}
+                        alt="Battle image"
+                        className="w-full max-w-md mx-auto rounded-lg shadow-lg"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Battle Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                              {/* Game */}
                <div className="flex items-center space-x-3 p-4 bg-bg-secondary rounded-lg">
                  {isValidGameIcon(battle.game_icon) ? (
