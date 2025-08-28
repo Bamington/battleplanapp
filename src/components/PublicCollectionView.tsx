@@ -222,11 +222,11 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Painted': return 'bg-green-100 text-green-800'
-      case 'Partially Painted': return 'bg-yellow-100 text-yellow-800'
-      case 'Primed': return 'bg-blue-100 text-blue-800'
-      case 'Assembled': return 'bg-yellow-100 text-yellow-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'Painted': return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+      case 'Partially Painted': return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+      case 'Primed': return 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+      case 'Assembled': return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+      default: return 'bg-border-custom text-secondary-text'
     }
   }
 
@@ -239,11 +239,11 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
       <div className="min-h-screen bg-bg-primary">
         <div className="max-w-4xl mx-auto px-4 py-8">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
-            <div className="h-64 bg-gray-200 rounded mb-8"></div>
+            <div className="h-8 bg-border-custom rounded w-1/4 mb-8"></div>
+            <div className="h-64 bg-border-custom rounded mb-8"></div>
             <div className="space-y-4">
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-4 bg-border-custom rounded w-3/4"></div>
+              <div className="h-4 bg-border-custom rounded w-1/2"></div>
             </div>
           </div>
         </div>
@@ -254,24 +254,24 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
   if (notFound || error) {
     return (
       <div className="min-h-screen bg-bg-primary flex items-center justify-center">
-        <div className="text-center">
-          <Globe className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-title mb-2">
-            {notFound ? 'Collection Not Found' : 'Error Loading Collection'}
-          </h1>
-          <p className="text-secondary-text mb-6">
-            {notFound 
-              ? 'This collection may be private or no longer exists.'
-              : error || 'Something went wrong while loading the collection.'
-            }
-          </p>
-          <button
-            onClick={onBack || handleBackClick}
-            className="btn-secondary"
-          >
-            <span>Go Back</span>
-          </button>
-        </div>
+              <div className="text-center">
+        <Globe className="w-16 h-16 text-secondary-text mx-auto mb-4" />
+        <h1 className="text-2xl font-bold text-title mb-2">
+          {notFound ? 'Collection Not Found' : 'Error Loading Collection'}
+        </h1>
+        <p className="text-secondary-text mb-6">
+          {notFound 
+            ? 'This collection may be private or no longer exists.'
+            : error || 'Something went wrong while loading the collection.'
+          }
+        </p>
+        <button
+          onClick={onBack || handleBackClick}
+          className="btn-secondary"
+        >
+          <span>Go Back</span>
+        </button>
+      </div>
       </div>
     )
   }
@@ -285,7 +285,7 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
          {onBack ? (
            <>
              {/* Preview Banner */}
-             <div className="bg-[var(--color-brand)] text-white px-4 py-3">
+             <div className="bg-brand text-white px-4 py-3">
                <div className="max-w-4xl mx-auto flex items-center justify-between">
                  <button
                    onClick={onBack}
@@ -458,9 +458,9 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
                               li: ({ children }) => <li className="text-sm text-secondary-text">{children}</li>,
                               strong: ({ children }) => <strong className="font-semibold text-secondary-text">{children}</strong>,
                               em: ({ children }) => <em className="italic text-secondary-text">{children}</em>,
-                              code: ({ children }) => <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
-                              pre: ({ children }) => <pre className="bg-gray-100 dark:bg-gray-800 p-1 rounded text-xs font-mono overflow-x-auto mb-1">{children}</pre>,
-                              blockquote: ({ children }) => <blockquote className="border-l-2 border-gray-300 dark:border-gray-600 pl-2 italic mb-1 text-secondary-text">{children}</blockquote>,
+                              code: ({ children }) => <code className="bg-bg-secondary px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                              pre: ({ children }) => <pre className="bg-bg-secondary p-1 rounded text-xs font-mono overflow-x-auto mb-1">{children}</pre>,
+                              blockquote: ({ children }) => <blockquote className="border-l-2 border-border-custom pl-2 italic mb-1 text-secondary-text">{children}</blockquote>,
                             }}
                           >
                             {model.notes}

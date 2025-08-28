@@ -180,12 +180,12 @@ export function PublicModelView({ modelId, onBack, breadcrumbs }: PublicModelVie
       <div className="min-h-screen bg-bg-secondary">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-300 rounded w-1/3 mb-4"></div>
-            <div className="h-64 bg-gray-300 rounded mb-6"></div>
+            <div className="h-8 bg-border-custom rounded w-1/3 mb-4"></div>
+            <div className="h-64 bg-border-custom rounded mb-6"></div>
             <div className="space-y-3">
-              <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-              <div className="h-4 bg-gray-300 rounded w-1/2"></div>
-              <div className="h-4 bg-gray-300 rounded w-2/3"></div>
+              <div className="h-4 bg-border-custom rounded w-3/4"></div>
+              <div className="h-4 bg-border-custom rounded w-1/2"></div>
+              <div className="h-4 bg-border-custom rounded w-2/3"></div>
             </div>
           </div>
         </div>
@@ -204,7 +204,7 @@ export function PublicModelView({ modelId, onBack, breadcrumbs }: PublicModelVie
             </p>
             <button
               onClick={onBack}
-              className="bg-[var(--color-brand)] text-white px-6 py-2 rounded-lg hover:bg-[var(--color-brand)]/90 transition-colors"
+              className="bg-brand text-white px-6 py-2 rounded-lg hover:bg-brand-hover transition-colors"
             >
               Go Back
             </button>
@@ -218,7 +218,7 @@ export function PublicModelView({ modelId, onBack, breadcrumbs }: PublicModelVie
          <div className="min-h-screen bg-bg-secondary px-[10%] pt-6">
       {/* Preview Banner */}
       {onBack && (
-        <div className="bg-[var(--color-brand)] text-white px-4 py-3">
+        <div className="bg-brand text-white px-4 py-3">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <button
               onClick={onBack}
