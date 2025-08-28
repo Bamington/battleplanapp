@@ -113,14 +113,14 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
 
   return (
     <div 
-      className={`fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[70] ${
+      className={`fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[70] modal-container ${
         isMobile ? 'p-0' : 'p-4'
       }`}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className={`bg-modal-bg w-full ${
+      <div className={`bg-modal-bg w-full modal-content ${
         isMobile 
           ? 'h-full rounded-none flex flex-col' 
           : 'rounded-lg max-w-4xl h-full max-h-[90vh] flex flex-col'
@@ -160,7 +160,7 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
               />
             )}
           </div>
-            </div>
+        </div>
             
         {/* Controls */}
         <div className={`${isMobile ? 'p-4 border-t border-border-custom' : 'p-6 border-t border-border-custom'}`}>
@@ -264,7 +264,7 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
           )}
 
           {/* Action buttons */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 modal-actions">
           <button
             onClick={onClose}
               className={`btn-ghost btn-flex ${isMobile ? 'flex-1 py-4' : 'flex-1'}`}

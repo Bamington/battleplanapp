@@ -96,10 +96,10 @@ export function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-container"
       onClick={handleBackdropClick}
     >
-      <div className="bg-modal-bg rounded-lg max-w-md w-full p-6">
+      <div className="bg-modal-bg rounded-lg max-w-md w-full p-6 modal-content">
         <div className="flex items-center justify-between mb-4">
           {currentMode === 'forgot-password' && (
             <button
@@ -209,7 +209,7 @@ export function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
             <div className="text-green-600 text-sm">{success}</div>
           )}
 
-          <div className="flex justify-center">
+          <div className="flex justify-center modal-actions">
             <button
               type="submit"
               disabled={loading}

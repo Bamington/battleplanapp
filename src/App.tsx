@@ -12,6 +12,8 @@ import { AddModelModal } from './components/AddModelModal'
 import { AddBoxModal } from './components/AddBoxModal'
 import { AdminPage } from './components/AdminPage'
 import { AboutPage } from './components/AboutPage'
+import { PrivacyPolicyPage } from './components/PrivacyPolicyPage'
+import { TermsOfServicePage } from './components/TermsOfServicePage'
 import { AllBookingsPage } from './components/AllBookingsPage'
 import { BlockedDatesPage } from './components/BlockedDatesPage'
 import { BattlesPage } from './components/BattlesPage'
@@ -52,6 +54,12 @@ function App() {
   // Handle both with and without base path for flexibility
   const sharedModelMatch = window.location.pathname.match(/\/shared\/model\/(.+)$/)
   const sharedModelId = sharedModelMatch ? sharedModelMatch[1] : null
+
+  // Check if we're on the privacy policy route
+  const isPrivacyPolicyRoute = window.location.pathname.endsWith('/privacy-policy')
+
+  // Check if we're on the terms of service route
+  const isTermsOfServiceRoute = window.location.pathname.endsWith('/terms-of-service')
 
   // Show auth callback component if on callback route
   if (isAuthCallback) {
@@ -367,6 +375,28 @@ function App() {
     setViewBoxModal({ isOpen: false, box: null })
   }
 
+  // Show Privacy Policy page
+  if (isPrivacyPolicyRoute) {
+    return (
+      <div className="min-h-screen bg-bg-secondary">
+        <Header onLogoClick={handleLogoClick} />
+        <PrivacyPolicyPage onBack={() => window.history.back()} />
+        <Footer />
+      </div>
+    )
+  }
+
+  // Show Terms of Service page
+  if (isTermsOfServiceRoute) {
+    return (
+      <div className="min-h-screen bg-bg-secondary">
+        <Header onLogoClick={handleLogoClick} />
+        <TermsOfServicePage onBack={() => window.history.back()} />
+        <Footer />
+      </div>
+    )
+  }
+
   // Show password reset modal if user needs to set a new password
   useEffect(() => {
     if (needsPasswordReset) {
@@ -432,8 +462,8 @@ function App() {
             </div>
           </div>
         </div>
-        <Footer />
-        <AuthModal
+                 <Footer />
+         <AuthModal
           isOpen={authModal.isOpen}
           onClose={() => setAuthModal({ isOpen: false, mode: 'login' })}
           mode={authModal.mode}
@@ -480,6 +510,8 @@ function App() {
       </div>
     )
   }
+
+
 
   // Render All Bookings page (Admin only)
   if (activeTab === 'all-bookings') {
@@ -1060,7 +1092,6 @@ function App() {
         onClose={() => setShowOnboardingModal(false)}
         onComplete={handleOnboardingComplete}
       />
-
 
     </div>
   )

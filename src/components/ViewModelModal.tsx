@@ -286,12 +286,12 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
   return (
     <>
       <div 
-        className={`fixed inset-0 bg-black flex items-center justify-center p-4 z-50 ${
+        className={`fixed inset-0 bg-black flex items-center justify-center p-4 z-50 modal-container ${
           showEditModal ? 'bg-opacity-25' : 'bg-opacity-50'
         }`}
         onClick={handleBackdropClick}
       >
-        <div className="bg-modal-bg max-w-2xl w-full overflow-y-auto md:rounded-lg md:max-w-2xl md:max-h-[90vh] fixed inset-0 md:relative md:inset-auto h-screen md:h-auto">
+        <div className="bg-modal-bg max-w-2xl w-full overflow-y-auto md:rounded-lg md:max-w-2xl md:max-h-[90vh] fixed inset-0 md:relative md:inset-auto h-screen md:h-auto modal-content">
           {/* Header Image */}
           <div className="relative">
             <img
@@ -558,7 +558,7 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
             )}
 
             {/* Action Buttons */}
-            <div className="pt-6">
+            <div className="pt-6 modal-actions">
               <div className="space-y-3">
                 <button
                   onClick={handleShareModel}

@@ -287,3 +287,33 @@
 .animate-fab-slide-in-delayed {
   animation: fab-slide-in 0.2s ease-out 0.1s both;
 }
+
+/* iOS Safe Area Support for Modals */
+@supports (padding: max(0px)) {
+  .modal-container {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  
+  .modal-content {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* iOS-specific modal adjustments */
+@supports (-webkit-touch-callout: none) {
+  .modal-container {
+    /* Ensure modal takes full height minus safe areas */
+    min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+  
+  .modal-content {
+    /* Add extra padding at bottom for iOS browser UI */
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+  
+  /* Ensure buttons are always visible */
+  .modal-actions {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+}

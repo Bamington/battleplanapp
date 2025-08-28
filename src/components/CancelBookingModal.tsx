@@ -19,10 +19,10 @@ export function CancelBookingModal({ isOpen, onClose, onConfirm, loading = false
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-container"
       onClick={handleBackdropClick}
     >
-      <div className="bg-modal-bg rounded-lg max-w-md w-full p-6">
+      <div className="bg-modal-bg rounded-lg max-w-md w-full p-6 modal-content">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-title">
             Are you sure you want to cancel this booking?
@@ -39,7 +39,7 @@ export function CancelBookingModal({ isOpen, onClose, onConfirm, loading = false
           We'll delete this booking and make the table available for someone else.
         </p>
 
-        <div className="flex space-x-3">
+        <div className="flex space-x-3 modal-actions">
           <button
             onClick={onClose}
             disabled={loading}

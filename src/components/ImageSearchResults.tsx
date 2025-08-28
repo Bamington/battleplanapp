@@ -30,10 +30,10 @@ export function ImageSearchResults({
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] modal-container"
       onClick={handleBackdropClick}
     >
-      <div className="bg-modal-bg rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-modal-bg rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto modal-content">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <Search className="w-6 h-6 text-secondary-text" />
