@@ -354,6 +354,19 @@ function App() {
     setShowSettingsPage(true)
   }
 
+  const handleLogoClick = () => {
+    // Close all overlays and modals
+    setShowAdminPage(false)
+    setShowSettingsPage(false)
+    setAddModelModal(false)
+    setAddBoxModal(false)
+    setShowNewBookingModal(false)
+    setShowPasswordResetModal(false)
+    setShowOnboardingModal(false)
+    setViewModelModal({ isOpen: false, model: null })
+    setViewBoxModal({ isOpen: false, box: null })
+  }
+
   // Show password reset modal if user needs to set a new password
   useEffect(() => {
     if (needsPasswordReset) {
@@ -392,7 +405,7 @@ function App() {
   if (!user) {
     return (
       <div className="min-h-screen bg-bg-secondary">
-        <Header onSettingsClick={handleSettingsClick} />
+        <Header onSettingsClick={handleSettingsClick} onLogoClick={handleLogoClick} />
         <div className="max-w-4xl mx-auto px-4 py-16 text-center">
           <div className="bg-bg-card rounded-lg shadow-sm p-8">
             <h1 className="text-3xl font-bold text-title mb-4">Welcome to the Battleplan App Beta</h1>
@@ -433,7 +446,7 @@ function App() {
   if (showAdminPage) {
     return (
       <div className="min-h-screen bg-bg-secondary">
-        <AdminPage onBack={() => setShowAdminPage(false)} />
+        <AdminPage onBack={() => setShowAdminPage(false)} onLogoClick={handleLogoClick} />
         <Footer />
       </div>
     )
@@ -459,6 +472,7 @@ function App() {
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          onLogoClick={handleLogoClick}
         />
         <AboutPage onBack={() => setActiveTab('collection')} />
         <Footer />
@@ -477,6 +491,7 @@ function App() {
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          onLogoClick={handleLogoClick}
         />
         <AllBookingsPage onBack={() => setActiveTab('collection')} />
         <Footer />
@@ -495,6 +510,7 @@ function App() {
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          onLogoClick={handleLogoClick}
         />
         <BlockedDatesPage onBack={() => setActiveTab('collection')} />
         <Footer />
@@ -513,6 +529,7 @@ function App() {
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          onLogoClick={handleLogoClick}
         />
         <BattlesPage onBack={() => setActiveTab('collection')} />
         <Footer />
@@ -531,6 +548,7 @@ function App() {
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          onLogoClick={handleLogoClick}
         />
         <BattleplanPage 
           refreshTrigger={refreshBookingsTrigger}
@@ -571,6 +589,7 @@ function App() {
         onSettingsClick={handleSettingsClick}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        onLogoClick={handleLogoClick}
       />
       
       {/* Collection Sub-menu - only show on collection tab */}

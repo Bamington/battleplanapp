@@ -10,6 +10,7 @@ import remarkGfm from 'remark-gfm'
 
 interface ReleaseManagementPageProps {
   onBack: () => void
+  onLogoClick?: () => void
 }
 
 interface Version {
@@ -20,7 +21,7 @@ interface Version {
   created_at: string
 }
 
-export function ReleaseManagementPage({ onBack }: ReleaseManagementPageProps) {
+export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagementPageProps) {
   console.log('=== ReleaseManagementPage rendering ===')
   
   const { currentVersion, loading, error, fetchCurrentVersion } = useVersion()
@@ -152,6 +153,7 @@ export function ReleaseManagementPage({ onBack }: ReleaseManagementPageProps) {
         onSettingsClick={() => {}}
         activeTab="collection"
         onTabChange={handleTabChange}
+        onLogoClick={onLogoClick}
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
         <div className="mb-8">
@@ -324,26 +326,17 @@ export function ReleaseManagementPage({ onBack }: ReleaseManagementPageProps) {
                   ) : (
                                          // View mode
                      <div>
-                       <div className="flex items-center justify-between mb-3">
-                         <div className="flex items-center space-x-4">
-                           <span className="text-lg font-semibold text-brand">
-                             Version {version.ver_number.toFixed(2)}
-                           </span>
-                           <span className="text-text">{version.ver_title}</span>
-                           <span className="text-secondary-text text-sm">
-                             {new Date(version.created_at).toLocaleDateString()}
-                           </span>
-                         </div>
-                         <button
-                           onClick={() => handleStartEdit(version)}
-                           className="flex items-center space-x-2 px-3 py-1 border border-border-custom rounded-lg text-text hover:bg-bg-secondary transition-colors"
-                         >
-                           <Edit2 className="w-4 h-4" />
-                           <span>Edit</span>
-                         </button>
+                       <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-1 sm:space-y-0 mb-3">
+                         <span className="text-lg font-semibold text-brand">
+                           Version {version.ver_number.toFixed(2)}
+                         </span>
+                         <span className="text-text">{version.ver_title}</span>
+                         <span className="text-secondary-text text-sm">
+                           {new Date(version.created_at).toLocaleDateString()}
+                         </span>
                        </div>
                        {version.ver_notes && (
-                         <div className="bg-bg-secondary rounded-lg p-3">
+                         <div className="bg-bg-secondary rounded-lg p-3 mb-4">
                            <ReactMarkdown 
                              remarkPlugins={[remarkGfm]}
                              components={{
@@ -365,6 +358,15 @@ export function ReleaseManagementPage({ onBack }: ReleaseManagementPageProps) {
                            </ReactMarkdown>
                          </div>
                        )}
+                       <div className="flex justify-end">
+                         <button
+                           onClick={() => handleStartEdit(version)}
+                           className="btn-secondary btn-with-icon"
+                         >
+                           <Edit2 className="w-4 h-4" />
+                           <span>Edit</span>
+                         </button>
+                       </div>
                      </div>
                   )}
                 </div>

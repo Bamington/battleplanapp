@@ -23,7 +23,7 @@ export function AboutPage({ onBack }: AboutPageProps) {
         <div className="bg-bg-card border border-border-custom rounded-lg p-8">
           <div className="space-y-6 text-base text-text leading-relaxed">
             <p>
-              You're using a very, very early version of the Mini Myths app. Our hope is that one day you'll be able to use this app to manage your tabletop wargaming collection, and book a table at nearby gaming store.
+              You're using a very, very early version of the Battleplan app. Our hope is that one day you'll be able to use this app to manage your tabletop wargaming collection, and book a table at nearby gaming store.
             </p>
             <p>
               We're still in very early development, so make sure to let us know if you run into any issues along the way. You can flag issues in the Mini Myths Discord.

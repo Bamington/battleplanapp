@@ -12,9 +12,10 @@ import { useAuth } from '../hooks/useAuth'
 
 interface AdminPageProps {
   onBack: () => void
+  onLogoClick?: () => void
 }
 
-export function AdminPage({ onBack }: AdminPageProps) {
+export function AdminPage({ onBack, onLogoClick }: AdminPageProps) {
   console.log('=== AdminPage rendering ===')
   const [currentView, setCurrentView] = useState<'main' | 'users' | 'games' | 'locations' | 'share-preview' | 'csv-upload' | 'release-management'>('main')
   const { user } = useAuth()
@@ -54,7 +55,7 @@ export function AdminPage({ onBack }: AdminPageProps) {
 
   if (currentView === 'release-management') {
     console.log('Rendering ReleaseManagementPage')
-    return <ReleaseManagementPage onBack={() => setCurrentView('main')} />
+    return <ReleaseManagementPage onBack={() => setCurrentView('main')} onLogoClick={onLogoClick} />
   }
 
   return (
@@ -65,6 +66,7 @@ export function AdminPage({ onBack }: AdminPageProps) {
         onSettingsClick={() => {}}
         activeTab="collection"
         onTabChange={handleTabChange}
+        onLogoClick={onLogoClick}
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
         <div className="mb-8">

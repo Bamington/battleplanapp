@@ -10,9 +10,10 @@ interface HeaderProps {
   onSettingsClick?: () => void
   activeTab?: string
   onTabChange?: (tab: string) => void
+  onLogoClick?: () => void
 }
 
-export function Header({ onAddModel, onAdminClick, onSettingsClick, activeTab, onTabChange }: HeaderProps) {
+export function Header({ onAddModel, onAdminClick, onSettingsClick, activeTab, onTabChange, onLogoClick }: HeaderProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const [isNavigationMenuOpen, setIsNavigationMenuOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
@@ -86,7 +87,10 @@ export function Header({ onAddModel, onAdminClick, onSettingsClick, activeTab, o
             {/* Center - Logo */}
             <div className="flex items-center justify-center flex-1">
               <button
-                onClick={() => onTabChange?.('collection')}
+                onClick={() => {
+                  onLogoClick?.()
+                  onTabChange?.('collection')
+                }}
                 className="hover:opacity-80 transition-opacity focus:outline-none"
               >
                 <img 
