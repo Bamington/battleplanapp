@@ -47,7 +47,7 @@ export function useBattles() {
         .from('battles')
         .select('*')
         .eq('user_id', user.id) // Filter by user_id for proper isolation
-        .order('date_played', { ascending: false })
+        .order('date_played', { ascending: false, nullsLast: true })
         .order('created_at', { ascending: false })
 
       if (error) {

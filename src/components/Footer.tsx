@@ -7,7 +7,7 @@ export function Footer() {
   return (
     <footer className="mt-12 pt-8 pb-20 border-t border-border-custom">
       <div className="flex flex-col items-center space-y-2">
-        <img src="Battleplan-Logo-Purple.svg" alt="BattlePlan" className="h-8" />
+        <img src="/Battleplan-Logo-Purple.svg" alt="BattlePlan" className="h-8" />
         {loading && (
           <span className="text-xs text-secondary-text">
             Loading version...

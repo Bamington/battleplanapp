@@ -4,6 +4,7 @@ import { BattleListItem } from './BattleListItem'
 import { ViewBattleModal } from './ViewBattleModal'
 import { DeleteBattleModal } from './DeleteBattleModal'
 import { NewBattleModal } from './NewBattleModal'
+import { EditBattleModal } from './EditBattleModal'
 import { useBattles } from '../hooks/useBattles'
 import { supabase } from '../lib/supabase'
 
@@ -26,6 +27,13 @@ export function BattlesPage({ onBack }: BattlesPageProps) {
     isOpen: false,
     battle: null
   })
+  const [editBattleModal, setEditBattleModal] = useState<{
+    isOpen: boolean
+    battle: any | null
+  }>({
+    isOpen: false,
+    battle: null
+  })
   const [newBattleModal, setNewBattleModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const { battles, loading, hasInitialized, refetch } = useBattles()
@@ -37,6 +45,13 @@ export function BattlesPage({ onBack }: BattlesPageProps) {
     setDeleteModal({
       isOpen: true,
       battleId
+    })
+  }
+
+  const handleEditBattle = (battle: any) => {
+    setEditBattleModal({
+      isOpen: true,
+      battle
     })
   }
 
@@ -174,6 +189,7 @@ export function BattlesPage({ onBack }: BattlesPageProps) {
                       battle={battle}
                       onViewBattle={() => handleViewBattle(battle)}
                       onDeleteBattle={handleDeleteBattle}
+                      onEditBattle={handleEditBattle}
                     />
                   ))}
                 </div>
@@ -209,10 +225,17 @@ export function BattlesPage({ onBack }: BattlesPageProps) {
 
       <ViewBattleModal
         isOpen={viewBattleModal.isOpen}
+        battle={viewBattleModal.battle}
         onClose={() => setViewBattleModal({ isOpen: false, battle: null })}
         onBattleDeleted={handleBattleDeleted}
         onBattleUpdated={handleBattleUpdated}
-        battle={viewBattleModal.battle}
+      />
+
+      <EditBattleModal
+        isOpen={editBattleModal.isOpen}
+        battle={editBattleModal.battle}
+        onClose={() => setEditBattleModal({ isOpen: false, battle: null })}
+        onBattleUpdated={handleBattleUpdated}
       />
     </>
   )

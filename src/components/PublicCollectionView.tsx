@@ -8,6 +8,7 @@ import battleplanLogo from '/Battleplan-Logo-Purple.svg'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Footer } from './Footer'
+import { PublicHeader } from './PublicHeader'
 
 interface PublicCollectionViewProps {
   collectionId: string
@@ -280,202 +281,204 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
     return null
   }
 
-                     return (
-               <div className="min-h-screen bg-bg-primary px-[10%] pt-6">
-         {onBack ? (
-           <>
-             {/* Preview Banner */}
-             <div className="bg-brand text-white px-4 py-3">
-               <div className="max-w-4xl mx-auto flex items-center justify-between">
-                 <button
-                   onClick={onBack}
-                   className="flex items-center space-x-2 text-white hover:text-white/80 transition-colors"
-                 >
-                   <ArrowLeft className="w-4 h-4" />
-                   <span className="text-sm font-medium">Back</span>
-                 </button>
-                 <span className="text-sm font-medium">This is just a preview.</span>
-                 <div className="w-16"></div> {/* Spacer for centering */}
-               </div>
-             </div>
-           </>
-                   ) : null}
+  return (
+    <div className="min-h-screen bg-bg-primary">
+      <PublicHeader />
+      <div className="px-[10%] pt-6">
+        {onBack ? (
+          <>
+            {/* Preview Banner */}
+            <div className="bg-brand text-white px-4 py-3">
+              <div className="max-w-4xl mx-auto flex items-center justify-between">
+                <button
+                  onClick={onBack}
+                  className="flex items-center space-x-2 text-white hover:text-white/80 transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="text-sm font-medium">Back</span>
+                </button>
+                <span className="text-sm font-medium">This is just a preview.</span>
+                <div className="w-16"></div> {/* Spacer for centering */}
+              </div>
+            </div>
+          </>
+        ) : null}
 
-                               {/* Full-width Hero Image */}
-                     <div className="w-full relative">
-                          <img
-                src={getImageSrc()}
-                alt={collection.name}
-                className="w-full max-h-[70vh] object-contain rounded-lg"
-                loading="lazy"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement
-                  const fallbackUrl = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
-                  if (target.src !== fallbackUrl) {
-                    target.src = fallbackUrl
-                  }
-                }}
-              />
-           </div>
+        {/* Full-width Hero Image */}
+        <div className="w-full relative">
+          <img
+            src={getImageSrc()}
+            alt={collection.name}
+            className="w-full max-h-[70vh] object-contain rounded-lg"
+            loading="lazy"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement
+              const fallbackUrl = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+              if (target.src !== fallbackUrl) {
+                target.src = fallbackUrl
+              }
+            }}
+          />
+        </div>
 
         {/* Content Container */}
         <div className="max-w-4xl mx-auto py-8">
-        {/* Collection Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-title mb-4 text-center">{collection.name}</h1>
-          {collection.user?.username && (
-            <p className="text-secondary-text text-center">by {collection.user.username}</p>
-          )}
-        </div>
-
-        {/* Collection Details */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Game Info */}
-          <div className="bg-bg-card rounded-lg p-6 border border-border-custom">
-            <div className="flex items-center space-x-4">
-              {collection.game?.icon ? (
-                <img
-                  src={collection.game.icon}
-                  alt={`${collection.game.name} icon`}
-                  className="w-12 h-12 object-cover rounded"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement
-                    target.style.display = 'none'
-                    const fallback = target.nextElementSibling as HTMLElement
-                    if (fallback && fallback.classList.contains('icon-fallback')) {
-                      fallback.style.display = 'flex'
-                    }
-                  }}
-                  onLoad={(e) => {
-                    const target = e.target as HTMLImageElement
-                    const fallback = target.nextElementSibling as HTMLElement
-                    if (fallback && fallback.classList.contains('icon-fallback')) {
-                      fallback.style.display = 'none'
-                    }
-                  }}
-                />
-              ) : null}
-              <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center icon-fallback" style={{ display: collection.game?.icon ? 'none' : 'flex' }}>
-                <span className="text-white text-sm font-bold">
-                  {(collection.game?.name || 'Unknown Game').charAt(0)}
-                </span>
-              </div>
-              <div>
-                <h3 className="font-semibold text-text">Game</h3>
-                <p className="text-secondary-text">{collection.game?.name || 'Unknown Game'}</p>
-              </div>
-            </div>
+          {/* Collection Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-title mb-4 text-center">{collection.name}</h1>
+            {collection.user?.username && (
+              <p className="text-secondary-text text-center">by {collection.user.username}</p>
+            )}
           </div>
 
-          {/* Purchase Date */}
-          {collection.purchase_date && (
+          {/* Collection Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {/* Game Info */}
             <div className="bg-bg-card rounded-lg p-6 border border-border-custom">
-              <div className="flex items-center space-x-3">
-                <Calendar className="w-6 h-6 text-secondary-text" />
+              <div className="flex items-center space-x-4">
+                {collection.game?.icon ? (
+                  <img
+                    src={collection.game.icon}
+                    alt={`${collection.game.name} icon`}
+                    className="w-12 h-12 object-cover rounded"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.style.display = 'none'
+                      const fallback = target.nextElementSibling as HTMLElement
+                      if (fallback && fallback.classList.contains('icon-fallback')) {
+                        fallback.style.display = 'flex'
+                      }
+                    }}
+                    onLoad={(e) => {
+                      const target = e.target as HTMLImageElement
+                      const fallback = target.nextElementSibling as HTMLElement
+                      if (fallback && fallback.classList.contains('icon-fallback')) {
+                        fallback.style.display = 'none'
+                      }
+                    }}
+                  />
+                ) : null}
+                <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center icon-fallback" style={{ display: collection.game?.icon ? 'none' : 'flex' }}>
+                  <span className="text-white text-sm font-bold">
+                    {(collection.game?.name || 'Unknown Game').charAt(0)}
+                  </span>
+                </div>
                 <div>
-                  <h3 className="font-semibold text-text">Purchase Date</h3>
-                  <p className="text-secondary-text">{formatDate(collection.purchase_date)}</p>
+                  <h3 className="font-semibold text-text">Game</h3>
+                  <p className="text-secondary-text">{collection.game?.name || 'Unknown Game'}</p>
                 </div>
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Models Section */}
-        <div className="bg-bg-card rounded-lg border border-border-custom overflow-hidden">
-          <div className="p-6 border-b border-border-custom">
-            <div className="flex items-center space-x-3">
-              <Users className="w-6 h-6 text-secondary-text" />
-              <h2 className="text-xl font-bold text-title">Models ({models.length})</h2>
-            </div>
-          </div>
-
-          {models.length === 0 ? (
-            <div className="p-8 text-center">
-              <Package className="w-12 h-12 text-secondary-text mx-auto mb-4" />
-              <p className="text-secondary-text">No models in this collection.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-border-custom">
-              {models.map((model) => (
-                                 <div 
-                   key={model.id} 
-                   className="p-6 hover:bg-bg-secondary transition-colors cursor-pointer"
-                   onClick={() => {
-                     const params = new URLSearchParams({
-                       from: collectionId,
-                       collectionName: encodeURIComponent(collection?.name || '')
-                     })
-                     window.location.href = `/shared/model/${model.id}?${params.toString()}`
-                   }}
-                 >
-                  <div className="flex items-start space-x-4">
-                    {/* Model Image */}
-                    <div className="flex-shrink-0">
-                      {(() => {
-                        const imageData = getModelImageSrc(model)
-                        return (
-                          <img
-                            src={imageData.src}
-                            alt={model.name}
-                            className={`w-16 h-16 object-cover rounded ${imageData.isGameFallback ? 'opacity-10' : ''}`}
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.src = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
-                            }}
-                          />
-                        )
-                      })()}
-                    </div>
-
-                    {/* Model Details */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-text mb-2">{model.name}</h3>
-                      
-                      <div className="flex items-center space-x-4 text-sm text-secondary-text mb-2">
-                        {model.count && (
-                          <span>{model.count} model{model.count !== 1 ? 's' : ''}</span>
-                        )}
-                        {model.status && model.status !== 'None' && (
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(model.status)}`}>
-                            {model.status}
-                          </span>
-                        )}
-                      </div>
-
-                      {model.notes && (
-                        <div className="text-sm text-secondary-text">
-                          <ReactMarkdown 
-                            remarkPlugins={[remarkGfm]}
-                            className="prose prose-sm max-w-none"
-                            components={{
-                              p: ({ children }) => <p className="mb-1 last:mb-0 text-sm text-secondary-text">{children}</p>,
-                              h1: ({ children }) => <h1 className="text-sm font-bold mb-1 text-secondary-text">{children}</h1>,
-                              h2: ({ children }) => <h2 className="text-sm font-bold mb-1 text-secondary-text">{children}</h2>,
-                              h3: ({ children }) => <h3 className="text-xs font-bold mb-1 text-secondary-text">{children}</h3>,
-                              ul: ({ children }) => <ul className="list-disc list-inside mb-1 space-y-0.5">{children}</ul>,
-                              ol: ({ children }) => <ol className="list-decimal list-inside mb-1 space-y-0.5">{children}</ol>,
-                              li: ({ children }) => <li className="text-sm text-secondary-text">{children}</li>,
-                              strong: ({ children }) => <strong className="font-semibold text-secondary-text">{children}</strong>,
-                              em: ({ children }) => <em className="italic text-secondary-text">{children}</em>,
-                              code: ({ children }) => <code className="bg-bg-secondary px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
-                              pre: ({ children }) => <pre className="bg-bg-secondary p-1 rounded text-xs font-mono overflow-x-auto mb-1">{children}</pre>,
-                              blockquote: ({ children }) => <blockquote className="border-l-2 border-border-custom pl-2 italic mb-1 text-secondary-text">{children}</blockquote>,
-                            }}
-                          >
-                            {model.notes}
-                          </ReactMarkdown>
-                        </div>
-                      )}
-                    </div>
+            {/* Purchase Date */}
+            {collection.purchase_date && (
+              <div className="bg-bg-card rounded-lg p-6 border border-border-custom">
+                <div className="flex items-center space-x-3">
+                  <Calendar className="w-6 h-6 text-secondary-text" />
+                  <div>
+                    <h3 className="font-semibold text-text">Purchase Date</h3>
+                    <p className="text-secondary-text">{formatDate(collection.purchase_date)}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
 
-        <Footer />
+          {/* Models Section */}
+          <div className="bg-bg-card rounded-lg border border-border-custom overflow-hidden">
+            <div className="p-6 border-b border-border-custom">
+              <div className="flex items-center space-x-3">
+                <Users className="w-6 h-6 text-secondary-text" />
+                <h2 className="text-xl font-bold text-title">Models ({models.length})</h2>
+              </div>
+            </div>
+
+            {models.length === 0 ? (
+              <div className="p-8 text-center">
+                <Package className="w-12 h-12 text-secondary-text mx-auto mb-4" />
+                <p className="text-secondary-text">No models in this collection.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border-custom">
+                {models.map((model) => (
+                  <div 
+                    key={model.id} 
+                    className="p-6 hover:bg-bg-secondary transition-colors cursor-pointer"
+                    onClick={() => {
+                      const params = new URLSearchParams({
+                        from: collectionId,
+                        collectionName: encodeURIComponent(collection?.name || '')
+                      })
+                      window.location.href = `/shared/model/${model.id}?${params.toString()}`
+                    }}
+                  >
+                    <div className="flex items-start space-x-4">
+                      {/* Model Image */}
+                      <div className="flex-shrink-0">
+                        {(() => {
+                          const imageData = getModelImageSrc(model)
+                          return (
+                            <img
+                              src={imageData.src}
+                              alt={model.name}
+                              className={`w-16 h-16 object-cover rounded ${imageData.isGameFallback ? 'opacity-10' : ''}`}
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.src = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                              }}
+                            />
+                          )
+                        })()}
+                      </div>
+
+                      {/* Model Details */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-text mb-2">{model.name}</h3>
+                        
+                        <div className="flex items-center space-x-4 text-sm text-secondary-text mb-2">
+                          {model.count && (
+                            <span>{model.count} model{model.count !== 1 ? 's' : ''}</span>
+                          )}
+                          {model.status && model.status !== 'None' && (
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(model.status)}`}>
+                              {model.status}
+                            </span>
+                          )}
+                        </div>
+
+                        {model.notes && (
+                          <div className="text-sm text-secondary-text">
+                            <ReactMarkdown 
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                p: ({ children }) => <p className="mb-1 last:mb-0 text-sm text-secondary-text">{children}</p>,
+                                h1: ({ children }) => <h1 className="text-sm font-bold mb-1 text-secondary-text">{children}</h1>,
+                                h2: ({ children }) => <h2 className="text-sm font-bold mb-1 text-secondary-text">{children}</h2>,
+                                h3: ({ children }) => <h3 className="text-xs font-bold mb-1 text-secondary-text">{children}</h3>,
+                                ul: ({ children }) => <ul className="list-disc list-inside mb-1 space-y-0.5">{children}</ul>,
+                                ol: ({ children }) => <ol className="list-decimal list-inside mb-1 space-y-0.5">{children}</ol>,
+                                li: ({ children }) => <li className="text-sm text-secondary-text">{children}</li>,
+                                strong: ({ children }) => <strong className="font-semibold text-secondary-text">{children}</strong>,
+                                em: ({ children }) => <em className="italic text-secondary-text">{children}</em>,
+                                code: ({ children }) => <code className="bg-bg-secondary px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                                pre: ({ children }) => <pre className="bg-bg-secondary p-1 rounded text-xs font-mono overflow-x-auto mb-1">{children}</pre>,
+                                blockquote: ({ children }) => <blockquote className="border-l-2 border-border-custom pl-2 italic mb-1 text-secondary-text">{children}</blockquote>,
+                              }}
+                            >
+                              {model.notes}
+                            </ReactMarkdown>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <Footer />
+        </div>
       </div>
     </div>
   )

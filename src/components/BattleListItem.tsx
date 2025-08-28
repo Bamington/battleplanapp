@@ -1,5 +1,5 @@
 import React from 'react'
-import { Trash2, Calendar, User, Gamepad2 } from 'lucide-react'
+import { Trash2, Calendar, User, Gamepad2, Edit } from 'lucide-react'
 import { formatLocalDate } from '../utils/timezone'
 
 interface Battle {
@@ -20,12 +20,20 @@ interface BattleListItemProps {
   battle: Battle
   onViewBattle: () => void
   onDeleteBattle: (battleId: number) => void
+  onEditBattle?: (battle: Battle) => void
 }
 
-export function BattleListItem({ battle, onViewBattle, onDeleteBattle }: BattleListItemProps) {
+export function BattleListItem({ battle, onViewBattle, onDeleteBattle, onEditBattle }: BattleListItemProps) {
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     onDeleteBattle(battle.id)
+  }
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (onEditBattle) {
+      onEditBattle(battle)
+    }
   }
 
   const isValidGameIcon = (iconUrl: string | null | undefined): boolean => {
@@ -114,20 +122,21 @@ export function BattleListItem({ battle, onViewBattle, onDeleteBattle }: BattleL
 
         {/* Battle details */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-semibold text-title truncate mb-1">
+          <h3 className="text-lg font-semibold text-title break-words mb-2">
             {battle.battle_name || 'Untitled Battle'}
           </h3>
           
-          <div className="flex items-center space-x-4 text-sm text-secondary-text">
-            {/* Game */}
-            <div className="flex items-center space-x-1">
-              <Gamepad2 className="w-4 h-4" />
+          {/* Mobile: Only show Date, Desktop: Show Game, Date, and Opponent */}
+          <div className="flex flex-col space-y-1 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4 text-sm text-secondary-text">
+            {/* Game - Hidden on mobile */}
+            <div className="hidden sm:flex items-center space-x-1">
+              <Gamepad2 className="w-4 h-4 flex-shrink-0" />
               <span className="truncate">{battle.game_name || 'Unknown Game'}</span>
             </div>
 
             {/* Date */}
             <div className="flex items-center space-x-1">
-              <Calendar className="w-4 h-4" />
+              <Calendar className="w-4 h-4 flex-shrink-0" />
               <span>
                 {battle.date_played ? formatLocalDate(battle.date_played, {
                   weekday: 'short',
@@ -138,10 +147,10 @@ export function BattleListItem({ battle, onViewBattle, onDeleteBattle }: BattleL
               </span>
             </div>
 
-            {/* Opponent */}
+            {/* Opponent - Hidden on mobile */}
             {battle.opp_name && (
-              <div className="flex items-center space-x-1">
-                <User className="w-4 h-4" />
+              <div className="hidden sm:flex items-center space-x-1">
+                <User className="w-4 h-4 flex-shrink-0" />
                 <span className="truncate">vs {battle.opp_name}</span>
               </div>
             )}
@@ -149,8 +158,20 @@ export function BattleListItem({ battle, onViewBattle, onDeleteBattle }: BattleL
         </div>
       </div>
 
-      {/* Right side: Delete button */}
-      <div className="flex-shrink-0 ml-4">
+      {/* Right side: Action buttons */}
+      <div className="flex-shrink-0 ml-4 flex items-center space-x-2">
+        {/* Edit button - Hidden on mobile */}
+        {onEditBattle && (
+          <button
+            onClick={handleEditClick}
+            className="hidden sm:block text-blue-500 hover:text-blue-700 transition-colors p-2 rounded-full hover:bg-blue-50"
+            title="Edit Battle"
+          >
+            <Edit className="w-5 h-5" />
+          </button>
+        )}
+        
+        {/* Delete button */}
         <button
           onClick={handleDeleteClick}
           className="text-red-500 hover:text-red-700 transition-colors p-2 rounded-full hover:bg-red-50"

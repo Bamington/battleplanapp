@@ -8,6 +8,7 @@ import remarkGfm from 'remark-gfm'
 import { formatLocalDate } from '../utils/timezone'
 import { Footer } from './Footer'
 import { TabSelector } from './TabSelector'
+import { PublicHeader } from './PublicHeader'
 
 interface PublicModelViewProps {
   modelId: string
@@ -215,56 +216,58 @@ export function PublicModelView({ modelId, onBack, breadcrumbs }: PublicModelVie
   }
 
   return (
-         <div className="min-h-screen bg-bg-secondary px-[10%] pt-6">
-      {/* Preview Banner */}
-      {onBack && (
-        <div className="bg-brand text-white px-4 py-3">
-          <div className="max-w-4xl mx-auto flex items-center justify-between">
-            <button
-              onClick={onBack}
-              className="flex items-center space-x-2 text-white hover:text-white/80 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm font-medium">Back</span>
-            </button>
-            <span className="text-sm font-medium">This is just a preview.</span>
-            <div className="w-16"></div> {/* Spacer for centering */}
+    <div className="min-h-screen bg-bg-secondary">
+      <PublicHeader />
+      <div className="px-[10%] pt-6">
+        {/* Preview Banner */}
+        {onBack && (
+          <div className="bg-brand text-white px-4 py-3">
+            <div className="max-w-4xl mx-auto flex items-center justify-between">
+              <button
+                onClick={onBack}
+                className="flex items-center space-x-2 text-white hover:text-white/80 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="text-sm font-medium">Back</span>
+              </button>
+              <span className="text-sm font-medium">This is just a preview.</span>
+              <div className="w-16"></div> {/* Spacer for centering */}
+            </div>
           </div>
-        </div>
-             )}
+        )}
 
-              {/* Breadcrumbs */}
-              {breadcrumbs && (
-                <div className="mb-4">
-                  <nav className="flex items-center space-x-2 text-sm text-secondary-text">
-                    <a 
-                      href={`/shared/collection/${breadcrumbs.collectionId}`}
-                      className="hover:text-text transition-colors"
-                    >
-                      {breadcrumbs.collectionName}
-                    </a>
-                    <span>/</span>
-                    <span className="text-text">{model?.name || 'Loading...'}</span>
-                  </nav>
-                </div>
-              )}
+        {/* Breadcrumbs */}
+        {breadcrumbs && (
+          <div className="mb-4">
+            <nav className="flex items-center space-x-2 text-sm text-secondary-text">
+              <a 
+                href={`/shared/collection/${breadcrumbs.collectionId}`}
+                className="hover:text-text transition-colors"
+              >
+                {breadcrumbs.collectionName}
+              </a>
+              <span>/</span>
+              <span className="text-text">{model?.name || 'Loading...'}</span>
+            </nav>
+          </div>
+        )}
 
-              {/* Main Content */}
+        {/* Main Content */}
         <main>
-                    {/* Full-width Hero Image */}
-                     {model.image_url && (
-             <div className="w-full relative">
-                              <img
-                  src={model.image_url}
-                  alt={model.name}
-                  className="w-full max-h-[70vh] object-contain rounded-lg"
-                />
-             </div>
-           )}
+          {/* Full-width Hero Image */}
+          {model.image_url && (
+            <div className="w-full relative">
+              <img
+                src={model.image_url}
+                alt={model.name}
+                className="w-full max-h-[70vh] object-contain rounded-lg"
+              />
+            </div>
+          )}
 
           {/* Content Container */}
           <div className="max-w-4xl mx-auto py-8">
-                       {/* Model Header */}
+            {/* Model Header */}
             <div className="bg-bg-card border border-border-custom rounded-lg p-6 mb-8">
               <div className="text-center">
                 <h1 className="text-3xl font-bold text-title mb-2">{model.name}</h1>
@@ -290,128 +293,129 @@ export function PublicModelView({ modelId, onBack, breadcrumbs }: PublicModelVie
               </div>
             </div>
 
-           {/* Tab Selector */}
-           <TabSelector
-             tabs={tabs}
-             activeTab={activeTab}
-             onTabChange={(tabId) => setActiveTab(tabId as 'details' | 'lore' | 'painting')}
-             className="mb-6"
-           />
+            {/* Tab Selector */}
+            <TabSelector
+              tabs={tabs}
+              activeTab={activeTab}
+              onTabChange={(tabId) => setActiveTab(tabId as 'details' | 'lore' | 'painting')}
+              className="mb-6"
+            />
 
-           {/* Tab Content */}
-           {activeTab === 'details' && (
-             <div className="space-y-6">
-               {/* Model Count */}
-               <div className="bg-bg-card border border-border-custom rounded-lg p-6">
-                 <div className="flex items-center space-x-3">
-                   <Package className="w-5 h-5 text-secondary-text" />
-                   <span className="text-base text-text font-medium">
-                     {model.count} model{model.count !== 1 ? 's' : ''}
-                   </span>
-                 </div>
-               </div>
+            {/* Tab Content */}
+            {activeTab === 'details' && (
+              <div className="space-y-6">
+                {/* Model Count */}
+                <div className="bg-bg-card border border-border-custom rounded-lg p-6">
+                  <div className="flex items-center space-x-3">
+                    <Package className="w-5 h-5 text-secondary-text" />
+                    <span className="text-base text-text font-medium">
+                      {model.count} model{model.count !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
 
-               {/* Purchase Date - only show if purchase date exists */}
-               {model.purchase_date && (
-                 <div className="bg-bg-card border border-border-custom rounded-lg p-6">
-                   <div className="flex items-center space-x-3">
-                     <Calendar className="w-5 h-5 text-secondary-text" />
-                     <span className="text-base text-text font-medium">
-                       Purchased {formatDate(model.purchase_date)}
-                     </span>
-                   </div>
-                 </div>
-               )}
+                {/* Purchase Date - only show if purchase date exists */}
+                {model.purchase_date && (
+                  <div className="bg-bg-card border border-border-custom rounded-lg p-6">
+                    <div className="flex items-center space-x-3">
+                      <Calendar className="w-5 h-5 text-secondary-text" />
+                      <span className="text-base text-text font-medium">
+                        Purchased {formatDate(model.purchase_date)}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
-               {/* Notes - only show if notes exist */}
-               {model.notes && (
-                 <div className="bg-bg-card border border-border-custom rounded-lg p-6">
-                   <h2 className="text-xl font-semibold text-title mb-4">Notes</h2>
-                   <div className="prose prose-sm max-w-none text-text">
-                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                       {model.notes}
-                     </ReactMarkdown>
-                   </div>
-                 </div>
-               )}
-             </div>
-           )}
+                {/* Notes - only show if notes exist */}
+                {model.notes && (
+                  <div className="bg-bg-card border border-border-custom rounded-lg p-6">
+                    <h2 className="text-xl font-semibold text-title mb-4">Notes</h2>
+                    <div className="prose prose-sm max-w-none text-text">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {model.notes}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
-           {activeTab === 'lore' && (
-             <div className="space-y-6">
-               {/* Lore Name - only show if lore name exists */}
-               {model.lore_name && (
-                 <div className="bg-bg-card border border-border-custom rounded-lg p-6">
-                   <h2 className="text-xl font-semibold text-title mb-4">Lore Name</h2>
-                   <p className="text-text">{model.lore_name}</p>
-                 </div>
-               )}
+            {activeTab === 'lore' && (
+              <div className="space-y-6">
+                {/* Lore Name - only show if lore name exists */}
+                {model.lore_name && (
+                  <div className="bg-bg-card border border-border-custom rounded-lg p-6">
+                    <h2 className="text-xl font-semibold text-title mb-4">Lore Name</h2>
+                    <p className="text-text">{model.lore_name}</p>
+                  </div>
+                )}
 
-               {/* Lore Description - only show if lore description exists */}
-               {model.lore_description && (
-                 <div className="bg-bg-card border border-border-custom rounded-lg p-6">
-                   <h2 className="text-xl font-semibold text-title mb-4">Lore Description</h2>
-                   <div className="prose prose-sm max-w-none text-text">
-                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                       {model.lore_description}
-                     </ReactMarkdown>
-                   </div>
-                 </div>
-               )}
+                {/* Lore Description - only show if lore description exists */}
+                {model.lore_description && (
+                  <div className="bg-bg-card border border-border-custom rounded-lg p-6">
+                    <h2 className="text-xl font-semibold text-title mb-4">Lore Description</h2>
+                    <div className="prose prose-sm max-w-none text-text">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {model.lore_description}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                )}
 
-               {/* Empty state */}
-               {!model.lore_name && !model.lore_description && (
-                 <div className="bg-bg-card border border-border-custom rounded-lg p-6">
-                   <div className="text-center text-secondary-text">
-                     <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                     <p>No lore information available</p>
-                   </div>
-                 </div>
-               )}
-             </div>
-           )}
+                {/* Empty state */}
+                {!model.lore_name && !model.lore_description && (
+                  <div className="bg-bg-card border border-border-custom rounded-lg p-6">
+                    <div className="text-center text-secondary-text">
+                      <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p>No lore information available</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
-           {activeTab === 'painting' && (
-             <div className="space-y-6">
-               {/* Painted Date - only show if painted date exists */}
-               {model.painted_date && (
-                 <div className="bg-bg-card border border-border-custom rounded-lg p-6">
-                   <div className="flex items-center space-x-3">
-                     <Brush className="w-5 h-5 text-secondary-text" />
-                     <span className="text-base text-text font-medium">
-                       Painted {formatDate(model.painted_date)}
-                     </span>
-                   </div>
-                 </div>
-               )}
+            {activeTab === 'painting' && (
+              <div className="space-y-6">
+                {/* Painted Date - only show if painted date exists */}
+                {model.painted_date && (
+                  <div className="bg-bg-card border border-border-custom rounded-lg p-6">
+                    <div className="flex items-center space-x-3">
+                      <Brush className="w-5 h-5 text-secondary-text" />
+                      <span className="text-base text-text font-medium">
+                        Painted {formatDate(model.painted_date)}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
-               {/* Painting Information - only show if painting notes exist */}
-               {model.painting_notes && (
-                 <div className="bg-bg-card border border-border-custom rounded-lg p-6">
-                   <h2 className="text-xl font-semibold text-title mb-4">Painting Information</h2>
-                   <div className="prose prose-sm max-w-none text-text">
-                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                       {model.painting_notes}
-                     </ReactMarkdown>
-                   </div>
-                 </div>
-               )}
+                {/* Painting Information - only show if painting notes exist */}
+                {model.painting_notes && (
+                  <div className="bg-bg-card border border-border-custom rounded-lg p-6">
+                    <h2 className="text-xl font-semibold text-title mb-4">Painting Information</h2>
+                    <div className="prose prose-sm max-w-none text-text">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {model.painting_notes}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                )}
 
-               {/* Empty state */}
-               {!model.painted_date && !model.painting_notes && (
-                 <div className="bg-bg-card border border-border-custom rounded-lg p-6">
-                   <div className="text-center text-secondary-text">
-                     <Brush className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                     <p>No painting information available</p>
-                   </div>
-                 </div>
-               )}
-             </div>
-           )}
+                {/* Empty state */}
+                {!model.painted_date && !model.painting_notes && (
+                  <div className="bg-bg-card border border-border-custom rounded-lg p-6">
+                    <div className="text-center text-secondary-text">
+                      <Brush className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p>No painting information available</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
-           <Footer />
-         </div>
-       </main>
+            <Footer />
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
