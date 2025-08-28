@@ -10,5 +10,6 @@ export default defineConfig({
   server: {
     historyApiFallback: true,
   },
-  base: process.env.NODE_ENV === 'production' ? '/battleplanapp/' : '/',
+  // Remove the base path for Vercel deployment
+  // base: process.env.NODE_ENV === 'production' ? '/battleplanapp/' : '/',
 });
