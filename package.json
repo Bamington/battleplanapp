@@ -5,11 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/updateBuildTimestamp.js && vite",
-    "build": "node scripts/updateBuildTimestamp.js && node scripts/updateVersion.js || echo 'Version update skipped - check environment variables' && vite build",
+    "build": "node scripts/updateBuildTimestamp.js && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "update-timestamp": "node scripts/updateBuildTimestamp.js",
-    "update-version": "node scripts/updateVersion.js",
     "deploy": "npm run build && gh-pages -d dist",
     "supabase": "npx supabase",
     "generate-types": "npx supabase gen types typescript --project-id dthxptbozocrbvmhwvao > src/lib/database.types.ts",

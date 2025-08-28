@@ -24,6 +24,9 @@ export function BattleplanPage({ refreshTrigger = 0, onNewBooking }: BattleplanP
   })
   const [cancelling, setCancelling] = React.useState(false)
   const { bookings, loading, hasInitialized, refetch } = useBookings()
+  
+  // Debug logging to help identify the issue
+  console.log('BattleplanPage render:', { loading, hasInitialized, bookingsLength: bookings.length })
 
   // Refetch bookings when refreshTrigger changes
   React.useEffect(() => {
@@ -163,7 +166,7 @@ export function BattleplanPage({ refreshTrigger = 0, onNewBooking }: BattleplanP
 
         {/* Bookings List */}
         <div className="mb-8">
-          {loading ? (
+          {loading || !hasInitialized ? (
             <div className="space-y-8">
               {/* Skeleton for date groups */}
               {Array.from({ length: 2 }).map((_, groupIndex) => (
@@ -215,7 +218,7 @@ export function BattleplanPage({ refreshTrigger = 0, onNewBooking }: BattleplanP
                 </div>
               ))}
             </div>
-          ) : hasInitialized && bookings.length === 0 ? (
+          ) : !loading && hasInitialized && bookings.length === 0 ? (
             <div className="text-center py-12">
               <Calendar className="w-16 h-16 text-secondary-text mx-auto mb-4" />
               <p className="text-base text-secondary-text mb-4">No table bookings yet.</p>

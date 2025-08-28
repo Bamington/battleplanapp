@@ -29,6 +29,9 @@ export function BattlesPage({ onBack }: BattlesPageProps) {
   const [newBattleModal, setNewBattleModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const { battles, loading, hasInitialized, refetch } = useBattles()
+  
+  // Debug logging to help identify the issue
+  console.log('BattlesPage render:', { loading, hasInitialized, battlesLength: battles.length })
 
   const handleDeleteBattle = (battleId: number) => {
     setDeleteModal({
@@ -118,7 +121,7 @@ export function BattlesPage({ onBack }: BattlesPageProps) {
 
         {/* Battles List */}
         <div className="mb-8">
-          {loading ? (
+          {loading || !hasInitialized ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Skeleton battle cards */}
               {Array.from({ length: 4 }).map((_, i) => (
@@ -146,7 +149,7 @@ export function BattlesPage({ onBack }: BattlesPageProps) {
                 </div>
               ))}
             </div>
-          ) : hasInitialized && battles.length === 0 ? (
+          ) : !loading && hasInitialized && battles.length === 0 ? (
             <div className="text-center py-12">
               <Sword className="w-16 h-16 text-secondary-text mx-auto mb-4" />
               <p className="text-base text-secondary-text mb-4">No battles logged yet.</p>

@@ -16,78 +16,30 @@ export function RichTextEditor({
   label = "Notes",
   rows = 3 
 }: RichTextEditorProps) {
-  const editableRef = useRef<HTMLDivElement>(null)
-  const [isInitialized, setIsInitialized] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Initialize content when value changes
-  useEffect(() => {
-    if (editableRef.current && value) {
-      // Convert markdown to plain text for display
-      const plainText = value
-        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
-        .replace(/\*(.*?)\*/g, '$1') // Remove italic
-        .replace(/__(.*?)__/g, '$1') // Remove underline
-        .replace(/^- (.*)/gm, '$1') // Remove bullet points
-        .replace(/^\d+\. (.*)/gm, '$1') // Remove numbered lists
-      editableRef.current.textContent = plainText
-      setIsInitialized(true)
-    }
-  }, [value])
-
-  const formatText = (command: string, value?: string) => {
-    if (!editableRef.current) return
-    
-    editableRef.current.focus()
-    document.execCommand(command, false, value)
-    
-    // Convert to markdown and notify parent
-    const markdown = htmlToMarkdown(editableRef.current.innerHTML)
-    onChange(markdown)
+  // Handle textarea change
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onChange(e.target.value)
   }
 
   const insertText = (text: string) => {
-    if (!editableRef.current) return
+    if (!textareaRef.current) return
     
-    editableRef.current.focus()
-    document.execCommand('insertText', false, text)
+    const textarea = textareaRef.current
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const currentValue = textarea.value
     
-    // Convert to markdown and notify parent
-    const markdown = htmlToMarkdown(editableRef.current.innerHTML)
-    onChange(markdown)
-  }
-
-  const handleInput = () => {
-    if (!editableRef.current) return
+    // Insert text at cursor position
+    const newValue = currentValue.substring(0, start) + text + currentValue.substring(end)
+    onChange(newValue)
     
-    // Convert to markdown and notify parent
-    const markdown = htmlToMarkdown(editableRef.current.innerHTML)
-    onChange(markdown)
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      document.execCommand('insertLineBreak', false)
-      handleInput()
-    }
-  }
-
-  // Convert HTML back to markdown for storage
-  const htmlToMarkdown = (html: string) => {
-    if (!html) return ''
-    
-    return html
-      .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
-      .replace(/<b>(.*?)<\/b>/g, '**$1**')
-      .replace(/<em>(.*?)<\/em>/g, '*$1*')
-      .replace(/<i>(.*?)<\/i>/g, '*$1*')
-      .replace(/<u>(.*?)<\/u>/g, '__$1__')
-      .replace(/<li>(.*?)<\/li>/g, '- $1')
-      .replace(/<br>/g, '\n')
-      .replace(/<div>/g, '\n')
-      .replace(/<\/div>/g, '')
-      .replace(/<p>/g, '')
-      .replace(/<\/p>/g, '\n')
+    // Set cursor position after inserted text
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + text.length, start + text.length)
+    }, 0)
   }
 
   return (
@@ -98,29 +50,31 @@ export function RichTextEditor({
         </label>
       </div>
 
-      {/* Toolbar */}
+
+
+            {/* Toolbar */}
       <div className="flex items-center space-x-1 p-2 border border-gray-300 dark:border-gray-600 border-b-0 rounded-t-md bg-gray-50 dark:bg-gray-800">
         <button
           type="button"
-          onClick={() => formatText('bold')}
+          onClick={() => insertText('**')}
           className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-          title="Bold (Ctrl+B)"
+          title="Bold (**text**)"
         >
           <Bold className="w-4 h-4" />
         </button>
         <button
           type="button"
-          onClick={() => formatText('italic')}
+          onClick={() => insertText('*')}
           className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-          title="Italic (Ctrl+I)"
+          title="Italic (*text*)"
         >
           <Italic className="w-4 h-4" />
         </button>
         <button
           type="button"
-          onClick={() => formatText('underline')}
+          onClick={() => insertText('__')}
           className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-          title="Underline (Ctrl+U)"
+          title="Underline (__text__)"
         >
           <Underline className="w-4 h-4" />
         </button>
@@ -145,19 +99,19 @@ export function RichTextEditor({
         </button>
       </div>
 
-      {/* Rich Text Editor */}
-      <div
-        ref={editableRef}
-        contentEditable
-        onInput={handleInput}
-        onKeyDown={handleKeyDown}
-        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-b-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white min-h-[80px] max-h-[200px] overflow-y-auto"
+      {/* Textarea */}
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={handleTextareaChange}
+        placeholder={placeholder}
+        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-b-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white resize-none"
         style={{ 
           minHeight: `${rows * 1.5}rem`,
-          whiteSpace: 'pre-wrap',
-          wordWrap: 'break-word'
+          direction: 'ltr',
+          textAlign: 'left'
         }}
-        data-placeholder={placeholder}
+        rows={rows}
       />
     </div>
   )

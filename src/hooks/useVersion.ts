@@ -66,57 +66,6 @@ export function useVersion() {
     }
   }
 
-  // Create a new version (increment by 0.1)
-  const createNewVersion = async () => {
-    try {
-      setError(null)
-
-      // Get the latest version number
-      const { data: latestVersion, error: fetchError } = await supabase
-        .from('version')
-        .select('ver_number')
-        .order('created_at', { ascending: false })
-        .limit(1)
-
-      if (fetchError) {
-        // If permission denied, show appropriate message
-        if (fetchError.code === '42501') {
-          throw new Error('Only administrators can create new versions')
-        }
-        throw fetchError
-      }
-
-      // Calculate new version number
-      const newVersionNumber = (latestVersion && latestVersion.length > 0 ? latestVersion[0].ver_number : 1.0) + 0.1
-
-      // Insert new version
-      const { data, error: insertError } = await supabase
-        .from('version')
-        .insert({
-          ver_number: newVersionNumber,
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single()
-
-      if (insertError) {
-        // If permission denied, show appropriate message
-        if (insertError.code === '42501') {
-          throw new Error('Only administrators can create new versions')
-        }
-        throw insertError
-      }
-
-      // Update local state
-      setCurrentVersion(data)
-      return data
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create new version')
-      console.error('Error creating new version:', err)
-      throw err
-    }
-  }
-
   // Fetch version on mount
   useEffect(() => {
     fetchCurrentVersion()
@@ -126,7 +75,6 @@ export function useVersion() {
     currentVersion,
     loading,
     error,
-    fetchCurrentVersion,
-    createNewVersion
+    fetchCurrentVersion
   }
 }

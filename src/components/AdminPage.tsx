@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
-import { ChevronRight, Users, Gamepad2, MapPin, ArrowLeft, Share2, Upload } from 'lucide-react'
+import { ChevronRight, Users, Gamepad2, MapPin, ArrowLeft, Share2, Upload, GitBranch } from 'lucide-react'
 import { ManageUsersPage } from './ManageUsersPage'
 import { ManageGamesPage } from './ManageGamesPage'
 import { ManageLocationsPage } from './ManageLocationsPage'
 import { SharePreviewPage } from './SharePreviewPage'
 import { CSVUploadPage } from './CSVUploadPage'
+import { ReleaseManagementPage } from './ReleaseManagementPage'
 import { Header } from './Header'
 import { TabBar } from './TabBar'
 import { useAuth } from '../hooks/useAuth'
@@ -15,7 +16,7 @@ interface AdminPageProps {
 
 export function AdminPage({ onBack }: AdminPageProps) {
   console.log('=== AdminPage rendering ===')
-  const [currentView, setCurrentView] = useState<'main' | 'users' | 'games' | 'locations' | 'share-preview' | 'csv-upload'>('main')
+  const [currentView, setCurrentView] = useState<'main' | 'users' | 'games' | 'locations' | 'share-preview' | 'csv-upload' | 'release-management'>('main')
   const { user } = useAuth()
   
   console.log('AdminPage user:', user)
@@ -49,6 +50,11 @@ export function AdminPage({ onBack }: AdminPageProps) {
   if (currentView === 'csv-upload') {
     console.log('Rendering CSVUploadPage')
     return <CSVUploadPage onBack={() => setCurrentView('main')} />
+  }
+
+  if (currentView === 'release-management') {
+    console.log('Rendering ReleaseManagementPage')
+    return <ReleaseManagementPage onBack={() => setCurrentView('main')} />
   }
 
   return (
@@ -132,6 +138,22 @@ export function AdminPage({ onBack }: AdminPageProps) {
               <div className="flex items-center space-x-4">
                 <Upload className="w-6 h-6 text-secondary-text" />
                 <span className="text-lg font-semibold text-text">CSV Upload</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-icon" />
+            </button>
+          )}
+
+          {user?.is_admin && (
+            <button
+              onClick={() => {
+                console.log('Release Management button clicked!')
+                setCurrentView('release-management')
+              }}
+              className="w-full bg-bg-card border border-border-custom rounded-lg p-6 hover:bg-bg-secondary transition-colors flex items-center justify-between"
+            >
+              <div className="flex items-center space-x-4">
+                <GitBranch className="w-6 h-6 text-secondary-text" />
+                <span className="text-lg font-semibold text-text">Release Management</span>
               </div>
               <ChevronRight className="w-5 h-5 text-icon" />
             </button>

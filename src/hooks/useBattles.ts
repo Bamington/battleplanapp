@@ -20,15 +20,25 @@ export function useBattles() {
   const [battles, setBattles] = useState<Battle[]>([])
   const [loading, setLoading] = useState(true)
   const [hasInitialized, setHasInitialized] = useState(false)
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
   const fetchBattles = async () => {
+    // Show loading while auth is loading
+    if (authLoading) {
+      setLoading(true)
+      setHasInitialized(false)
+      return
+    }
+
     if (!user) {
       setBattles([])
       setLoading(false)
       setHasInitialized(true)
       return
     }
+
+    const startTime = Date.now()
+    const minLoadingTime = 500 // Minimum 500ms loading time for better UX
 
     try {
       setLoading(true)
@@ -81,18 +91,27 @@ export function useBattles() {
       console.error('Error fetching battles:', error)
       setBattles([])
     } finally {
-      setLoading(false)
-      setHasInitialized(true)
+      // Ensure minimum loading time for better UX
+      const elapsedTime = Date.now() - startTime
+      const remainingTime = Math.max(0, minLoadingTime - elapsedTime)
+      
+      setTimeout(() => {
+        setLoading(false)
+        setHasInitialized(true)
+      }, remainingTime)
     }
   }
 
   useEffect(() => {
     fetchBattles()
-  }, [user])
+  }, [user, authLoading])
 
   const refetch = () => {
     fetchBattles()
   }
+
+  // Debug logging
+  console.log('useBattles state:', { loading, hasInitialized, battlesLength: battles.length, authLoading })
 
   return {
     battles,

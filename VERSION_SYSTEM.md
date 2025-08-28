@@ -1,6 +1,6 @@
 # Version System
 
-The BattlePlan app now includes an automated version tracking system that increments the version number with each deployment.
+The BattlePlan app includes a version tracking system that displays the current version number in the footer.
 
 ## How It Works
 
@@ -8,48 +8,17 @@ The BattlePlan app now includes an automated version tracking system that increm
    - `id`: Auto-incrementing primary key
    - `ver_number`: Numeric version number (e.g., 1.0, 1.1, 1.2)
    - `created_at`: Timestamp of when the version was created
+   - `ver_notes`: Optional notes about the version
 
-2. **Automatic Increment**: Each time you run `npm run build`, the version number automatically increments by 0.1
+2. **Display**: The current version is displayed in the footer of the app
 
-3. **Display**: The current version is displayed in the footer of the app
+## Version Management
 
-## Usage
-
-### Automatic Version Increment (Recommended)
-
-The version automatically increments during the build process:
-
-```bash
-npm run build
-```
-
-This will:
-1. Update the build timestamp
-2. Increment the version number in the database
-3. Build the app
-
-### Manual Version Increment
-
-If you need to manually increment the version (e.g., for hotfixes), you can:
-
-1. **Via Admin Panel**: Go to Admin Panel → Version Management → Click "Increment Version"
-2. **Via Script**: Run `npm run update-version`
-
-### Environment Variables Required
-
-For the version update script to work, you need these environment variables:
-
-```env
-VITE_SUPABASE_URL=your_supabase_url
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-```
-
-**Note**: The service role key is required because the version update needs to write to the database during the build process.
+Version numbers are now managed manually through the database or admin interface. The automatic version increment functionality has been removed.
 
 ## Version Numbering
 
 - **Format**: Numeric (e.g., 1.0, 1.1, 1.2, 2.0)
-- **Increment**: +0.1 for each deployment
 - **Initial Version**: 1.0 (automatically created if table is empty)
 
 ## Database Migration
@@ -63,22 +32,17 @@ ALTER TABLE version ADD COLUMN ver_number numeric NOT NULL DEFAULT 1.0;
 
 ## Troubleshooting
 
-### Version Not Updating
-
-1. Check that environment variables are set correctly
-2. Ensure the service role key has write permissions to the `version` table
-3. Verify the database migration has been applied
-
 ### Version Display Issues
 
 1. Check the browser console for any errors
 2. Verify the `useVersion` hook is working correctly
 3. Ensure the footer component is receiving the version data
+4. Verify the database migration has been applied
 
 ## Future Enhancements
 
 Potential improvements to consider:
-- Major/minor version increments (e.g., 1.0 → 1.1 → 2.0)
+- Manual version management interface
 - Version release notes
 - Version comparison tools
 - Automated changelog generation
