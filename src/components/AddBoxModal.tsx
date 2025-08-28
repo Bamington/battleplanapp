@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { X, Calendar, DollarSign, Image } from 'lucide-react'
+import { X, Calendar, DollarSign, Image, Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { GameDropdown } from './GameDropdown'
@@ -137,6 +137,174 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
       setSelectedImages(files)
     }
   }
+
+  const handleCameraCapture = async () => {
+    try {
+      // Check if camera is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Camera is not available on this device');
+        return;
+      }
+
+      // Try to get camera access
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 }
+        } 
+      });
+
+      // Create a video element to display the camera feed
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.autoplay = true;
+      video.playsInline = true;
+      video.muted = true;
+      video.style.position = 'fixed';
+      video.style.top = '0';
+      video.style.left = '0';
+      video.style.width = '100%';
+      video.style.height = '100%';
+      video.style.zIndex = '9999';
+      video.style.objectFit = 'cover';
+      video.style.backgroundColor = '#000';
+
+      // Create canvas for capturing
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Could not get canvas context');
+      }
+
+      // Create capture button
+      const captureBtn = document.createElement('button');
+      captureBtn.textContent = '📸 Take Photo';
+      captureBtn.style.position = 'fixed';
+      captureBtn.style.bottom = '20px';
+      captureBtn.style.left = '50%';
+      captureBtn.style.transform = 'translateX(-50%)';
+      captureBtn.style.zIndex = '10000';
+      captureBtn.style.padding = '12px 24px';
+      captureBtn.style.backgroundColor = '#007bff';
+      captureBtn.style.color = 'white';
+      captureBtn.style.border = 'none';
+      captureBtn.style.borderRadius = '8px';
+      captureBtn.style.fontSize = '16px';
+      captureBtn.style.fontWeight = 'bold';
+      captureBtn.style.cursor = 'pointer';
+
+      // Create cancel button
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = '❌ Cancel';
+      cancelBtn.style.position = 'fixed';
+      cancelBtn.style.bottom = '20px';
+      cancelBtn.style.right = '20px';
+      cancelBtn.style.zIndex = '10000';
+      cancelBtn.style.padding = '12px 24px';
+      cancelBtn.style.backgroundColor = '#dc3545';
+      cancelBtn.style.color = 'white';
+      cancelBtn.style.border = 'none';
+      cancelBtn.style.borderRadius = '8px';
+      cancelBtn.style.fontSize = '16px';
+      cancelBtn.style.fontWeight = 'bold';
+      cancelBtn.style.cursor = 'pointer';
+
+      // Function to capture photo
+      const capturePhoto = () => {
+        try {
+          // Set canvas dimensions to match video
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          
+          // Draw the current video frame to canvas
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          
+          // Convert canvas to blob
+          canvas.toBlob((blob) => {
+            if (blob) {
+              // Create a File object from the blob
+              const file = new File([blob], `collection-photo-${Date.now()}.jpg`, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              });
+
+              // Create a FileList-like object with the captured file
+              const dataTransfer = new DataTransfer();
+              dataTransfer.items.add(file);
+              setSelectedImages(dataTransfer.files);
+              setImageForCropping(file);
+              setShowImageCropper(true);
+            }
+            
+            // Clean up
+            cleanup();
+          }, 'image/jpeg', 0.9);
+        } catch (error) {
+          console.error('Error capturing photo:', error);
+          alert('Error capturing photo. Please try again.');
+          cleanup();
+        }
+      };
+
+      // Function to cleanup
+      const cleanup = () => {
+        try {
+          if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+          }
+          if (document.body.contains(video)) {
+            document.body.removeChild(video);
+          }
+          if (document.body.contains(captureBtn)) {
+            document.body.removeChild(captureBtn);
+          }
+          if (document.body.contains(cancelBtn)) {
+            document.body.removeChild(cancelBtn);
+          }
+        } catch (error) {
+          console.error('Error during cleanup:', error);
+        }
+      };
+
+      // Add event listeners
+      captureBtn.addEventListener('click', capturePhoto);
+      cancelBtn.addEventListener('click', cleanup);
+
+      // Add elements to DOM
+      document.body.appendChild(video);
+      document.body.appendChild(captureBtn);
+      document.body.appendChild(cancelBtn);
+
+      // Wait for video to be ready
+      video.addEventListener('loadedmetadata', () => {
+        console.log('Video ready, dimensions:', video.videoWidth, 'x', video.videoHeight);
+      });
+
+      video.addEventListener('error', (e) => {
+        console.error('Video error:', e);
+        alert('Error loading camera feed. Please try again.');
+        cleanup();
+      });
+
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      
+      if (error instanceof DOMException) {
+        if (error.name === 'NotAllowedError') {
+          alert('Camera access denied. Please allow camera permissions and try again.');
+        } else if (error.name === 'NotFoundError') {
+          alert('No camera found on this device.');
+        } else if (error.name === 'NotReadableError') {
+          alert('Camera is already in use by another application.');
+        } else {
+          alert(`Camera error: ${error.message}`);
+        }
+      } else {
+        alert('Unable to access camera. Please try again or use the file upload option.');
+      }
+    }
+  };
 
   const handleCroppedImage = (croppedFile: File) => {
     // Create a new FileList-like object with the cropped file
@@ -589,25 +757,95 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
               </div>
           </div>
 
-          {/* Image */}
+          {/* Collection Image */}
           <div>
-                          <label htmlFor="boxImage" className="block text-sm font-medium text-input-label font-overpass mb-2">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-input-label font-overpass">
                 Collection Image
               </label>
-            <div className="relative">
-              <Image className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
-              <input
-                type="file"
-                id="boxImage"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-brand)]/10 file:text-[var(--color-brand)] hover:file:bg-[var(--color-brand)]/20 bg-bg-primary text-text"
-              />
+              <span className="text-sm text-gray-500">Optional</span>
             </div>
-            <p className="text-xs text-secondary-text mt-1">
-              You can upload more images later.
-            </p>
             
+            {/* Image Upload Area */}
+            <div className="border-2 border-dashed border-border-custom rounded-lg p-6 text-center hover:border-[var(--color-brand)] transition-colors">
+              {selectedImages && selectedImages.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="relative mx-auto w-32 h-32">
+                    <img
+                      src={URL.createObjectURL(selectedImages[0])}
+                      alt="Selected collection image"
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedImages(null)
+                        setFileSizeError('')
+                        setCompressionInfo('')
+                      }}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <p className="text-sm text-secondary-text">{selectedImages[0].name}</p>
+                </div>
+              ) : selectedImageUrl ? (
+                <div className="space-y-4">
+                  <div className="relative mx-auto w-32 h-32">
+                    <img
+                      src={selectedImageUrl}
+                      alt="Selected collection image"
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedImageUrl('')
+                        setFileSizeError('')
+                        setCompressionInfo('')
+                      }}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <p className="text-sm text-secondary-text">Selected image</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex justify-center space-x-4">
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="hidden"
+                        disabled={loading}
+                      />
+                      <div className="flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-bg-secondary transition-colors">
+                        <Image className="w-8 h-8 text-icon" />
+                        <span className="text-sm font-medium text-text">Upload Image</span>
+                      </div>
+                    </label>
+                    
+                    <button
+                      type="button"
+                      onClick={handleCameraCapture}
+                      disabled={loading}
+                      className="flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-bg-secondary transition-colors"
+                    >
+                      <Camera className="w-8 h-8 text-icon" />
+                      <span className="text-sm font-medium text-text">Take Photo</span>
+                    </button>
+                  </div>
+                  <p className="text-xs text-secondary-text">
+                    JPEG, PNG, or WebP up to 50MB
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Image Search Button */}
             {boxName.trim() && !selectedImages && !selectedImageUrl && (
               <div className="mt-3">
@@ -621,6 +859,15 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
                   {searchingImages ? 'Searching for images...' : 'Find images for this collection'}
                 </Button>
               </div>
+            )}
+
+            {/* Error Messages */}
+            {fileSizeError && (
+              <p className="text-red-600 text-sm mt-2">{fileSizeError}</p>
+            )}
+            
+            {compressionInfo && (
+              <p className="text-blue-600 text-sm mt-2">{compressionInfo}</p>
             )}
           </div>
 

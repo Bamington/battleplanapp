@@ -937,39 +937,81 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
               </div>
           </div>
 
-          {/* Photos */}
+          {/* Model Image */}
           <div>
-            <label htmlFor="image" className="block text-sm font-medium text-input-label font-overpass mb-2">
-              Image
-            </label>
-                          <div className="relative">
-                <Image className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
-                <input
-                  type="file"
-                  id="image"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-brand)]/10 file:text-[var(--color-brand)] hover:file:bg-[var(--color-brand)]/20 bg-bg-primary text-text"
-                />
-              </div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-input-label font-overpass">
+                Model Image
+              </label>
+              <span className="text-sm text-gray-500">Optional</span>
+            </div>
             
-            {/* Camera option for mobile */}
-            {isMobile && (
-              <div className="mt-3">
-                <button
-                  type="button"
-                  onClick={handleCameraCapture}
-                  className="w-full flex items-center justify-center space-x-2 py-3 px-4 border border-border-custom rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors bg-bg-primary text-text"
-                >
-                  <Camera className="w-5 h-5 text-icon" />
-                  <span>Take Photo with Camera</span>
-                </button>
-              </div>
+            {/* Image Upload Area */}
+            <div className="border-2 border-dashed border-border-custom rounded-lg p-6 text-center hover:border-[var(--color-brand)] transition-colors">
+              {selectedImages && selectedImages.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="relative mx-auto w-32 h-32">
+                    <img
+                      src={URL.createObjectURL(selectedImages[0])}
+                      alt="Selected model image"
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedImages(null)
+                        setFileSizeError('')
+                        setCompressionInfo('')
+                      }}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <p className="text-sm text-secondary-text">{selectedImages[0].name}</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex justify-center space-x-4">
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="hidden"
+                        disabled={loading}
+                      />
+                      <div className="flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-bg-secondary transition-colors">
+                        <Image className="w-8 h-8 text-icon" />
+                        <span className="text-sm font-medium text-text">Upload Image</span>
+                      </div>
+                    </label>
+                    
+                    <button
+                      type="button"
+                      onClick={handleCameraCapture}
+                      disabled={loading}
+                      className="flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-bg-secondary transition-colors"
+                    >
+                      <Camera className="w-8 h-8 text-icon" />
+                      <span className="text-sm font-medium text-text">Take Photo</span>
+                    </button>
+                  </div>
+                  <p className="text-xs text-secondary-text">
+                    JPEG, PNG, or WebP up to 50MB
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Error Messages */}
+            {fileSizeError && (
+              <p className="text-red-600 text-sm mt-2">{fileSizeError}</p>
             )}
             
-            <p className="text-xs text-secondary-text mt-1">
-              You can upload more images later.
-            </p>
+            {compressionInfo && (
+              <p className="text-blue-600 text-sm mt-2">{compressionInfo}</p>
+            )}
           </div>
 
           {compressionInfo && (
