@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Menu, X, User, Plus, Settings, Moon, Sun, Shield, Package, Calendar, Ban } from 'lucide-react'
+import { Menu, X, User, Plus, Settings, Moon, Sun, Shield, Package, Calendar, Ban, Sword } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useDarkMode } from '../hooks/useDarkMode'
 import { Toast } from './Toast'
@@ -48,6 +48,11 @@ export function Header({ onAddModel, onAdminClick, onSettingsClick, activeTab, o
       id: 'collection',
       name: 'Collection',
       icon: Package
+    },
+    {
+      id: 'battles',
+      name: 'Battles',
+      icon: Sword
     },
     {
       id: 'battleplan',

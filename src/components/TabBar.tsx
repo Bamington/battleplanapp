@@ -1,5 +1,5 @@
 import React from 'react'
-import { Package, Calendar } from 'lucide-react'
+import { Package, Calendar, Sword } from 'lucide-react'
 import { TabButton } from './TabButton'
 
 interface TabBarProps {
@@ -13,6 +13,11 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
       id: 'collection',
       name: 'Collection',
       icon: Package
+    },
+    {
+      id: 'battles',
+      name: 'Battles',
+      icon: Sword
     },
     {
       id: 'battleplan',

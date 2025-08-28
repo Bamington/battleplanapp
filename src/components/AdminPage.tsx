@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
-import { ChevronRight, Users, Gamepad2, MapPin, ArrowLeft, Share2 } from 'lucide-react'
+import { ChevronRight, Users, Gamepad2, MapPin, ArrowLeft, Share2, Upload } from 'lucide-react'
 import { ManageUsersPage } from './ManageUsersPage'
 import { ManageGamesPage } from './ManageGamesPage'
 import { ManageLocationsPage } from './ManageLocationsPage'
 import { SharePreviewPage } from './SharePreviewPage'
+import { CSVUploadPage } from './CSVUploadPage'
 import { Header } from './Header'
 import { TabBar } from './TabBar'
 import { useAuth } from '../hooks/useAuth'
@@ -13,14 +14,19 @@ interface AdminPageProps {
 }
 
 export function AdminPage({ onBack }: AdminPageProps) {
-  const [currentView, setCurrentView] = useState<'main' | 'users' | 'games' | 'locations' | 'share-preview'>('main')
+  console.log('=== AdminPage rendering ===')
+  const [currentView, setCurrentView] = useState<'main' | 'users' | 'games' | 'locations' | 'share-preview' | 'csv-upload'>('main')
   const { user } = useAuth()
+  
+  console.log('AdminPage user:', user)
+  console.log('AdminPage user is_admin:', user?.is_admin)
+  console.log('AdminPage currentView:', currentView)
 
   const handleAdminClick = () => {
     // This is a no-op since we're already in admin
   }
 
-  const handleTabChange = (tab: string) => {
+  const handleTabChange = (_tab: string) => {
     // This is a no-op since we're in admin mode
   }
 
@@ -38,6 +44,11 @@ export function AdminPage({ onBack }: AdminPageProps) {
 
   if (currentView === 'share-preview') {
     return <SharePreviewPage onBack={() => setCurrentView('main')} />
+  }
+
+  if (currentView === 'csv-upload') {
+    console.log('Rendering CSVUploadPage')
+    return <CSVUploadPage onBack={() => setCurrentView('main')} />
   }
 
   return (
@@ -109,11 +120,27 @@ export function AdminPage({ onBack }: AdminPageProps) {
             </div>
             <ChevronRight className="w-5 h-5 text-icon" />
           </button>
+
+          {user?.is_admin && (
+            <button
+              onClick={() => {
+                console.log('CSV Upload button clicked!')
+                setCurrentView('csv-upload')
+              }}
+              className="w-full bg-bg-card border border-border-custom rounded-lg p-6 hover:bg-bg-secondary transition-colors flex items-center justify-between"
+            >
+              <div className="flex items-center space-x-4">
+                <Upload className="w-6 h-6 text-secondary-text" />
+                <span className="text-lg font-semibold text-text">CSV Upload</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-icon" />
+            </button>
+          )}
         </div>
       </div>
       <TabBar 
         activeTab="collection" 
-        onTabChange={(tab) => {
+        onTabChange={(_tab) => {
           // This is a no-op since we're in admin mode
         }} 
       />

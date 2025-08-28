@@ -14,6 +14,7 @@ import { AdminPage } from './components/AdminPage'
 import { AboutPage } from './components/AboutPage'
 import { AllBookingsPage } from './components/AllBookingsPage'
 import { BlockedDatesPage } from './components/BlockedDatesPage'
+import { BattlesPage } from './components/BattlesPage'
 import { ViewModelModal } from './components/ViewModelModal'
 import { ViewBoxModal } from './components/ViewBoxModal'
 import { PasswordResetModal } from './components/PasswordResetModal'
@@ -496,6 +497,24 @@ function App() {
           onTabChange={setActiveTab}
         />
         <BlockedDatesPage onBack={() => setActiveTab('collection')} />
+        <Footer />
+        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
+    )
+  }
+
+  // Render Battles page
+  if (activeTab === 'battles') {
+    return (
+      <div className="min-h-screen bg-bg-secondary">
+        <Header 
+          onAddModel={() => setAddModelModal(true)} 
+          onAdminClick={handleAdminClick}
+          onSettingsClick={handleSettingsClick}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+        <BattlesPage onBack={() => setActiveTab('collection')} />
         <Footer />
         <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
       </div>

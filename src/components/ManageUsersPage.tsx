@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, User } from 'lucide-react'
+import { ArrowLeft, User, MapPin } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { formatLocalDate } from '../utils/timezone'
 
@@ -8,6 +8,18 @@ interface User {
   email: string
   is_admin: boolean
   created_at: string
+  user_name_public?: string | null
+}
+
+interface Location {
+  id: string
+  name: string
+  address: string
+  admins: string[]
+}
+
+interface UserWithLocations extends User {
+  adminLocations: Location[]
 }
 
 interface ManageUsersPageProps {
@@ -15,7 +27,7 @@ interface ManageUsersPageProps {
 }
 
 export function ManageUsersPage({ onBack }: ManageUsersPageProps) {
-  const [users, setUsers] = useState<User[]>([])
+  const [users, setUsers] = useState<UserWithLocations[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -25,13 +37,34 @@ export function ManageUsersPage({ onBack }: ManageUsersPageProps) {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch users
+      const { data: usersData, error: usersError } = await supabase
         .from('users')
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (error) throw error
-      setUsers(data || [])
+      if (usersError) throw usersError
+
+      // Fetch all locations
+      const { data: locationsData, error: locationsError } = await supabase
+        .from('locations')
+        .select('id, name, address, admins')
+        .order('name')
+
+      if (locationsError) throw locationsError
+
+      // Map users to include their admin locations
+      const usersWithLocations = (usersData || []).map(user => {
+        const adminLocations = (locationsData || []).filter(location =>
+          location.admins && location.admins.includes(user.id)
+        )
+        return {
+          ...user,
+          adminLocations
+        }
+      })
+
+      setUsers(usersWithLocations)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch users')
     } finally {
@@ -108,19 +141,42 @@ export function ManageUsersPage({ onBack }: ManageUsersPageProps) {
               <User className="w-6 h-6 text-secondary-text" />
               <div className="min-w-0 flex-1">
                 <h3 className="text-lg font-semibold text-text truncate">{user.email || 'No email'}</h3>
-                <p className="text-sm text-secondary-text">
-                  Joined {formatDate(user.created_at)}
-                </p>
+                <div className="text-sm text-secondary-text space-y-1">
+                  <p>Joined {formatDate(user.created_at)}</p>
+                  {user.user_name_public && (
+                    <p className="text-brand">Public name: {user.user_name_public}</p>
+                  )}
+                  {user.adminLocations.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {user.adminLocations.map((location) => (
+                        <span
+                          key={location.id}
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                        >
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {location.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             
-            <span className={`px-3 py-1 rounded-full text-sm font-medium flex-shrink-0 ${
-              user.is_admin 
-                ? 'bg-amber-100 text-amber-800' 
-                : 'bg-gray-100 text-gray-800'
-            }`}>
-              {user.is_admin ? 'Admin' : 'User'}
-            </span>
+            <div className="flex flex-col items-end gap-2">
+              <span className={`px-3 py-1 rounded-full text-sm font-medium flex-shrink-0 ${
+                user.is_admin 
+                  ? 'bg-amber-100 text-amber-800' 
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
+                {user.is_admin ? 'Admin' : 'User'}
+              </span>
+              {user.adminLocations.length > 0 && (
+                <span className="text-xs text-secondary-text">
+                  {user.adminLocations.length} location{user.adminLocations.length !== 1 ? 's' : ''} admin
+                </span>
+              )}
+            </div>
           </div>
         ))}
       </div>
