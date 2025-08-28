@@ -760,7 +760,9 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
           ? 'translate-y-0 opacity-100' 
           : 'translate-y-full opacity-0'
         }`}>
-        <div className="flex items-center justify-between mb-6">
+        
+        {/* Header - Fixed at top */}
+        <div className="flex items-center justify-between mb-6 flex-shrink-0">
           <h2 className="text-lg font-bold text-secondary-text uppercase tracking-wide text-center flex-1">
             Add New Model
           </h2>
@@ -772,11 +774,13 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
           </button>
         </div>
 
-        <p className="text-base text-secondary-text text-center mb-8">
+        {/* Description - Fixed */}
+        <p className="text-base text-secondary-text text-center mb-8 flex-shrink-0">
           Don't worry- you can update any of these details later.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Form - Scrollable content */}
+        <form onSubmit={handleSubmit} className="space-y-6 flex-1 overflow-y-auto">
           {/* Model Name */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -924,17 +928,17 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
             <label htmlFor="numberOfModels" className="block text-sm font-medium text-input-label font-overpass mb-2">
               Number of Models
             </label>
-                          <div className="relative">
-                <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
-                <input
-                  type="number"
-                  id="numberOfModels"
-                  value={numberOfModels}
-                  onChange={(e) => setNumberOfModels(e.target.value)}
-                  min="1"
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text"
-                />
-              </div>
+            <div className="relative">
+              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
+              <input
+                type="number"
+                id="numberOfModels"
+                value={numberOfModels}
+                onChange={(e) => setNumberOfModels(e.target.value)}
+                min="1"
+                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text"
+              />
+            </div>
           </div>
 
           {/* Model Image */}
@@ -1031,22 +1035,23 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
               {error}
             </div>
           )}
-
-          {/* Submit Button */}
-          <div className="flex justify-center pt-4 modal-actions">
-            <button
-              type="submit"
-              disabled={!isFormValid || loading}
-              className={`${
-                isFormValid && !loading
-                  ? 'btn-primary'
-                  : 'btn-disabled'
-              }`}
-            >
-              {compressing ? 'Compressing Image...' : loading ? 'Adding...' : 'Add to Collection'}
-            </button>
-          </div>
         </form>
+
+        {/* Submit Button - Fixed at bottom */}
+        <div className="flex justify-center pt-4 modal-actions">
+          <button
+            type="submit"
+            disabled={!isFormValid || loading}
+            className={`${
+              isFormValid && !loading
+                ? 'btn-primary'
+                : 'btn-disabled'
+            }`}
+            onClick={handleSubmit}
+          >
+            {compressing ? 'Compressing Image...' : loading ? 'Adding...' : 'Add to Collection'}
+          </button>
+        </div>
       </div>
       
       {imageForCropping && (

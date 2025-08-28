@@ -475,7 +475,9 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
           ? 'translate-y-0 opacity-100' 
           : 'translate-y-full opacity-0'
         }`}>
-        <div className="flex items-center justify-between mb-6">
+        
+        {/* Header - Fixed at top */}
+        <div className="flex items-center justify-between mb-6 flex-shrink-0">
           <h2 className="text-xl font-semibold text-text font-overpass">
             New Booking
           </h2>
@@ -487,29 +489,30 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
           </button>
         </div>
 
-        {/* Booking Limit Warning */}
+        {/* Booking Limit Warning - Fixed */}
         {checkingBookingLimit ? (
-          <div className="p-4 rounded-lg border bg-blue-50 border-blue-200">
+          <div className="p-4 rounded-lg border bg-blue-50 border-blue-200 flex-shrink-0">
             <div className="flex items-center space-x-2">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
               <span className="text-blue-700 text-sm font-medium">Checking booking limit...</span>
             </div>
           </div>
         ) : currentBookingCount >= 4 ? (
-          <div className="p-4 rounded-lg border bg-red-50 border-red-200">
+          <div className="p-4 rounded-lg border bg-red-50 border-red-200 flex-shrink-0">
             <span className="text-red-700 text-sm font-medium">
               ⚠️ You have reached the maximum of 4 active bookings. Cancel an existing booking to create a new one.
             </span>
           </div>
         ) : currentBookingCount >= 3 ? (
-          <div className="p-4 rounded-lg border bg-yellow-50 border-yellow-200">
+          <div className="p-4 rounded-lg border bg-yellow-50 border-yellow-200 flex-shrink-0">
             <span className="text-yellow-700 text-sm font-medium">
               ⚠️ You have {currentBookingCount} active booking{currentBookingCount !== 1 ? 's' : ''}. You can create {4 - currentBookingCount} more.
             </span>
           </div>
         ) : null}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Form - Scrollable content */}
+        <form onSubmit={handleSubmit} className="space-y-6 flex-1 overflow-y-auto">
           {/* User Name */}
           <div>
             <label htmlFor="userName" className="block text-sm font-medium text-input-label font-overpass mb-2">
@@ -551,23 +554,20 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
             <label htmlFor="location" className="block text-sm font-medium text-input-label font-overpass mb-2">
               Location
             </label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
-              <select
-                id="location"
-                value={selectedLocation}
-                onChange={(e) => setSelectedLocation(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
-                required
-              >
-                <option value="">Select Location</option>
-                {locations.map((location) => (
-                  <option key={location.id} value={location.id}>
-                    {location.name} - {location.tables} table{location.tables !== 1 ? 's' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select
+              id="location"
+              value={selectedLocation}
+              onChange={(e) => setSelectedLocation(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
+              required
+            >
+              <option value="">Select a Location</option>
+              {locations.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Date */}
@@ -583,45 +583,32 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
             />
           </div>
 
-          {/* Timeslot - Only show if date is not blocked */}
-          {!blockedDateInfo && (
-            <div>
-              <label htmlFor="timeslot" className="block text-sm font-medium text-input-label font-overpass mb-2">
-                Timeslot
-              </label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
-                <select
-                  id="timeslot"
-                  value={selectedTimeslot}
-                  onChange={(e) => setSelectedTimeslot(e.target.value)}
-                  disabled={!selectedLocation || !selectedDate}
-                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text disabled:opacity-50 disabled:cursor-not-allowed"
-                  required
-                >
-                  <option value="">
-                    {!selectedLocation ? 'Select location first' : 
-                     !selectedDate ? 'Select date first' : 
-                     availableTimeslots.length === 0 ? 'No timeslots available for this day' :
-                     'Select Timeslot'}
-                  </option>
-                  {availableTimeslots.map((timeslot) => (
-                    <option key={timeslot.id} value={timeslot.id}>
-                      {timeslot.isAllDay 
-                        ? `${timeslot.name} (All Day)` 
-                        : `${timeslot.name} (${formatTime(timeslot.start_time)} - ${formatTime(timeslot.end_time)})`
-                      }
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {selectedDate && availableTimeslots.length === 0 && selectedLocation && (
-                <p className="text-sm text-secondary-text mt-1">
-                  No timeslots available for {getSelectedDayOfWeek()} at this location.
-                </p>
-              )}
-            </div>
-          )}
+          {/* Timeslot */}
+          <div>
+            <label htmlFor="timeslot" className="block text-sm font-medium text-input-label font-overpass mb-2">
+              Time
+            </label>
+            <select
+              id="timeslot"
+              value={selectedTimeslot}
+              onChange={(e) => setSelectedTimeslot(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
+              required
+              disabled={!selectedDate || availableTimeslots.length === 0}
+            >
+              <option value="">Select a Time</option>
+              {availableTimeslots.map((timeslot) => (
+                <option key={timeslot.id} value={timeslot.id}>
+                  {timeslot.name} ({formatTime(timeslot.start_time)} - {formatTime(timeslot.end_time)})
+                </option>
+              ))}
+            </select>
+            {selectedDate && availableTimeslots.length === 0 && selectedLocation && (
+              <p className="text-sm text-secondary-text mt-1">
+                No timeslots available for {getSelectedDayOfWeek()} at this location.
+              </p>
+            )}
+          </div>
 
           {/* Blocked Date Warning */}
           {checkingBlockedDate ? (
@@ -682,33 +669,34 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
               )}
             </div>
           )}
-
-          {/* Action Buttons */}
-          <div className="flex flex-col space-y-3 pt-4 modal-actions">
-            <button
-              type="submit"
-              disabled={!isFormValid || loading || availableTables === 0 || currentBookingCount >= 4 || blockedDateInfo}
-              className={`btn-full ${
-                isFormValid && !loading && availableTables !== 0 && currentBookingCount < 4 && !blockedDateInfo
-                  ? 'btn-primary'
-                  : 'btn-disabled'
-              }`}
-            >
-              {loading ? 'Creating Booking...' : 
-               currentBookingCount >= 4 ? 'Booking Limit Reached' :
-               availableTables === 0 ? 'No Tables Available' : 
-               blockedDateInfo ? 'Location Unavailable' :
-               'Confirm Booking'}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-danger-outline btn-full"
-            >
-              Cancel
-            </button>
-          </div>
         </form>
+
+        {/* Action Buttons - Fixed at bottom */}
+        <div className="flex flex-col space-y-3 pt-4 modal-actions">
+          <button
+            type="submit"
+            disabled={!isFormValid || loading || availableTables === 0 || currentBookingCount >= 4 || blockedDateInfo}
+            className={`btn-full ${
+              isFormValid && !loading && availableTables !== 0 && currentBookingCount < 4 && !blockedDateInfo
+                ? 'btn-primary'
+                : 'btn-disabled'
+            }`}
+            onClick={handleSubmit}
+          >
+            {loading ? 'Creating Booking...' : 
+             currentBookingCount >= 4 ? 'Booking Limit Reached' :
+             availableTables === 0 ? 'No Tables Available' : 
+             blockedDateInfo ? 'Location Unavailable' :
+             'Confirm Booking'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn-danger-outline btn-full"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -304,16 +304,72 @@
   .modal-container {
     /* Ensure modal takes full height minus safe areas */
     min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    /* Use viewport units with safe area consideration */
+    height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    /* Ensure content is positioned above Safari control bar */
+    padding-bottom: env(safe-area-inset-bottom);
   }
   
   .modal-content {
     /* Add extra padding at bottom for iOS browser UI */
     padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    /* Ensure content doesn't get hidden behind Safari control bar */
+    max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem);
+    /* Use flexbox to push content up */
+    display: flex;
+    flex-direction: column;
   }
   
   /* Ensure buttons are always visible */
   .modal-actions {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
     margin-bottom: env(safe-area-inset-bottom);
+    /* Ensure buttons stay at the bottom but above Safari control bar */
+    margin-top: auto;
+    /* Add extra space to prevent overlap */
+    padding-top: 1rem;
+  }
+  
+  /* For modals with forms, ensure the form content is scrollable */
+  .modal-content form {
+    flex: 1;
+    overflow-y: auto;
+    /* Add padding to ensure content doesn't get hidden behind Safari control bar */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Additional Safari-specific fixes for control bar overlap */
+@supports (-webkit-touch-callout: none) and (-webkit-appearance: none) {
+  .modal-container {
+    /* Use 100dvh (dynamic viewport height) for better Safari support */
+    height: 100dvh;
+    min-height: 100dvh;
+    /* Ensure proper positioning */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+  
+  .modal-content {
+    /* Use dynamic viewport height for content */
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem);
+    /* Ensure content is positioned above Safari control bar */
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+  }
+  
+  .modal-actions {
+    /* Ensure buttons are always above Safari control bar */
+    position: sticky;
+    bottom: 0;
+    background: var(--color-modal-bg);
+    /* Add extra padding for Safari control bar */
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    margin-bottom: 0;
+    /* Add shadow to separate from content */
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 10;
   }
 }
