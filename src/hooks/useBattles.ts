@@ -13,6 +13,7 @@ interface Battle {
   opp_name: string | null
   opp_id: string[] | null
   result: string | null
+  user_id: string | null
   created_at: string
 }
 

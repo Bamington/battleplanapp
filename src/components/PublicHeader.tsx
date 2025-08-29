@@ -23,20 +23,30 @@ export function PublicHeader({ onAdminClick, onSettingsClick }: PublicHeaderProp
     if (isProfileMenuOpen && profileButtonRef.current) {
       const rect = profileButtonRef.current.getBoundingClientRect()
       const menuWidth = 200 // min-w-[200px]
-      const menuHeight = 200 // Approximate height
+      const menuHeight = 250 // Increased height estimate
       
       // Position below the button
       let left = rect.left
       let top = rect.bottom + 8 // 8px gap
       
       // Prevent going off the right side of screen
-      if (left + menuWidth > window.innerWidth) {
+      if (left + menuWidth > window.innerWidth - 16) {
         left = window.innerWidth - menuWidth - 16 // 16px margin from edge
       }
       
+      // Prevent going off the left side of screen
+      if (left < 16) {
+        left = 16
+      }
+      
       // Prevent going off the bottom of screen
-      if (top + menuHeight > window.innerHeight) {
+      if (top + menuHeight > window.innerHeight - 16) {
         top = rect.top - menuHeight - 8 // Position above the button instead
+      }
+      
+      // Prevent going off the top of screen
+      if (top < 16) {
+        top = 16
       }
       
       setProfileMenuPosition({ top, left })
@@ -117,103 +127,115 @@ export function PublicHeader({ onAdminClick, onSettingsClick }: PublicHeaderProp
             </div>
           </div>
 
-          {/* Profile Menu Dropdown */}
-          <div 
-            className={`fixed bg-bg-primary border border-border-custom rounded-lg shadow-lg py-2 z-50 min-w-[200px] transition-all duration-200 ease-in-out ${
-              isProfileMenuOpen 
-                ? 'opacity-100 scale-100 translate-y-0' 
-                : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
-            }`}
-            style={{
-              top: `${profileMenuPosition.top}px`,
-              left: `${profileMenuPosition.left}px`
-            }}
-          >
-            {user ? (
-              <>
-                {/* User info */}
-                <div className="px-4 py-2 border-b border-border-custom">
-                  <div className="flex items-center space-x-2">
-                    <User className="w-5 h-5 text-icon" />
-                    <span className="text-base text-text">{user.email}</span>
-                  </div>
-                </div>
-                
-                <button
-                  onClick={() => {
-                    setIsProfileMenuOpen(false)
-                    onAdminClick?.()
-                  }}
-                  className={`flex items-center space-x-3 w-full text-left px-4 py-2 text-base font-semibold text-text hover:bg-bg-secondary transition-colors ${
-                    (user?.is_admin || user?.is_location_admin) ? '' : 'hidden'
-                  }`}
-                >
-                  <Shield className="w-5 h-5 text-icon hover:text-icon-hover" />
-                  <span>Admin</span>
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setIsProfileMenuOpen(false)
-                    onSettingsClick?.()
-                  }}
-                  className="flex items-center space-x-3 w-full text-left px-4 py-2 text-base font-semibold text-text hover:bg-bg-secondary transition-colors"
-                >
-                  <Settings className="w-5 h-5 text-icon hover:text-icon-hover" />
-                  <span>Settings</span>
-                </button>
-                
-                <button
-                  onClick={handleSignOut}
-                  className="block w-full text-left px-4 py-2 text-base font-semibold text-text hover:bg-bg-secondary transition-colors"
-                >
-                  Sign Out
-                </button>
-              </>
-            ) : (
-              <>
-                {/* Sign In option for logged out users */}
-                <button
-                  onClick={() => {
-                    setIsProfileMenuOpen(false)
-                    window.location.href = '/login'
-                  }}
-                  className="flex items-center space-x-3 w-full text-left px-4 py-2 text-base font-semibold text-text hover:bg-bg-secondary transition-colors"
-                >
-                  <User className="w-5 h-5 text-icon hover:text-icon-hover" />
-                  <span>Sign In</span>
-                </button>
-              </>
-            )}
-            
-            {/* Dark/Light Mode Toggle - Show for both logged in and logged out users */}
-            <div className="flex items-center justify-between px-4 py-2 hover:bg-bg-secondary transition-colors">
-              <div className="flex items-center space-x-3">
-                {isDarkMode ? <Moon className="w-5 h-5 text-icon hover:text-icon-hover" /> : <Sun className="w-5 h-5 text-icon hover:text-icon-hover" />}
-                <span className="text-base font-semibold text-text">
-                  {isDarkMode ? 'Dark Mode' : 'Light Mode'}
-                </span>
-              </div>
-              <button
-                onClick={toggleDarkMode}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring---color-brand focus:ring-offset-2 ${
-                  isDarkMode ? 'bg-brand' : 'bg-gray-200'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    isDarkMode ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
+
         </div>
       </header>
       
+      {/* Profile Menu Dropdown */}
+      <div 
+        className={`fixed bg-bg-primary border border-border-custom rounded-lg shadow-lg py-2 z-[70] min-w-[200px] transition-opacity duration-200 ease-in-out ${
+          isProfileMenuOpen 
+            ? 'opacity-100' 
+            : 'opacity-0 pointer-events-none'
+        }`}
+        style={{
+          top: `${profileMenuPosition.top}px`,
+          left: `${profileMenuPosition.left}px`
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {user ? (
+          <>
+            {/* User info */}
+            <div className="px-4 py-2 border-b border-border-custom">
+              <div className="flex items-center space-x-2">
+                <User className="w-5 h-5 text-icon" />
+                <span className="text-base text-text">{user.user_name_public || user.email}</span>
+              </div>
+            </div>
+            
+                         <button
+               onClick={(e) => {
+                 e.stopPropagation()
+                 setIsProfileMenuOpen(false)
+                 onAdminClick?.()
+               }}
+               className={`flex items-center space-x-3 w-full text-left px-4 py-2 text-base font-semibold text-text hover:bg-bg-secondary transition-colors ${
+                 (user?.is_admin || user?.is_location_admin) ? '' : 'hidden'
+               }`}
+             >
+              <Shield className="w-5 h-5 text-icon hover:text-icon-hover" />
+              <span>Admin</span>
+            </button>
+            
+                         <button
+               onClick={(e) => {
+                 e.stopPropagation()
+                 setIsProfileMenuOpen(false)
+                 onSettingsClick?.()
+               }}
+               className="flex items-center space-x-3 w-full text-left px-4 py-2 text-base font-semibold text-text hover:bg-bg-secondary transition-colors"
+             >
+              <Settings className="w-5 h-5 text-icon hover:text-icon-hover" />
+              <span>Settings</span>
+            </button>
+            
+                         <button
+               onClick={(e) => {
+                 e.stopPropagation()
+                 handleSignOut()
+               }}
+               className="block w-full text-left px-4 py-2 text-base font-semibold text-text hover:bg-bg-secondary transition-colors"
+             >
+              Sign Out
+            </button>
+          </>
+        ) : (
+          <>
+            {/* Sign In option for logged out users */}
+                         <button
+               onClick={(e) => {
+                 e.stopPropagation()
+                 setIsProfileMenuOpen(false)
+                 window.location.href = '/login'
+               }}
+               className="flex items-center space-x-3 w-full text-left px-4 py-2 text-base font-semibold text-text hover:bg-bg-secondary transition-colors"
+             >
+              <User className="w-5 h-5 text-icon hover:text-icon-hover" />
+              <span>Sign In</span>
+            </button>
+          </>
+        )}
+        
+        {/* Dark/Light Mode Toggle - Show for both logged in and logged out users */}
+        <div className="flex items-center justify-between px-4 py-2 hover:bg-bg-secondary transition-colors">
+          <div className="flex items-center space-x-3">
+            {isDarkMode ? <Moon className="w-5 h-5 text-icon hover:text-icon-hover" /> : <Sun className="w-5 h-5 text-icon hover:text-icon-hover" />}
+            <span className="text-base font-semibold text-text">
+              {isDarkMode ? 'Dark Mode' : 'Light Mode'}
+            </span>
+          </div>
+                     <button
+             onClick={(e) => {
+               e.stopPropagation()
+               toggleDarkMode()
+             }}
+             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring---color-brand focus:ring-offset-2 ${
+               isDarkMode ? 'bg-brand' : 'bg-gray-200'
+             }`}
+           >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                isDarkMode ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
       {/* Backdrop for profile menu */}
       <div 
-        className={`fixed inset-0 bg-black z-40 transition-opacity duration-200 ease-in-out ${
+        className={`fixed inset-0 bg-black z-60 transition-opacity duration-200 ease-in-out ${
           isProfileMenuOpen
             ? 'bg-opacity-25 pointer-events-auto' 
             : 'bg-opacity-0 pointer-events-none'

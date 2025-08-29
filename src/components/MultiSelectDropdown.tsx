@@ -16,7 +16,7 @@ interface MultiSelectDropdownProps {
   placeholder?: string
   maxSelections?: number
   searchable?: boolean
-  type?: 'game' | 'location' // To determine icon fallback
+  type?: 'game' | 'location' | 'role' // To determine icon fallback
 }
 
 export function MultiSelectDropdown({ 
@@ -44,16 +44,40 @@ export function MultiSelectDropdown({
   useEffect(() => {
     if (isOpen && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect()
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+      
       const spaceBelow = window.innerHeight - rect.bottom
-      const margin = 20 // Margin from bottom of screen
+      const spaceAbove = rect.top
+      const margin = 20 // Margin from edges of screen
       const maxHeight = Math.min(400, spaceBelow - margin) // Max height with margin
       
-      // Always position below the input field, extending downward
+      // Calculate position accounting for scroll offset
+      let top = rect.bottom + scrollTop + 4 // Small gap below input
+      let left = rect.left + scrollLeft
+      let width = rect.width
+      
+      // If there's not enough space below, position above the input
+      if (spaceBelow < maxHeight + margin && spaceAbove > maxHeight + margin) {
+        top = rect.top + scrollTop - maxHeight - 4 // Small gap above input
+      }
+      
+      // Ensure dropdown doesn't go off the left edge
+      if (left < margin + scrollLeft) {
+        left = margin + scrollLeft
+        width = Math.min(rect.width, window.innerWidth - (margin * 2))
+      }
+      
+      // Ensure dropdown doesn't go off the right edge
+      if (left + width > window.innerWidth + scrollLeft - margin) {
+        left = window.innerWidth + scrollLeft - width - margin
+      }
+      
       setDropdownPosition({
-        top: rect.bottom,
-        left: rect.left,
-        width: rect.width,
-        maxHeight: maxHeight
+        top,
+        left,
+        width,
+        maxHeight: Math.max(200, maxHeight) // Minimum height of 200px
       })
     }
   }, [isOpen])
@@ -93,7 +117,10 @@ export function MultiSelectDropdown({
   }
 
   const getIconFallback = () => {
-    return type === 'game' ? '🎮' : '📍'
+    if (type === 'game') return '🎮'
+    if (type === 'location') return '📍'
+    if (type === 'role') return '👤'
+    return '📍'
   }
 
   const renderOptionIcon = (option: Option) => {
@@ -108,7 +135,7 @@ export function MultiSelectDropdown({
     }
     return (
       <div className="w-6 h-6 rounded bg-bg-secondary flex items-center justify-center text-xs">
-        {type === 'game' ? '🎮' : '📍'}
+        {getIconFallback()}
       </div>
     )
   }
@@ -116,7 +143,8 @@ export function MultiSelectDropdown({
   const renderDropdownContent = () => (
     <div
       ref={dropdownRef}
-      className="absolute z-[9999] bg-bg-primary border border-border-custom rounded-lg shadow-lg overflow-hidden"
+      className="absolute z-[99999] bg-bg-primary border border-border-custom rounded-lg shadow-lg overflow-hidden multiselect-dropdown-portal"
+      data-dropdown="true"
       style={{
         top: `${dropdownPosition.top}px`,
         left: `${dropdownPosition.left}px`,
@@ -195,7 +223,7 @@ export function MultiSelectDropdown({
   )
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative" data-dropdown="true">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
