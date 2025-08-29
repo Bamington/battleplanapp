@@ -12,7 +12,7 @@ export function TabButton({ icon: Icon, label, isActive, onClick }: TabButtonPro
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center space-y-1 sm:flex-row sm:space-y-0 sm:space-x-2 py-4 px-6 border-b-2 font-medium text-sm transition-colors ${
+      className={`flex flex-col items-center space-y-1 sm:flex-row sm:space-y-0 sm:space-x-2 py-14 px-6 border-b-2 font-medium text-sm transition-colors ${
         isActive
           ? '!border-brand !text-brand'
           : 'border-transparent text-secondary-text hover:text-text hover:border-border-custom'

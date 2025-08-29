@@ -120,11 +120,7 @@ export function ImageCropper({ isOpen, onClose, onCrop, imageFile }: ImageCroppe
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className={`bg-modal-bg w-full modal-content ${
-        isMobile 
-          ? 'h-full rounded-none flex flex-col' 
-          : 'rounded-lg max-w-4xl h-full max-h-[90vh] flex flex-col'
-      }`}>
+      <div className="bg-modal-bg w-full max-w-4xl modal-content rounded-lg flex flex-col">
         {/* Header */}
         <div className={`flex items-center justify-between ${
           isMobile ? 'p-4 border-b border-border-custom' : 'p-6 border-b border-border-custom'

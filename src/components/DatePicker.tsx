@@ -171,7 +171,7 @@ export function DatePicker({
               onClick={handlePrevMonth}
               className="p-1 hover:bg-bg-secondary rounded transition-colors"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-4 h-4 text-icon" />
             </button>
             <h3 className="text-sm font-semibold text-text">
               {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
@@ -180,7 +180,7 @@ export function DatePicker({
               onClick={handleNextMonth}
               className="p-1 hover:bg-bg-secondary rounded transition-colors"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4 text-icon" />
             </button>
           </div>
 

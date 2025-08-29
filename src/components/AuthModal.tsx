@@ -99,7 +99,8 @@ export function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-container"
       onClick={handleBackdropClick}
     >
-      <div className="bg-modal-bg rounded-lg max-w-md w-full p-6 modal-content">
+      <div className="bg-modal-bg rounded-lg max-w-md w-full modal-content">
+        <div className="p-6">
         <div className="flex items-center justify-between mb-4">
           {currentMode === 'forgot-password' && (
             <button
@@ -156,7 +157,7 @@ export function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
           </>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="auth-form" onSubmit={handleSubmit} className="modal-form-content space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-input-label font-overpass mb-1">
               Email
@@ -209,19 +210,21 @@ export function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
             <div className="text-green-600 text-sm">{success}</div>
           )}
 
-          <div className="flex justify-center modal-actions">
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary btn-full"
-            >
-              {loading ? 'Processing...' : 
-               currentMode === 'login' ? 'Log In' : 
-               currentMode === 'signup' ? 'Sign Up' : 
-               'Send Reset Email'}
-            </button>
-          </div>
         </form>
+        
+        <div className="modal-actions">
+          <button
+            type="submit"
+            form="auth-form"
+            disabled={loading}
+            className="btn-primary btn-full"
+          >
+            {loading ? 'Processing...' : 
+             currentMode === 'login' ? 'Log In' : 
+             currentMode === 'signup' ? 'Sign Up' : 
+             'Send Reset Email'}
+          </button>
+        </div>
 
         {/* Mode switch links */}
         {currentMode !== 'forgot-password' && (
@@ -238,6 +241,7 @@ export function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
             </p>
           </div>
         )}
+        </div>
       </div>
     </div>
   )

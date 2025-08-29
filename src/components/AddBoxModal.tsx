@@ -665,12 +665,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-container"
       onClick={handleBackdropClick}
     >
-      <div className={`bg-modal-bg rounded-lg max-w-lg w-full p-6 overflow-y-auto transition-all duration-300 ease-out transform
-        fixed inset-0 sm:relative sm:inset-auto sm:max-w-lg sm:h-auto sm:rounded-lg sm:max-h-[90vh] h-screen w-screen sm:w-full overflow-y-auto rounded-none sm:rounded-lg p-6 sm:p-6 modal-content
-        ${isOpen 
-          ? 'translate-y-0 opacity-100' 
-          : 'translate-y-full opacity-0'
-        }`}>
+      <div className="bg-modal-bg rounded-lg max-w-lg w-full modal-content">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-secondary-text uppercase tracking-wide text-center flex-1">
             Add New Collection
@@ -864,10 +859,6 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
             {/* Error Messages */}
             {fileSizeError && (
               <p className="text-red-600 text-sm mt-2">{fileSizeError}</p>
-            )}
-            
-            {compressionInfo && (
-              <p className="text-blue-600 text-sm mt-2">{compressionInfo}</p>
             )}
           </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, HelpCircle } from 'lucide-react'
 import { Header } from './components/Header'
 import { TabBar } from './components/TabBar'
 import { CollectionSubMenu } from './components/CollectionSubMenu'
@@ -22,8 +22,7 @@ import { ViewBoxModal } from './components/ViewBoxModal'
 import { PasswordResetModal } from './components/PasswordResetModal'
 import { NewBookingModal } from './components/NewBookingModal'
 import { AuthCallback } from './components/AuthCallback'
-import { ExpandableFAB } from './components/ExpandableFAB'
-import { BookingsFAB } from './components/BookingsFAB'
+
 import { useAuth } from './hooks/useAuth'
 import { useModels } from './hooks/useModels'
 import { useBoxes } from './hooks/useBoxes'
@@ -506,7 +505,13 @@ function App() {
         />
         <AboutPage onBack={() => setActiveTab('collection')} />
         <Footer />
-        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+        <TabBar 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+          onAddModel={() => setAddModelModal(true)}
+          onAddCollection={() => setAddBoxModal(true)}
+          onAddBooking={() => setShowNewBookingModal(true)}
+        />
       </div>
     )
   }
@@ -527,7 +532,13 @@ function App() {
         />
         <AllBookingsPage onBack={() => setActiveTab('collection')} />
         <Footer />
-        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+        <TabBar 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+          onAddModel={() => setAddModelModal(true)}
+          onAddCollection={() => setAddBoxModal(true)}
+          onAddBooking={() => setShowNewBookingModal(true)}
+        />
       </div>
     )
   }
@@ -546,7 +557,44 @@ function App() {
         />
         <BlockedDatesPage onBack={() => setActiveTab('collection')} />
         <Footer />
-        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+        <TabBar 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+          onAddModel={() => setAddModelModal(true)}
+          onAddCollection={() => setAddBoxModal(true)}
+          onAddBooking={() => setShowNewBookingModal(true)}
+        />
+      </div>
+    )
+  }
+
+  // Render Help page (placeholder)
+  if (activeTab === 'help') {
+    return (
+      <div className="min-h-screen bg-bg-secondary">
+        <Header 
+          onAddModel={() => setAddModelModal(true)} 
+          onAdminClick={handleAdminClick}
+          onSettingsClick={handleSettingsClick}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onLogoClick={handleLogoClick}
+        />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+          <div className="text-center py-16">
+            <HelpCircle className="w-16 h-16 text-secondary-text mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-title mb-2">Help & Support</h2>
+            <p className="text-secondary-text">Coming soon...</p>
+          </div>
+        </main>
+        <Footer />
+        <TabBar 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+          onAddModel={() => setAddModelModal(true)}
+          onAddCollection={() => setAddBoxModal(true)}
+          onAddBooking={() => setShowNewBookingModal(true)}
+        />
       </div>
     )
   }
@@ -565,7 +613,13 @@ function App() {
         />
         <BattlesPage onBack={() => setActiveTab('collection')} />
         <Footer />
-        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+        <TabBar 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+          onAddModel={() => setAddModelModal(true)}
+          onAddCollection={() => setAddBoxModal(true)}
+          onAddBooking={() => setShowNewBookingModal(true)}
+        />
       </div>
     )
   }
@@ -587,12 +641,15 @@ function App() {
           onNewBooking={() => setShowNewBookingModal(true)}
         />
         <Footer />
-        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
-        
-        {/* Bookings FAB - Only show on battleplan tab */}
-        <BookingsFAB
-          onNewBooking={() => setShowNewBookingModal(true)}
+        <TabBar 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+          onAddModel={() => setAddModelModal(true)}
+          onAddCollection={() => setAddBoxModal(true)}
+          onAddBooking={() => setShowNewBookingModal(true)}
         />
+        
+
 
         {/* New Booking Modal for battleplan tab */}
         <NewBookingModal
@@ -1015,7 +1072,13 @@ function App() {
 
       <Footer />
 
-      <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+      <TabBar 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab}
+        onAddModel={() => setAddModelModal(true)}
+        onAddCollection={() => setAddBoxModal(true)}
+        onAddBooking={() => setShowNewBookingModal(true)}
+      />
 
       <AuthModal
         isOpen={authModal.isOpen}
@@ -1078,13 +1141,6 @@ function App() {
         }}
       />
 
-      {/* Expandable FAB - Only show on collection tab */}
-      {activeTab === 'collection' && (
-        <ExpandableFAB
-          onAddModel={() => setAddModelModal(true)}
-          onAddCollection={() => setAddBoxModal(true)}
-        />
-      )}
 
       {/* Add onboarding modal */}
       <OnboardingModal

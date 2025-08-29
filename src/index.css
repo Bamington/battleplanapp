@@ -128,6 +128,205 @@
   background: var(--color-border);
 }
 
+/* iOS Native Control Overrides */
+@layer base {
+  /* Force custom styling for select elements on all devices, including iOS */
+  select {
+    /* Remove default styling */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    
+    /* Ensure custom background works */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m6 9 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem 1rem;
+    
+    /* Ensure padding accounts for dropdown arrow */
+    padding-right: 2.5rem !important;
+  }
+  
+  /* Dark mode dropdown arrow */
+  .dark select {
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m6 9 6 6 6-6'/%3e%3c/svg%3e");
+  }
+  
+  /* Style option elements */
+  select option {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text);
+    padding: 0.5rem;
+  }
+  
+  /* Ensure focus states work properly */
+  select:focus {
+    outline: none;
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 2px var(--color-brand);
+  }
+  
+  /* Override other iOS native controls */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  textarea {
+    /* Remove iOS native styling */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    
+    /* Prevent iOS zoom on focus */
+    font-size: 16px;
+    
+    /* Remove iOS inner shadow */
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none;
+    
+    /* Ensure border radius is respected */
+    border-radius: 0.5rem;
+  }
+  
+  /* Prevent iOS from adding rounded corners to buttons */
+  button,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: 0.5rem;
+  }
+  
+  /* Fix for iOS file input styling */
+  input[type="file"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+  
+  /* Override iOS checkbox and radio button styling */
+  input[type="checkbox"],
+  input[type="radio"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--color-border);
+    background-color: var(--color-bg-primary);
+  }
+  
+  input[type="checkbox"]:checked,
+  input[type="radio"]:checked {
+    background-color: var(--color-brand);
+    border-color: var(--color-brand);
+  }
+  
+  input[type="checkbox"]:checked {
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m9 12 2 2 4-4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 0.75rem 0.75rem;
+  }
+  
+  input[type="radio"] {
+    border-radius: 50%;
+  }
+  
+  input[type="radio"]:checked {
+    background-image: radial-gradient(circle, white 40%, transparent 41%);
+  }
+  
+  /* iOS-specific enhancements for touch interactions */
+  @supports (-webkit-touch-callout: none) {
+    /* Improve touch targets for mobile */
+    select,
+    button,
+    input,
+    textarea {
+      min-height: 44px; /* iOS recommended minimum touch target */
+    }
+    
+    /* Prevent iOS callout menu on long press */
+    select,
+    button,
+    input,
+    textarea,
+    img {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    /* Allow text selection in text inputs */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="search"],
+    textarea {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+    
+    /* Improve select dropdown appearance on iOS */
+    select {
+      /* Ensure the dropdown arrow is always visible */
+      background-color: var(--color-bg-primary);
+      
+      /* Force iOS to respect our styling */
+      -webkit-border-radius: 0.5rem;
+      border-radius: 0.5rem;
+      
+      /* Prevent iOS from adding its own shadow */
+      -webkit-box-shadow: none;
+      box-shadow: none;
+      
+      /* Ensure consistent font rendering */
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* Override iOS focus styling for form elements */
+    select:focus,
+    input:focus,
+    textarea:focus,
+    button:focus {
+      /* Remove iOS blue outline */
+      -webkit-tap-highlight-color: transparent;
+      outline: none;
+      
+      /* Apply our custom focus styling */
+      border-color: var(--color-brand);
+      box-shadow: 0 0 0 2px var(--color-brand);
+    }
+    
+    /* Improve button tap feedback */
+    button,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"] {
+      /* Remove iOS tap highlight */
+      -webkit-tap-highlight-color: transparent;
+      
+      /* Prevent iOS from adding rounded corners */
+      -webkit-border-radius: 0;
+      border-radius: 0.5rem;
+    }
+  }
+}
+
 /* Button Component Library */
 @layer components {
   /* Primary Button */
@@ -288,88 +487,250 @@
   animation: fab-slide-in 0.2s ease-out 0.1s both;
 }
 
-/* iOS Safe Area Support for Modals */
+/* Tab Bar Animations */
+@keyframes tab-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes menu-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-tab-slide-in {
+  animation: tab-slide-in 0.3s ease-out;
+}
+
+.animate-menu-slide-in {
+  animation: menu-slide-in 0.15s ease-out;
+}
+
+/* Tab Bar Styles */
+.tab-bar-container {
+  background: rgba(15, 23, 42, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Dark mode tab bar */
+.dark .tab-bar-container {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: rgba(71, 85, 105, 0.2);
+}
+
+/* Light mode tab bar */
+:root .tab-bar-container {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(229, 231, 235, 0.8);
+}
+
+.tab-button-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-button-ripple::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.15s ease-out, height 0.15s ease-out;
+}
+
+.tab-button-ripple:active::before {
+  width: 100%;
+  height: 100%;
+}
+
+/* Safe area handling for tab bar */
+.pb-safe {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+/* Additional safe area classes */
 @supports (padding: max(0px)) {
-  .modal-container {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
-  }
-  
-  .modal-content {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  .pb-safe {
+    padding-bottom: max(0.75rem, calc(0.5rem + env(safe-area-inset-bottom)));
   }
 }
 
-/* iOS-specific modal adjustments */
-@supports (-webkit-touch-callout: none) {
-  .modal-container {
-    /* Ensure modal takes full height minus safe areas */
-    min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-    /* Use viewport units with safe area consideration */
-    height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-    /* Ensure content is positioned above Safari control bar */
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  
-  .modal-content {
-    /* Add extra padding at bottom for iOS browser UI */
-    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
-    /* Ensure content doesn't get hidden behind Safari control bar */
-    max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem);
-    /* Use flexbox to push content up */
-    display: flex;
-    flex-direction: column;
-  }
-  
-  /* Ensure buttons are always visible */
-  .modal-actions {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
-    margin-bottom: env(safe-area-inset-bottom);
-    /* Ensure buttons stay at the bottom but above Safari control bar */
-    margin-top: auto;
-    /* Add extra space to prevent overlap */
-    padding-top: 1rem;
-  }
-  
-  /* For modals with forms, ensure the form content is scrollable */
-  .modal-content form {
-    flex: 1;
-    overflow-y: auto;
-    /* Add padding to ensure content doesn't get hidden behind Safari control bar */
-    padding-bottom: env(safe-area-inset-bottom);
+/* Tab bar specific layout improvements */
+@media (max-height: 700px) {
+  .pb-safe {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
 }
 
-/* Additional Safari-specific fixes for control bar overlap */
-@supports (-webkit-touch-callout: none) and (-webkit-appearance: none) {
+/* Floating action button enhancements */
+.floating-action-button {
+  /* Ensure the button appears above tab bar content */
+  z-index: 60;
+  
+  /* Add subtle glow effect */
+  box-shadow: 
+    0 8px 16px rgba(0, 0, 0, 0.15),
+    0 4px 8px rgba(114, 77, 221, 0.2);
+}
+
+.floating-action-button:hover {
+  box-shadow: 
+    0 12px 20px rgba(0, 0, 0, 0.2),
+    0 6px 12px rgba(114, 77, 221, 0.3);
+}
+
+/* Tab bar overflow handling for floating button */
+.tab-bar-container {
+  /* Allow content to overflow for floating button */
+  overflow: visible;
+}
+
+/* iOS Safe Area Support for Modals - Comprehensive Fix */
+.modal-container {
+  /* Use dynamic viewport height for modern iOS Safari support */
+  height: 100dvh;
+  min-height: 100vh; /* Fallback for older browsers */
+  min-height: 100dvh;
+  
+  /* Ensure proper positioning */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  
+  /* Add padding to account for safe areas */
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.modal-content {
+  /* Use flexbox for proper layout control */
+  display: flex;
+  flex-direction: column;
+  
+  /* Ensure content fits within available space */
+  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem);
+  max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem); /* Fallback */
+  
+  /* Enable scrolling for content that overflows */
+  overflow-y: auto;
+  
+  /* Ensure proper spacing from edges */
+  margin: auto;
+  
+  /* Add webkit scrolling for smooth iOS experience */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Form content within modals */
+.modal-content form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Important for flex children to shrink */
+}
+
+/* Scrollable form content */
+.modal-form-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 1rem;
+}
+
+/* Fixed modal actions (buttons) */
+.modal-actions {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: 1rem;
+  
+  /* Ensure buttons are always visible above iOS UI */
+  position: relative;
+  z-index: 10;
+  
+  /* Add background to separate from scrollable content */
+  background: var(--color-modal-bg);
+  
+  /* Add subtle shadow for visual separation */
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile-specific modal adjustments */
+@media (max-width: 640px) {
   .modal-container {
-    /* Use 100dvh (dynamic viewport height) for better Safari support */
-    height: 100dvh;
-    min-height: 100dvh;
-    /* Ensure proper positioning */
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    /* Reduce padding on mobile to maximize space */
+    padding: max(0.5rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
   }
   
   .modal-content {
-    /* Use dynamic viewport height for content */
-    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem);
-    /* Ensure content is positioned above Safari control bar */
-    padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+    /* Allow full width on mobile with proper safe area handling */
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+    
+    /* Ensure proper safe area spacing */
+    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
   
   .modal-actions {
-    /* Ensure buttons are always above Safari control bar */
-    position: sticky;
-    bottom: 0;
-    background: var(--color-modal-bg);
-    /* Add extra padding for Safari control bar */
-    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
-    margin-bottom: 0;
-    /* Add shadow to separate from content */
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-    z-index: 10;
+    /* Extra padding on mobile to prevent overlap with iOS controls */
+    padding-bottom: max(1.5rem, calc(1rem + env(safe-area-inset-bottom)));
+  }
+}
+
+/* iPhone SE and small device specific fixes */
+@media (max-width: 375px) and (max-height: 667px) {
+  .modal-content {
+    /* Ensure content uses all available space on small screens */
+    padding: 0.75rem;
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+  
+  .modal-actions {
+    /* Reduce padding on very small screens */
+    padding-top: 0.75rem;
+    padding-bottom: max(1.25rem, calc(0.75rem + env(safe-area-inset-bottom)));
+  }
+}
+
+/* Landscape orientation fixes for small devices */
+@media (max-height: 500px) and (orientation: landscape) {
+  .modal-container {
+    /* Reduce vertical padding in landscape */
+    padding-top: max(0.25rem, env(safe-area-inset-top));
+    padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+  }
+  
+  .modal-content {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+  
+  .modal-actions {
+    padding-top: 0.5rem;
+    padding-bottom: max(1rem, calc(0.5rem + env(safe-area-inset-bottom)));
   }
 }

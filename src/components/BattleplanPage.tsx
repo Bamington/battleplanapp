@@ -231,6 +231,19 @@ export function BattleplanPage({ refreshTrigger = 0, onNewBooking }: BattleplanP
                 </button>
               </div>
             </div>
+          ) : !loading && hasInitialized && groupedBookings.filter(group => !group.isPast).length === 0 && groupedBookings.filter(group => group.isPast).length > 0 ? (
+            <div className="text-center py-12">
+              <Calendar className="w-16 h-16 text-secondary-text mx-auto mb-4" />
+              <p className="text-base text-secondary-text mb-4">You don't have any upcoming bookings right now.</p>
+              <div className="flex justify-center">
+                <button 
+                  onClick={onNewBooking}
+                  className="btn-primary"
+                >
+                  Create New Booking
+                </button>
+              </div>
+            </div>
           ) : (
             <div className="space-y-8">
               {groupedBookings.map(({ date, bookings: dateBookings, isPast }) => (

@@ -1,44 +1,89 @@
 import React from 'react'
-import { Package, Calendar, Sword } from 'lucide-react'
-import { TabButton } from './TabButton'
+import { Package, Calendar, Sword, HelpCircle } from 'lucide-react'
+import { IconTabButton } from './IconTabButton'
+import { ActionButton } from './ActionButton'
 
 interface TabBarProps {
   activeTab: string
   onTabChange: (tab: string) => void
+  onAddModel: () => void
+  onAddCollection: () => void
+  onAddBooking: () => void
 }
 
-export function TabBar({ activeTab, onTabChange }: TabBarProps) {
-  const tabs = [
+export function TabBar({ 
+  activeTab, 
+  onTabChange, 
+  onAddModel, 
+  onAddCollection, 
+  onAddBooking 
+}: TabBarProps) {
+  const leftTabs = [
     {
       id: 'collection',
-      name: 'Collection',
+      label: 'Collection',
       icon: Package
     },
     {
       id: 'battles',
-      name: 'Battles',
+      label: 'Battles',
       icon: Sword
-    },
+    }
+  ]
+
+  const rightTabs = [
     {
       id: 'battleplan',
-      name: 'Bookings',
+      label: 'Bookings',
       icon: Calendar
+    },
+    {
+      id: 'soon',
+      label: 'Soon...',
+      icon: HelpCircle
     }
   ]
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-black/75 backdrop-blur-md border-t border-border-custom/30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <nav className="flex justify-center items-center space-x-8" aria-label="Tabs">
-          {tabs.map((tab) => (
-            <TabButton
-              key={tab.id}
-              icon={tab.icon}
-              label={tab.name}
-              isActive={activeTab === tab.id}
-              onClick={() => onTabChange(tab.id)}
+    <div className="fixed bottom-0 left-0 right-0 z-40 tab-bar-container border-t border-border-custom/30 animate-tab-slide-in">
+      <div className="px-4 pt-2 pb-safe">
+        <nav className="flex items-center justify-center" aria-label="Tabs">
+          {/* Left tabs */}
+          <div className="flex items-center">
+            {leftTabs.map((tab) => (
+              <IconTabButton
+                key={tab.id}
+                icon={tab.icon}
+                label={tab.label}
+                isActive={activeTab === tab.id}
+                onClick={() => onTabChange(tab.id)}
+                className="tab-button-ripple"
+              />
+            ))}
+          </div>
+          
+          {/* Center action button */}
+          <div className="mx-6">
+            <ActionButton
+              onAddModel={onAddModel}
+              onAddCollection={onAddCollection}
+              onAddBooking={onAddBooking}
             />
-          ))}
+          </div>
+          
+          {/* Right tabs */}
+          <div className="flex items-center">
+            {rightTabs.map((tab) => (
+              <IconTabButton
+                key={tab.id}
+                icon={tab.icon}
+                label={tab.label}
+                isActive={activeTab === tab.id}
+                onClick={tab.id === 'soon' ? () => {} : () => onTabChange(tab.id)}
+                className="tab-button-ripple"
+              />
+            ))}
+          </div>
         </nav>
       </div>
     </div>

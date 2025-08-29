@@ -754,12 +754,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-container"
       onClick={handleBackdropClick}
     >
-      <div className={`bg-modal-bg rounded-lg max-w-lg w-full p-6 overflow-y-auto transition-all duration-300 ease-out transform
-        fixed inset-0 sm:relative sm:inset-auto sm:max-w-lg sm:h-auto sm:rounded-lg sm:max-h-[90vh] h-screen w-screen sm:w-full overflow-y-auto rounded-none sm:rounded-lg p-6 sm:p-6 modal-content
-        ${isOpen 
-          ? 'translate-y-0 opacity-100' 
-          : 'translate-y-full opacity-0'
-        }`}>
+      <div className="bg-modal-bg rounded-lg max-w-lg w-full modal-content">
         
         {/* Header - Fixed at top */}
         <div className="flex items-center justify-between mb-6 flex-shrink-0">
@@ -780,7 +775,8 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
         </p>
 
         {/* Form - Scrollable content */}
-        <form onSubmit={handleSubmit} className="space-y-6 flex-1 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="space-y-6 flex-1">
+          <div className="modal-form-content space-y-6">
           {/* Model Name */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -1012,10 +1008,6 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
             {fileSizeError && (
               <p className="text-red-600 text-sm mt-2">{fileSizeError}</p>
             )}
-            
-            {compressionInfo && (
-              <p className="text-blue-600 text-sm mt-2">{compressionInfo}</p>
-            )}
           </div>
 
           {compressionInfo && (
@@ -1035,10 +1027,12 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
               {error}
             </div>
           )}
+          </div>
         </form>
 
         {/* Submit Button - Fixed at bottom */}
-        <div className="flex justify-center pt-4 modal-actions">
+        <div className="modal-actions">
+          <div className="flex justify-center">
           <button
             type="submit"
             disabled={!isFormValid || loading}
@@ -1051,6 +1045,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
           >
             {compressing ? 'Compressing Image...' : loading ? 'Adding...' : 'Add to Collection'}
           </button>
+          </div>
         </div>
       </div>
       

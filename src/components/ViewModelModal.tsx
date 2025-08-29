@@ -291,7 +291,7 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
         }`}
         onClick={handleBackdropClick}
       >
-        <div className="bg-modal-bg max-w-2xl w-full overflow-y-auto md:rounded-lg md:max-w-2xl md:max-h-[90vh] fixed inset-0 md:relative md:inset-auto h-screen md:h-auto modal-content">
+        <div className="bg-modal-bg max-w-2xl w-full modal-content">
           {/* Header Image */}
           <div className="relative">
             <img
