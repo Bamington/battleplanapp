@@ -466,18 +466,17 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-container"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50 modal-container"
       onClick={handleBackdropClick}
     >
-      <div className={`bg-modal-bg rounded-lg max-w-lg w-full p-6 overflow-y-auto transition-all duration-300 ease-out transform
-        fixed inset-0 sm:relative sm:inset-auto sm:max-w-lg sm:h-auto sm:rounded-lg sm:max-h-[90vh] h-screen w-screen sm:w-full overflow-y-auto rounded-none sm:rounded-lg p-6 sm:p-6 modal-content
+      <div className={`bg-modal-bg rounded-none sm:rounded-lg max-w-lg w-full h-screen sm:h-auto sm:max-h-[90vh] flex flex-col transition-all duration-300 ease-out transform
         ${isOpen 
           ? 'translate-y-0 opacity-100' 
           : 'translate-y-full opacity-0'
         }`}>
         
-        {/* Header - Fixed at top */}
-        <div className="flex items-center justify-between mb-6 flex-shrink-0">
+        {/* Header - Fixed at top with shadow */}
+        <div className="flex items-center justify-between mb-6 flex-shrink-0 p-6 pb-4 shadow-sm bg-modal-bg rounded-t-lg">
           <h2 className="text-xl font-semibold text-text font-overpass">
             New Booking
           </h2>
@@ -489,30 +488,31 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
           </button>
         </div>
 
-        {/* Booking Limit Warning - Fixed */}
+        {/* Booking Limit Warning - Fixed with shadow */}
         {checkingBookingLimit ? (
-          <div className="p-4 rounded-lg border bg-blue-50 border-blue-200 flex-shrink-0">
+          <div className="p-4 rounded-lg border bg-blue-50 border-blue-200 flex-shrink-0 mx-6 mb-4 shadow-sm bg-modal-bg">
             <div className="flex items-center space-x-2">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
               <span className="text-blue-700 text-sm font-medium">Checking booking limit...</span>
             </div>
           </div>
         ) : currentBookingCount >= 4 ? (
-          <div className="p-4 rounded-lg border bg-red-50 border-red-200 flex-shrink-0">
+          <div className="p-4 rounded-lg border bg-red-50 border-red-200 flex-shrink-0 mx-6 mb-4 shadow-sm bg-modal-bg">
             <span className="text-red-700 text-sm font-medium">
               ⚠️ You have reached the maximum of 4 active bookings. Cancel an existing booking to create a new one.
             </span>
           </div>
         ) : currentBookingCount >= 3 ? (
-          <div className="p-4 rounded-lg border bg-yellow-50 border-yellow-200 flex-shrink-0">
+          <div className="p-4 rounded-lg border bg-yellow-50 border-yellow-200 flex-shrink-0 mx-6 mb-4 shadow-sm bg-modal-bg">
             <span className="text-yellow-700 text-sm font-medium">
               ⚠️ You have {currentBookingCount} active booking{currentBookingCount !== 1 ? 's' : ''}. You can create {4 - currentBookingCount} more.
             </span>
           </div>
         ) : null}
 
-        {/* Form - Scrollable content */}
-        <form onSubmit={handleSubmit} className="space-y-6 flex-1 overflow-y-auto">
+        {/* Form - Scrollable content with padding */}
+        <form onSubmit={handleSubmit} className="space-y-6 flex-1 overflow-y-auto px-6">
+          <div className="py-4 space-y-6">
           {/* User Name */}
           <div>
             <label htmlFor="userName" className="block text-sm font-medium text-input-label font-overpass mb-2">
@@ -669,10 +669,12 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
               )}
             </div>
           )}
+          </div>
         </form>
 
-        {/* Action Buttons - Fixed at bottom */}
-        <div className="flex flex-col space-y-3 pt-4 modal-actions">
+        {/* Submit Button - Fixed at bottom with shadow */}
+        <div className="p-6 pt-4 shadow-sm bg-modal-bg rounded-b-lg flex-shrink-0">
+          <div className="flex flex-col space-y-3">
           <button
             type="submit"
             disabled={!isFormValid || loading || availableTables === 0 || currentBookingCount >= 4 || blockedDateInfo}
@@ -698,6 +700,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
           </button>
         </div>
       </div>
+    </div>
     </div>
   )
 }

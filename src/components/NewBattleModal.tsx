@@ -424,11 +424,10 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50"
       onClick={handleBackdropClick}
     >
-      <div className="bg-modal-bg rounded-lg max-w-lg w-full p-6 overflow-y-auto transition-all duration-300 ease-out transform
-        fixed inset-0 sm:relative sm:inset-auto sm:max-w-lg sm:h-auto sm:rounded-lg sm:max-h-[90vh] h-screen w-screen sm:w-full overflow-y-auto rounded-none sm:rounded-lg p-6 sm:p-6">
+      <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-lg w-full h-screen sm:h-auto sm:max-h-[90vh] flex flex-col overflow-y-auto p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-text font-overpass">
             Log New Battle

@@ -60,8 +60,8 @@ export function PasswordResetModal({ isOpen, onClose }: PasswordResetModalProps)
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-modal-bg rounded-lg max-w-md w-full p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50">
+      <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-title">Set New Password</h2>
           <button

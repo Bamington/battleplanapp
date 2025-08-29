@@ -286,12 +286,12 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
   return (
     <>
       <div 
-        className={`fixed inset-0 bg-black flex items-center justify-center p-4 z-50 modal-container ${
+        className={`fixed inset-0 bg-black flex items-center justify-center p-0 sm:p-4 z-50 modal-container ${
           showEditModal ? 'bg-opacity-25' : 'bg-opacity-50'
         }`}
         onClick={handleBackdropClick}
       >
-        <div className="bg-modal-bg max-w-2xl w-full modal-content">
+        <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-2xl w-full h-screen sm:h-auto sm:max-h-[90vh] overflow-y-auto modal-content">
           {/* Header Image */}
           <div className="relative">
             <img

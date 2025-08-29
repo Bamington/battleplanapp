@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { User, Settings, Moon, Sun, Shield } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useDarkMode } from '../hooks/useDarkMode'
@@ -13,8 +13,49 @@ export function PublicHeader({ onAdminClick, onSettingsClick }: PublicHeaderProp
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [showToast, setShowToast] = useState(false)
+  const [profileMenuPosition, setProfileMenuPosition] = useState({ top: 0, left: 0 })
   const { isDarkMode, toggleDarkMode } = useDarkMode()
   const { user, signOut } = useAuth()
+  const profileButtonRef = useRef<HTMLButtonElement>(null)
+
+  // Calculate profile menu position
+  useEffect(() => {
+    if (isProfileMenuOpen && profileButtonRef.current) {
+      const rect = profileButtonRef.current.getBoundingClientRect()
+      const menuWidth = 200 // min-w-[200px]
+      const menuHeight = 200 // Approximate height
+      
+      // Position below the button
+      let left = rect.left
+      let top = rect.bottom + 8 // 8px gap
+      
+      // Prevent going off the right side of screen
+      if (left + menuWidth > window.innerWidth) {
+        left = window.innerWidth - menuWidth - 16 // 16px margin from edge
+      }
+      
+      // Prevent going off the bottom of screen
+      if (top + menuHeight > window.innerHeight) {
+        top = rect.top - menuHeight - 8 // Position above the button instead
+      }
+      
+      setProfileMenuPosition({ top, left })
+    }
+  }, [isProfileMenuOpen])
+
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileButtonRef.current && !profileButtonRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false)
+      }
+    }
+
+    if (isProfileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isProfileMenuOpen])
 
   const handleSignOut = async () => {
     try {
@@ -67,6 +108,7 @@ export function PublicHeader({ onAdminClick, onSettingsClick }: PublicHeaderProp
             <div className="flex items-center space-x-4">
               {/* Profile Menu Button - Show for both logged in and logged out users */}
               <button
+                ref={profileButtonRef}
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                 className="text-secondary-text hover:text-text focus:outline-none"
               >
@@ -76,11 +118,17 @@ export function PublicHeader({ onAdminClick, onSettingsClick }: PublicHeaderProp
           </div>
 
           {/* Profile Menu Dropdown */}
-          <div className={`absolute right-4 top-16 bg-bg-primary border border-border-custom rounded-lg shadow-lg py-2 z-50 min-w-[200px] transition-all duration-200 ease-in-out ${
-            isProfileMenuOpen 
-              ? 'opacity-100 scale-100 translate-y-0' 
-              : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
-          }`}>
+          <div 
+            className={`fixed bg-bg-primary border border-border-custom rounded-lg shadow-lg py-2 z-50 min-w-[200px] transition-all duration-200 ease-in-out ${
+              isProfileMenuOpen 
+                ? 'opacity-100 scale-100 translate-y-0' 
+                : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
+            }`}
+            style={{
+              top: `${profileMenuPosition.top}px`,
+              left: `${profileMenuPosition.left}px`
+            }}
+          >
             {user ? (
               <>
                 {/* User info */}

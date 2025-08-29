@@ -203,10 +203,10 @@ export function EditGameModal({ isOpen, onClose, onGameUpdated, game }: EditGame
   return (
     <>
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50"
         onClick={handleBackdropClick}
       >
-        <div className="bg-modal-bg rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-bold text-title">Edit Game</h2>
             <button

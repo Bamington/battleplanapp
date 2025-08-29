@@ -96,10 +96,10 @@ export function AuthModal({ isOpen, onClose, mode }: AuthModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-container"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50 modal-container"
       onClick={handleBackdropClick}
     >
-      <div className="bg-modal-bg rounded-lg max-w-md w-full modal-content">
+      <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-md w-full modal-content">
         <div className="p-6">
         <div className="flex items-center justify-between mb-4">
           {currentMode === 'forgot-password' && (

@@ -751,13 +751,13 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-container"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50 modal-container"
       onClick={handleBackdropClick}
     >
-      <div className="bg-modal-bg rounded-lg max-w-lg w-full modal-content">
+      <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-lg w-full modal-content h-screen sm:h-auto sm:max-h-[90vh] flex flex-col">
         
-        {/* Header - Fixed at top */}
-        <div className="flex items-center justify-between mb-6 flex-shrink-0">
+        {/* Header - Fixed at top with shadow */}
+        <div className="flex items-center justify-between mb-6 flex-shrink-0 p-6 pb-4 shadow-sm bg-modal-bg rounded-t-lg">
           <h2 className="text-lg font-bold text-secondary-text uppercase tracking-wide text-center flex-1">
             Add New Model
           </h2>
@@ -769,14 +769,16 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
           </button>
         </div>
 
-        {/* Description - Fixed */}
-        <p className="text-base text-secondary-text text-center mb-8 flex-shrink-0">
-          Don't worry- you can update any of these details later.
-        </p>
+        {/* Description - Fixed with shadow */}
+        <div className="px-6 pb-4 flex-shrink-0 shadow-sm bg-modal-bg">
+          <p className="text-base text-secondary-text text-center">
+            Don't worry- you can update any of these details later.
+          </p>
+        </div>
 
-        {/* Form - Scrollable content */}
-        <form onSubmit={handleSubmit} className="space-y-6 flex-1">
-          <div className="modal-form-content space-y-6">
+        {/* Form - Scrollable content with padding */}
+        <form onSubmit={handleSubmit} className="space-y-6 flex-1 overflow-y-auto px-6">
+          <div className="modal-form-content space-y-6 py-4">
           {/* Model Name */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -1030,8 +1032,8 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
           </div>
         </form>
 
-        {/* Submit Button - Fixed at bottom */}
-        <div className="modal-actions">
+        {/* Submit Button - Fixed at bottom with shadow */}
+        <div className="modal-actions p-6 pt-4 shadow-sm bg-modal-bg rounded-b-lg flex-shrink-0">
           <div className="flex justify-center">
           <button
             type="submit"

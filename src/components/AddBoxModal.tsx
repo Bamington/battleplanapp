@@ -662,11 +662,12 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-container"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50 modal-container"
       onClick={handleBackdropClick}
     >
-      <div className="bg-modal-bg rounded-lg max-w-lg w-full modal-content">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-lg w-full modal-content h-screen sm:h-auto sm:max-h-[90vh] flex flex-col">
+        {/* Header - Fixed at top with shadow */}
+        <div className="flex items-center justify-between mb-6 flex-shrink-0 p-6 pb-4 shadow-sm bg-modal-bg rounded-t-lg">
           <h2 className="text-lg font-bold text-secondary-text uppercase tracking-wide text-center flex-1">
             Add New Collection
           </h2>
@@ -678,11 +679,16 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
           </button>
         </div>
 
-        <p className="text-base text-secondary-text text-center mb-8">
-          Collections are a way to sort your models into groups. You can use this to track boxes you've bought, squads you've assembled, or simply to organise your collection.
-        </p>
+        {/* Description - Fixed with shadow */}
+        <div className="px-6 pb-4 flex-shrink-0 shadow-sm bg-modal-bg">
+          <p className="text-base text-secondary-text text-center">
+            Collections are a way to sort your models into groups. You can use this to track boxes you've bought, squads you've assembled, or simply to organise your collection.
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Form - Scrollable content with padding */}
+        <form onSubmit={handleSubmit} className="space-y-6 flex-1 overflow-y-auto px-6">
+          <div className="py-4 space-y-6">
           {/* Box Name */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -879,9 +885,12 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
               {error}
             </div>
           )}
+          </div>
+        </form>
 
-          {/* Submit Button */}
-          <div className="flex flex-col space-y-3 pt-4 modal-actions">
+        {/* Submit Button - Fixed at bottom with shadow */}
+        <div className="p-6 pt-4 shadow-sm bg-modal-bg rounded-b-lg flex-shrink-0">
+          <div className="flex flex-col space-y-3">
             <Button
               className='btn-primary'
               variant={isFormValid && !loading ? 'primary' : 'disabled'}
@@ -900,7 +909,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
               {compressing ? 'Compressing Image...' : loading ? 'Adding...' : 'Add Models to Collection'}
             </Button>
           </div>
-        </form>
+        </div>
       </div>
       
       {imageForCropping && (

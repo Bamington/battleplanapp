@@ -66,11 +66,10 @@ export function ViewBattleModal({ isOpen, onClose, onBattleDeleted, onBattleUpda
   return (
     <>
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-container"
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50 modal-container"
         onClick={handleBackdropClick}
       >
-        <div className="bg-modal-bg rounded-lg max-w-2xl w-full p-6 overflow-y-auto transition-all duration-300 ease-out transform
-          fixed inset-0 sm:relative sm:inset-auto sm:max-w-2xl sm:h-auto sm:rounded-lg sm:max-h-[90vh] h-screen w-screen sm:w-full overflow-y-auto rounded-none sm:rounded-lg p-6 sm:p-6 modal-content">
+        <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-2xl w-full h-screen sm:h-auto sm:max-h-[90vh] flex flex-col overflow-y-auto p-6 modal-content">
           
           {/* Header */}
           <div className="flex items-center justify-between mb-6">

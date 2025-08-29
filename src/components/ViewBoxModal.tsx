@@ -324,10 +324,10 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
   return (
     <>
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-container"
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50 modal-container"
         onClick={handleBackdropClick}
       >
-        <div className="bg-modal-bg max-w-2xl w-full overflow-y-auto md:rounded-lg md:max-w-2xl md:max-h-[90vh] fixed inset-0 md:relative md:inset-auto h-screen md:h-auto modal-content">
+        <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-2xl w-full h-screen sm:h-auto sm:max-h-[90vh] overflow-y-auto modal-content">
           {/* Header Image */}
           <div className="relative">
             <img

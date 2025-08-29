@@ -45,11 +45,11 @@ export function TabBar({
   ]
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 tab-bar-container border-t border-border-custom/30">
-      <div className="px-4 pt-2 pb-safe">
-        <nav className="flex items-center justify-center" aria-label="Tabs">
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-bg-primary border-t border-border-custom">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-safe">
+        <nav className="flex items-center justify-between" aria-label="Tabs">
           {/* Left tabs */}
-          <div className="flex items-center">
+          <div className="flex items-center justify-between flex-1">
             {leftTabs.map((tab) => (
               <IconTabButton
                 key={tab.id}
@@ -63,7 +63,7 @@ export function TabBar({
           </div>
           
           {/* Center action button */}
-          <div className="mx-6">
+          <div>
             <ActionButton
               onAddModel={onAddModel}
               onAddCollection={onAddCollection}
@@ -72,7 +72,7 @@ export function TabBar({
           </div>
           
           {/* Right tabs */}
-          <div className="flex items-center">
+          <div className="flex items-center justify-between flex-1">
             {rightTabs.map((tab) => (
               <IconTabButton
                 key={tab.id}
