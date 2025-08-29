@@ -45,7 +45,7 @@ export function TabBar({
   ]
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 tab-bar-container border-t border-border-custom/30 animate-tab-slide-in">
+    <div className="fixed bottom-0 left-0 right-0 z-40 tab-bar-container border-t border-border-custom/30">
       <div className="px-4 pt-2 pb-safe">
         <nav className="flex items-center justify-center" aria-label="Tabs">
           {/* Left tabs */}
@@ -57,7 +57,7 @@ export function TabBar({
                 label={tab.label}
                 isActive={activeTab === tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className="tab-button-ripple"
+                className=""
               />
             ))}
           </div>
@@ -80,7 +80,7 @@ export function TabBar({
                 label={tab.label}
                 isActive={activeTab === tab.id}
                 onClick={tab.id === 'soon' ? () => {} : () => onTabChange(tab.id)}
-                className="tab-button-ripple"
+                className=""
               />
             ))}
           </div>
