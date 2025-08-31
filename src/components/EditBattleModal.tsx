@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useRecentGames } from '../hooks/useRecentGames'
 import { GameDropdown } from './GameDropdown'
+import { RichTextEditor } from './RichTextEditor'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
 
@@ -16,6 +17,7 @@ interface Game {
 interface Battle {
   id: number
   battle_name: string | null
+  battle_notes: string | null
   date_played: string | null
   game_name: string | null
   game_uid: string | null
@@ -38,7 +40,11 @@ interface EditBattleModalProps {
 export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: EditBattleModalProps) {
   const [datePlayed, setDatePlayed] = useState('')
   const [opponentName, setOpponentName] = useState('')
+  const [battleNotes, setBattleNotes] = useState('')
   const [selectedGame, setSelectedGame] = useState('')
+  const [result, setResult] = useState('')
+  const [location, setLocation] = useState('')
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false)
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [showImageCropper, setShowImageCropper] = useState(false)
   const [imageForCropping, setImageForCropping] = useState<File | null>(null)
@@ -57,7 +63,10 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
     if (battle) {
       setDatePlayed(battle.date_played || '')
       setOpponentName(battle.opp_name || '')
+      setBattleNotes(battle.battle_notes || '')
       setSelectedGame(battle.game_uid || '')
+      setResult(battle.result || '')
+      setLocation('') // Location is not stored in database, so always start empty
       setCurrentImageUrl(battle.image_url)
       setSelectedImage(null) // Reset selected image when battle changes
     }
@@ -103,6 +112,28 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
     return games.filter(game => user.fav_games?.includes(game.id))
   }
 
+  const getPreviousLocations = (): string[] => {
+    try {
+      const stored = localStorage.getItem('battle-locations')
+      return stored ? JSON.parse(stored) : []
+    } catch {
+      return []
+    }
+  }
+
+  const addLocationToHistory = (newLocation: string) => {
+    if (!newLocation.trim()) return
+    
+    try {
+      const locations = getPreviousLocations()
+      const filteredLocations = locations.filter(loc => loc.toLowerCase() !== newLocation.toLowerCase())
+      const updatedLocations = [newLocation.trim(), ...filteredLocations].slice(0, 10) // Keep last 10
+      localStorage.setItem('battle-locations', JSON.stringify(updatedLocations))
+    } catch (error) {
+      console.error('Error saving location to history:', error)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -120,6 +151,11 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
 
     if (!selectedGame) {
       setError('Game is required')
+      return
+    }
+
+    if (!result) {
+      setError('Result is required')
       return
     }
 
@@ -171,6 +207,11 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
         }
       }
       
+      // Save location to history if provided
+      if (location.trim()) {
+        addLocationToHistory(location.trim())
+      }
+      
       const { error } = await supabase
         .from('battles')
         .update({
@@ -179,7 +220,9 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
           opp_name: opponentName.trim(),
           game_name: selectedGameData?.name || '',
           game_uid: selectedGame,
-          image_url: imageUrl
+          result: result,
+          image_url: imageUrl,
+          battle_notes: battleNotes.trim() || null
         })
         .eq('id', battle.id)
 
@@ -445,6 +488,19 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
     }
   }
 
+  // Close location dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element
+      if (!target.closest('#location') && !target.closest('.location-dropdown')) {
+        setShowLocationDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   if (!isOpen || !battle) return null
 
   return (
@@ -516,6 +572,77 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
             </div>
           </div>
 
+          {/* Result */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label htmlFor="result" className="block text-sm font-medium text-input-label font-overpass">
+                Result
+              </label>
+              <span className="text-sm text-gray-500">Required</span>
+            </div>
+            <select
+              id="result"
+              value={result}
+              onChange={(e) => setResult(e.target.value)}
+              className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text"
+              disabled={loading}
+            >
+              <option value="">Select result...</option>
+              <option value="I won">I won</option>
+              <option value={`${opponentName.trim() || 'Opponent'} won`}>
+                {opponentName.trim() || 'Opponent'} won
+              </option>
+              <option value="Draw">Draw</option>
+            </select>
+          </div>
+
+          {/* Location */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label htmlFor="location" className="block text-sm font-medium text-input-label font-overpass">
+                Location
+              </label>
+              <span className="text-sm text-gray-500">Optional</span>
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                id="location"
+                value={location}
+                onChange={(e) => {
+                  setLocation(e.target.value)
+                  setShowLocationDropdown(true)
+                }}
+                onFocus={() => setShowLocationDropdown(true)}
+                placeholder="Enter battle location..."
+                className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] placeholder-secondary-text bg-bg-primary text-text"
+                disabled={loading}
+              />
+              
+                             {/* Location Dropdown */}
+               {showLocationDropdown && getPreviousLocations().length > 0 && (
+                 <div className="absolute z-10 w-full mt-1 bg-bg-primary border border-border-custom rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                   {getPreviousLocations()
+                     .filter(loc => loc.toLowerCase().includes(location.toLowerCase()) || location === '')
+                     .map((prevLocation, index) => (
+                       <button
+                         key={index}
+                         type="button"
+                         onMouseDown={(e) => {
+                           e.preventDefault()
+                           setLocation(prevLocation)
+                           setShowLocationDropdown(false)
+                         }}
+                         className="w-full px-4 py-2 text-left hover:bg-bg-secondary text-text border-b border-border-custom last:border-b-0"
+                       >
+                         {prevLocation}
+                       </button>
+                     ))}
+                 </div>
+               )}
+            </div>
+          </div>
+
           {/* Game */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -530,6 +657,22 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
               onGameSelect={handleGameSelect}
               placeholder="Choose a Game"
               favoriteGames={getFavoriteGames()}
+            />
+          </div>
+
+          {/* Battle Notes */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-input-label font-overpass">
+                Battle Notes
+              </label>
+              <span className="text-sm text-gray-500">Optional</span>
+            </div>
+            <RichTextEditor
+              value={battleNotes}
+              onChange={(value) => setBattleNotes(value)}
+              placeholder="Optional notes about this battle..."
+              rows={4}
             />
           </div>
 

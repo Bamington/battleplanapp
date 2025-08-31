@@ -1,12 +1,15 @@
 import React, { useState } from 'react'
-import { X, Edit, Trash2, Calendar, User, Gamepad2, Trophy, Image } from 'lucide-react'
+import { X, Edit, Trash2, Calendar, User, Gamepad2, Trophy, Image, FileText } from 'lucide-react'
 import { DeleteBattleModal } from './DeleteBattleModal'
 import { EditBattleModal } from './EditBattleModal'
 import { formatLocalDate } from '../utils/timezone'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface Battle {
   id: number
   battle_name: string | null
+  battle_notes: string | null
   date_played: string | null
   game_name: string | null
   game_uid: string | null
@@ -215,6 +218,37 @@ export function ViewBattleModal({ isOpen, onClose, onBattleDeleted, onBattleUpda
                 </div>
               </div>
             </div>
+
+            {/* Battle Notes - only show if notes exist */}
+            {battle.battle_notes && (
+              <div className="bg-bg-secondary rounded-lg p-4">
+                <div className="flex items-center space-x-3 mb-3">
+                  <FileText className="w-5 h-5 text-icon" />
+                  <h3 className="text-lg font-semibold text-text">Battle Notes</h3>
+                </div>
+                <div className="prose prose-sm max-w-none text-text">
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      p: ({ children }) => <p className="mb-2 last:mb-0 text-base text-text">{children}</p>,
+                      h1: ({ children }) => <h1 className="text-base font-bold mb-2 text-text">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-text">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-base font-bold mb-1 text-text">{children}</h3>,
+                      ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                      li: ({ children }) => <li className="text-base text-text">{children}</li>,
+                      strong: ({ children }) => <strong className="font-semibold text-text">{children}</strong>,
+                      em: ({ children }) => <em className="italic text-text">{children}</em>,
+                      code: ({ children }) => <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                      pre: ({ children }) => <pre className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs font-mono overflow-x-auto mb-2">{children}</pre>,
+                      blockquote: ({ children }) => <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-3 italic mb-2 text-text">{children}</blockquote>,
+                    }}
+                  >
+                    {battle.battle_notes}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            )}
 
             {/* Created Date */}
             <div className="pt-4 border-t border-border-custom">

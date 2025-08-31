@@ -1,13 +1,14 @@
 import React from 'react'
-import { Package, Layers, Clock } from 'lucide-react'
+import { Package, Layers, Clock, Heart } from 'lucide-react'
 
 interface CollectionSubMenuProps {
-  activeView: 'recent' | 'collections' | 'models'
-  onViewChange: (view: 'recent' | 'collections' | 'models') => void
+  activeView: 'recent' | 'collections' | 'models' | 'wishlist'
+  onViewChange: (view: 'recent' | 'collections' | 'models' | 'wishlist') => void
+  isBetaTester?: boolean
 }
 
-export function CollectionSubMenu({ activeView, onViewChange }: CollectionSubMenuProps) {
-  const menuItems = [
+export function CollectionSubMenu({ activeView, onViewChange, isBetaTester = false }: CollectionSubMenuProps) {
+  const baseMenuItems = [
     {
       id: 'recent' as const,
       label: 'Recent',
@@ -25,11 +26,19 @@ export function CollectionSubMenu({ activeView, onViewChange }: CollectionSubMen
     }
   ]
 
+  const wishlistItem = {
+    id: 'wishlist' as const,
+    label: 'Wishlist',
+    icon: Heart
+  }
+
+  const menuItems = isBetaTester ? [...baseMenuItems, wishlistItem] : baseMenuItems
+
   return (
     <div className="bg-bg-secondary shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-center items-center py-2">
-          <div className="grid grid-cols-3 gap-8 w-full max-w-md">
+          <div className={`grid gap-6 w-full ${isBetaTester ? 'grid-cols-4 max-w-lg' : 'grid-cols-3 max-w-md'}`}>
             {menuItems.map((item) => {
               const Icon = item.icon
               const isActive = activeView === item.id

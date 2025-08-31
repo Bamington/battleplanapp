@@ -40,7 +40,7 @@ export function ManageUsersPage({ onBack }: ManageUsersPageProps) {
     isOpen: false,
     user: null
   })
-  const [roles, setRoles] = useState<{ id: number; role_name: string | null }[]>([])
+  const [roles, setRoles] = useState<{ id: number; role_name: string | null; users_assigned: string[] | null }[]>([])
 
   useEffect(() => {
     fetchUsers()
@@ -88,7 +88,7 @@ export function ManageUsersPage({ onBack }: ManageUsersPageProps) {
     try {
       const { data, error } = await supabase
         .from('roles')
-        .select('id, role_name')
+        .select('id, role_name, users_assigned')
         .order('role_name')
 
       if (error) throw error
@@ -119,13 +119,15 @@ export function ManageUsersPage({ onBack }: ManageUsersPageProps) {
     fetchUsers()
   }
 
-  const getUserRoleNames = (userRoles: string[] | null) => {
-    if (!userRoles || userRoles.length === 0) return []
-    return userRoles.map(roleId => {
-      const role = roles.find(r => r.id.toString() === roleId)
-      return role?.role_name || 'Unknown Role'
-    })
+  const getUserRoles = (userId: string) => {
+    // Get roles where this user is assigned
+    const userRoles = roles.filter(role => 
+      role.users_assigned && role.users_assigned.includes(userId)
+    ).map(role => role.role_name).filter(Boolean)
+    
+    return userRoles
   }
+
 
   if (loading) {
     return (
@@ -177,23 +179,21 @@ export function ManageUsersPage({ onBack }: ManageUsersPageProps) {
                       )}
                       
                       {/* User Roles and Location Admin Status */}
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {/* User Roles */}
-                        {user.user_roles && user.user_roles.length > 0 && 
-                          getUserRoleNames(user.user_roles).map((roleName, index) => (
+                      {getUserRoles(user.id).length > 0 || user.adminLocations.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {/* User Roles */}
+                          {getUserRoles(user.id).map((roleName, index) => (
                             <span
                               key={`role-${index}`}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
                             >
                               <Shield className="w-3 h-3 mr-1" />
                               {roleName}
                             </span>
-                          ))
-                        }
-                        
-                        {/* Location Admin Status */}
-                        {user.adminLocations.length > 0 && 
-                          user.adminLocations.map((location) => (
+                          ))}
+                          
+                          {/* Location Admin Status */}
+                          {user.adminLocations.map((location) => (
                             <span
                               key={`location-${location.id}`}
                               className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
@@ -201,9 +201,9 @@ export function ManageUsersPage({ onBack }: ManageUsersPageProps) {
                               <MapPin className="w-3 h-3 mr-1" />
                               {location.name}
                             </span>
-                          ))
-                        }
-                      </div>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -225,16 +225,16 @@ export function ManageUsersPage({ onBack }: ManageUsersPageProps) {
                       {user.is_admin ? 'Admin' : 'User'}
                     </span>
                   </div>
-                  {(user.adminLocations.length > 0 || (user.user_roles && user.user_roles.length > 0)) && (
+                  {(getUserRoles(user.id).length > 0 || user.adminLocations.length > 0) && (
                     <span className="text-xs text-secondary-text">
-                      {user.adminLocations.length > 0 && (
-                        <span>{user.adminLocations.length} location{user.adminLocations.length !== 1 ? 's' : ''} admin</span>
+                      {getUserRoles(user.id).length > 0 && (
+                        <span>{getUserRoles(user.id).length} role{getUserRoles(user.id).length !== 1 ? 's' : ''}</span>
                       )}
-                      {user.adminLocations.length > 0 && user.user_roles && user.user_roles.length > 0 && (
+                      {getUserRoles(user.id).length > 0 && user.adminLocations.length > 0 && (
                         <span> • </span>
                       )}
-                      {user.user_roles && user.user_roles.length > 0 && (
-                        <span>{user.user_roles.length} role{user.user_roles.length !== 1 ? 's' : ''}</span>
+                      {user.adminLocations.length > 0 && (
+                        <span>{user.adminLocations.length} location{user.adminLocations.length !== 1 ? 's' : ''} admin</span>
                       )}
                     </span>
                   )}
@@ -271,6 +271,17 @@ export function ManageUsersPage({ onBack }: ManageUsersPageProps) {
                     {user.is_admin ? 'Admin' : 'User'}
                   </span>
                   
+                  {/* Role Pills */}
+                  {getUserRoles(user.id).map((roleName, index) => (
+                    <span
+                      key={`role-${index}`}
+                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                    >
+                      <Shield className="w-3 h-3 mr-1" />
+                      {roleName}
+                    </span>
+                  ))}
+
                   {/* Location Admin Pills */}
                   {user.adminLocations.length > 0 && 
                     user.adminLocations.map((location) => (
@@ -284,18 +295,6 @@ export function ManageUsersPage({ onBack }: ManageUsersPageProps) {
                     ))
                   }
                   
-                  {/* Role Pills */}
-                  {user.user_roles && user.user_roles.length > 0 && 
-                    getUserRoleNames(user.user_roles).map((roleName, index) => (
-                      <span
-                        key={`role-${index}`}
-                        className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                      >
-                        <Shield className="w-3 h-3 mr-1" />
-                        {roleName}
-                      </span>
-                    ))
-                  }
                 </div>
                 
                 {/* Edit Button */}

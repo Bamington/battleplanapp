@@ -3,7 +3,7 @@ import { Sword, Plus, AlertTriangle } from 'lucide-react'
 import { BattleListItem } from './BattleListItem'
 import { ViewBattleModal } from './ViewBattleModal'
 import { DeleteBattleModal } from './DeleteBattleModal'
-import { NewBattleModal } from './NewBattleModal'
+
 import { EditBattleModal } from './EditBattleModal'
 import { useBattles } from '../hooks/useBattles'
 import { supabase } from '../lib/supabase'
@@ -34,7 +34,6 @@ export function BattlesPage({ onBack }: BattlesPageProps) {
     isOpen: false,
     battle: null
   })
-  const [newBattleModal, setNewBattleModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const { battles, loading, hasInitialized, refetch } = useBattles()
   
@@ -168,15 +167,7 @@ export function BattlesPage({ onBack }: BattlesPageProps) {
             <div className="text-center py-12">
               <Sword className="w-16 h-16 text-secondary-text mx-auto mb-4" />
               <p className="text-base text-secondary-text mb-4">No battles logged yet.</p>
-              <div className="flex justify-center">
-                <button 
-                  className="btn-primary"
-                  onClick={() => setNewBattleModal(true)}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Log Your First Battle
-                </button>
-              </div>
+              <p className="text-sm text-secondary-text">Use the action button in the tab bar to log your first battle.</p>
             </div>
           ) : (
             <>
@@ -194,17 +185,6 @@ export function BattlesPage({ onBack }: BattlesPageProps) {
                   ))}
                 </div>
               </div>
-              
-              {/* Add Battle FAB */}
-              <div className="fixed bottom-20 right-4 z-30">
-                <button
-                  onClick={() => setNewBattleModal(true)}
-                  className="bg-brand hover:bg-brand/90 text-white rounded-full p-4 shadow-lg transition-colors"
-                  title="Add New Battle"
-                >
-                  <Plus className="w-6 h-6" />
-                </button>
-              </div>
             </>
           )}
         </div>
@@ -217,11 +197,7 @@ export function BattlesPage({ onBack }: BattlesPageProps) {
         loading={deleting}
       />
 
-      <NewBattleModal
-        isOpen={newBattleModal}
-        onClose={() => setNewBattleModal(false)}
-        onBattleCreated={handleBattleCreated}
-      />
+
 
       <ViewBattleModal
         isOpen={viewBattleModal.isOpen}

@@ -454,7 +454,7 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
                                 p: ({ children }) => <p className="mb-1 last:mb-0 text-sm text-secondary-text">{children}</p>,
                                 h1: ({ children }) => <h1 className="text-sm font-bold mb-1 text-secondary-text">{children}</h1>,
                                 h2: ({ children }) => <h2 className="text-sm font-bold mb-1 text-secondary-text">{children}</h2>,
-                                h3: ({ children }) => <h3 className="text-xs font-bold mb-1 text-secondary-text">{children}</h3>,
+                                h3: ({ children }) => <h3 className="text-sm font-bold mb-1 text-secondary-text">{children}</h3>,
                                 ul: ({ children }) => <ul className="list-disc list-inside mb-1 space-y-0.5">{children}</ul>,
                                 ol: ({ children }) => <ol className="list-decimal list-inside mb-1 space-y-0.5">{children}</ol>,
                                 li: ({ children }) => <li className="text-sm text-secondary-text">{children}</li>,

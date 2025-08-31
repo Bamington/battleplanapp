@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, HelpCircle } from 'lucide-react'
+import { HelpCircle } from 'lucide-react'
 import { Header } from './components/Header'
 import { TabBar } from './components/TabBar'
 import { CollectionSubMenu } from './components/CollectionSubMenu'
@@ -17,10 +17,12 @@ import { TermsOfServicePage } from './components/TermsOfServicePage'
 import { AllBookingsPage } from './components/AllBookingsPage'
 import { BlockedDatesPage } from './components/BlockedDatesPage'
 import { BattlesPage } from './components/BattlesPage'
+import { WishlistPage } from './components/WishlistPage'
 import { ViewModelModal } from './components/ViewModelModal'
 import { ViewBoxModal } from './components/ViewBoxModal'
 import { PasswordResetModal } from './components/PasswordResetModal'
 import { NewBookingModal } from './components/NewBookingModal'
+import { NewBattleModal } from './components/NewBattleModal'
 import { AuthCallback } from './components/AuthCallback'
 
 import { useAuth } from './hooks/useAuth'
@@ -35,11 +37,8 @@ import { PublicModelView } from './components/PublicModelView'
 import { OnboardingModal } from './components/OnboardingModal'
 import { SettingsPage } from './components/SettingsPage'
 import { Footer } from './components/Footer'
-import { formatLocalDate } from './utils/timezone'
 
 function App() {
-  // Get the base path from Vite config
-  const basePath = import.meta.env.BASE_URL || '/'
   
   // Check if we're on the auth callback route
   const isAuthCallback = window.location.pathname.endsWith('/auth/callback')
@@ -92,7 +91,7 @@ function App() {
   }
 
   const [activeTab, setActiveTab] = useState('collection')
-  const [collectionView, setCollectionView] = useState<'recent' | 'models' | 'collections'>('recent')
+  const [collectionView, setCollectionView] = useState<'recent' | 'models' | 'collections' | 'wishlist'>('recent')
   const [currentPage, setCurrentPage] = useState(1)
   const [boxCurrentPage, setBoxCurrentPage] = useState(1)
   
@@ -115,6 +114,7 @@ function App() {
   const [addModelModal, setAddModelModal] = useState(false)
   const [addBoxModal, setAddBoxModal] = useState(false)
   const [showNewBookingModal, setShowNewBookingModal] = useState(false)
+  const [showNewBattleModal, setShowNewBattleModal] = useState(false)
   const [showAdminPage, setShowAdminPage] = useState(false)
   const [showSettingsPage, setShowSettingsPage] = useState(false)
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false)
@@ -135,7 +135,7 @@ function App() {
     box: null
   })
   
-  const { user, loading: authLoading, needsPasswordReset } = useAuth()
+  const { user, loading: authLoading, needsPasswordReset, isBetaTester } = useAuth()
   const { models, loading: modelsLoading, refetch: refetchModels } = useModels()
   const { boxes, loading: boxesLoading, refetch: refetchBoxes } = useBoxes()
 
@@ -511,6 +511,8 @@ function App() {
           onAddModel={() => setAddModelModal(true)}
           onAddCollection={() => setAddBoxModal(true)}
           onAddBooking={() => setShowNewBookingModal(true)}
+          onAddWishlist={() => setActiveTab('wishlist')}
+          isBetaTester={isBetaTester}
         />
       </div>
     )
@@ -538,6 +540,8 @@ function App() {
           onAddModel={() => setAddModelModal(true)}
           onAddCollection={() => setAddBoxModal(true)}
           onAddBooking={() => setShowNewBookingModal(true)}
+          onAddWishlist={() => setActiveTab('wishlist')}
+          isBetaTester={isBetaTester}
         />
       </div>
     )
@@ -563,6 +567,8 @@ function App() {
           onAddModel={() => setAddModelModal(true)}
           onAddCollection={() => setAddBoxModal(true)}
           onAddBooking={() => setShowNewBookingModal(true)}
+          onAddWishlist={() => setActiveTab('wishlist')}
+          isBetaTester={isBetaTester}
         />
       </div>
     )
@@ -594,6 +600,8 @@ function App() {
           onAddModel={() => setAddModelModal(true)}
           onAddCollection={() => setAddBoxModal(true)}
           onAddBooking={() => setShowNewBookingModal(true)}
+          onAddWishlist={() => setActiveTab('wishlist')}
+          isBetaTester={isBetaTester}
         />
       </div>
     )
@@ -619,6 +627,8 @@ function App() {
           onAddModel={() => setAddModelModal(true)}
           onAddCollection={() => setAddBoxModal(true)}
           onAddBooking={() => setShowNewBookingModal(true)}
+          onAddWishlist={() => setActiveTab('wishlist')}
+          isBetaTester={isBetaTester}
         />
       </div>
     )
@@ -647,6 +657,8 @@ function App() {
           onAddModel={() => setAddModelModal(true)}
           onAddCollection={() => setAddBoxModal(true)}
           onAddBooking={() => setShowNewBookingModal(true)}
+          onAddWishlist={() => setActiveTab('wishlist')}
+          isBetaTester={isBetaTester}
         />
         
 
@@ -670,6 +682,33 @@ function App() {
     )
   }
 
+  // Render Wishlist page
+  if (activeTab === 'wishlist') {
+    return (
+      <div className="min-h-screen bg-bg-secondary">
+        <Header 
+          onAddModel={() => setAddModelModal(true)} 
+          onAdminClick={handleAdminClick}
+          onSettingsClick={handleSettingsClick}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onLogoClick={handleLogoClick}
+        />
+        <WishlistPage />
+        <Footer />
+        <TabBar 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+          onAddModel={() => setAddModelModal(true)}
+          onAddCollection={() => setAddBoxModal(true)}
+          onAddBooking={() => setShowNewBookingModal(true)}
+          onAddWishlist={() => setActiveTab('wishlist')}
+          isBetaTester={isBetaTester}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-bg-secondary">
       <Header 
@@ -686,6 +725,7 @@ function App() {
         <CollectionSubMenu
           activeView={collectionView}
           onViewChange={setCollectionView}
+          isBetaTester={isBetaTester}
         />
       )}
       
@@ -1068,6 +1108,12 @@ function App() {
           )}
           </section>
         )}
+
+        {/* Wishlist View */}
+        {collectionView === 'wishlist' && isBetaTester && (
+          <WishlistPage />
+        )}
+
       </main>
 
       <Footer />
@@ -1077,7 +1123,15 @@ function App() {
         onTabChange={setActiveTab}
         onAddModel={() => setAddModelModal(true)}
         onAddCollection={() => setAddBoxModal(true)}
-        onAddBooking={() => setShowNewBookingModal(true)}
+                onAddBooking={() => setShowNewBookingModal(true)}
+        onAddWishlist={() => {}} // No-op since wishlist is now in collection sub-menu
+        onAddBattle={() => {
+          console.log('onAddBattle called from TabBar')
+          console.log('Current showNewBattleModal state:', showNewBattleModal)
+          setShowNewBattleModal(true)
+          console.log('setShowNewBattleModal(true) called')
+        }}
+        isBetaTester={isBetaTester}
       />
 
       <AuthModal
@@ -1141,6 +1195,14 @@ function App() {
         }}
       />
 
+      {/* Add New Battle Modal */}
+      <NewBattleModal
+        isOpen={showNewBattleModal}
+        onClose={() => setShowNewBattleModal(false)}
+        onBattleCreated={() => {
+          setShowNewBattleModal(false)
+        }}
+      />
 
       {/* Add onboarding modal */}
       <OnboardingModal

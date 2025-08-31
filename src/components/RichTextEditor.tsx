@@ -13,7 +13,7 @@ export function RichTextEditor({
   value, 
   onChange, 
   placeholder = "Enter text...", 
-  label = "Notes",
+  label,
   rows = 3 
 }: RichTextEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -44,11 +44,13 @@ export function RichTextEditor({
 
   return (
     <div>
-      <div className="mb-2">
-        <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
-          {label}
-        </label>
-      </div>
+      {label && (
+        <div className="mb-2">
+          <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
+            {label}
+          </label>
+        </div>
+      )}
 
 
 

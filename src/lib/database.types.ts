@@ -17,6 +17,7 @@ export type Database = {
       battles: {
         Row: {
           battle_name: string | null
+          battle_notes: string | null
           created_at: string
           date_played: string | null
           game_name: string | null
@@ -30,6 +31,7 @@ export type Database = {
         }
         Insert: {
           battle_name?: string | null
+          battle_notes?: string | null
           created_at?: string
           date_played?: string | null
           game_name?: string | null
@@ -43,6 +45,7 @@ export type Database = {
         }
         Update: {
           battle_name?: string | null
+          battle_notes?: string | null
           created_at?: string
           date_played?: string | null
           game_name?: string | null
@@ -342,6 +345,30 @@ export type Database = {
           },
         ]
       }
+      opponents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: number
+          opp_name: string | null
+          opp_rel_uuid: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          opp_name?: string | null
+          opp_rel_uuid?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          opp_name?: string | null
+          opp_rel_uuid?: string | null
+        }
+        Relationships: []
+      }
       roles: {
         Row: {
           booking_limit: number | null
@@ -461,6 +488,27 @@ export type Database = {
           ver_notes?: string | null
           ver_number?: number | null
           ver_title?: string | null
+        }
+        Relationships: []
+      }
+      wishlist: {
+        Row: {
+          created_at: string
+          id: number
+          item_name: string | null
+          user_uid: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          item_name?: string | null
+          user_uid?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          item_name?: string | null
+          user_uid?: string | null
         }
         Relationships: []
       }

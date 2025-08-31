@@ -5,6 +5,7 @@ import { formatLocalDate } from '../utils/timezone'
 interface Battle {
   id: number
   battle_name: string | null
+  battle_notes: string | null
   date_played: string | null
   game_name: string | null
   game_uid: string | null

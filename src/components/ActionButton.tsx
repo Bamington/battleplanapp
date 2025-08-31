@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Plus, Package, FolderPlus, CalendarPlus } from 'lucide-react'
+import { Plus, Package, FolderPlus, CalendarPlus, Heart, Sword } from 'lucide-react'
 
 interface ActionOption {
   id: string
@@ -12,14 +12,20 @@ interface ActionButtonProps {
   onAddModel: () => void
   onAddCollection: () => void
   onAddBooking: () => void
+  onAddWishlist?: () => void
+  onAddBattle?: () => void
   className?: string
+  isBetaTester?: boolean
 }
 
-export function ActionButton({ onAddModel, onAddCollection, onAddBooking, className = '' }: ActionButtonProps) {
+export function ActionButton({ onAddModel, onAddCollection, onAddBooking, onAddWishlist, onAddBattle, className = '', isBetaTester = false }: ActionButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const buttonRef = useRef<HTMLDivElement>(null)
 
-  const options: ActionOption[] = [
+  // Debug logging
+  console.log('ActionButton render:', { onAddBattle: !!onAddBattle, isBetaTester })
+
+  const baseOptions: ActionOption[] = [
     {
       id: 'model',
       label: 'Model',
@@ -48,6 +54,44 @@ export function ActionButton({ onAddModel, onAddCollection, onAddBooking, classN
       }
     }
   ]
+
+  // Add battle option if onAddBattle is provided
+  const battleOption: ActionOption = {
+    id: 'battle',
+    label: 'Battle',
+    icon: Sword,
+    onClick: () => {
+      console.log('Battle option clicked!')
+      console.log('onAddBattle function:', onAddBattle)
+      if (onAddBattle) {
+        console.log('Calling onAddBattle...')
+        onAddBattle()
+        console.log('onAddBattle called successfully')
+      } else {
+        console.log('onAddBattle is not provided')
+      }
+      setIsOpen(false)
+    }
+  }
+
+  const wishlistOption: ActionOption = {
+    id: 'wishlist',
+    label: 'Wishlist',
+    icon: Heart,
+    onClick: () => {
+      if (onAddWishlist) {
+        onAddWishlist()
+      }
+      setIsOpen(false)
+    }
+  }
+
+  // Include battle option if onAddBattle is provided
+  const optionsWithBattle = onAddBattle ? [...baseOptions, battleOption] : baseOptions
+  const options = isBetaTester && onAddWishlist ? [...optionsWithBattle, wishlistOption] : optionsWithBattle
+
+  // Debug logging for options
+  console.log('ActionButton options:', options.map(opt => opt.id))
 
   // Close menu when clicking outside
   useEffect(() => {

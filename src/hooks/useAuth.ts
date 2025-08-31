@@ -11,11 +11,13 @@ interface User {
   onboarded: boolean | null
   fav_games: string[] | null
   fav_locations: string[] | null
+  user_roles: string[] | null
 }
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isBetaTester, setIsBetaTester] = useState(false)
 
   const fetchUserProfile = async (session: any) => {
     console.log('fetchUserProfile called with session:', session ? 'exists' : 'null')
@@ -29,7 +31,7 @@ export function useAuth() {
       // Fetch user profile from users table
       const { data, error } = await supabase
         .from('users')
-        .select('is_admin, user_name_public, onboarded, fav_games, fav_locations')
+        .select('is_admin, user_name_public, onboarded, fav_games, fav_locations, user_roles')
         .eq('id', session.user.id)
         .single()
 
@@ -53,6 +55,7 @@ export function useAuth() {
         onboarded: data?.onboarded || false,
         fav_games: data?.fav_games || null,
         fav_locations: data?.fav_locations || null,
+        user_roles: data?.user_roles || null,
       })
     } catch (error) {
       console.error('Error fetching user profile:', error)
@@ -190,6 +193,50 @@ export function useAuth() {
   // Check if user needs to set a new password
   const needsPasswordReset = user && window.location.hash.includes('type=recovery')
 
+  // Helper function to check if user has a specific role (synchronous check)
+  const hasRole = (roleName: string) => {
+    // First check the user_roles field (legacy)
+    if (user?.user_roles?.includes(roleName)) {
+      return true
+    }
+    
+    // For now, return false for roles table check since it requires async
+    // This will be handled by the useEffect below
+    return false
+  }
+
+  // Check if user is a beta tester (synchronous check)
+  const isBetaTesterSync = hasRole('Beta Tester')
+
+  // Check for Beta Tester role in the roles table
+  useEffect(() => {
+    const checkBetaTesterRole = async () => {
+      if (!user?.id) {
+        setIsBetaTester(false)
+        return
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('roles')
+          .select('users_assigned')
+          .eq('role_name', 'Beta Tester')
+          .single()
+        
+        if (!error && data?.users_assigned) {
+          setIsBetaTester(data.users_assigned.includes(user.id))
+        } else {
+          setIsBetaTester(false)
+        }
+      } catch (error) {
+        console.error('Error checking Beta Tester role:', error)
+        setIsBetaTester(false)
+      }
+    }
+
+    checkBetaTesterRole()
+  }, [user?.id])
+
   return {
     user,
     loading,
@@ -200,5 +247,7 @@ export function useAuth() {
     resetPassword,
     updatePassword,
     needsPasswordReset,
+    hasRole,
+    isBetaTester: isBetaTester || isBetaTesterSync,
   }
 }

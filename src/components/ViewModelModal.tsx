@@ -527,12 +527,12 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
                         remarkPlugins={[remarkGfm]}
                         components={{
                           p: ({ children }) => <p className="mb-2 last:mb-0 text-base text-text">{children}</p>,
-                          h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-text">{children}</h1>,
+                          h1: ({ children }) => <h1 className="text-base font-bold mb-2 text-text">{children}</h1>,
                           h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-text">{children}</h2>,
-                          h3: ({ children }) => <h3 className="text-sm font-bold mb-1 text-text">{children}</h3>,
+                          h3: ({ children }) => <h3 className="text-base font-bold mb-1 text-text">{children}</h3>,
                           ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
                           ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
-                          li: ({ children }) => <li className="text-sm text-text">{children}</li>,
+                          li: ({ children }) => <li className="text-base text-text">{children}</li>,
                           strong: ({ children }) => <strong className="font-semibold text-text">{children}</strong>,
                           em: ({ children }) => <em className="italic text-text">{children}</em>,
                           code: ({ children }) => <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,

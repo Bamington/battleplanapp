@@ -1,5 +1,5 @@
 import React from 'react'
-import { Package, Calendar, Sword, HelpCircle } from 'lucide-react'
+import { Package, Calendar, Sword, Heart, HelpCircle } from 'lucide-react'
 import { IconTabButton } from './IconTabButton'
 import { ActionButton } from './ActionButton'
 
@@ -9,6 +9,9 @@ interface TabBarProps {
   onAddModel: () => void
   onAddCollection: () => void
   onAddBooking: () => void
+  onAddWishlist?: () => void
+  onAddBattle?: () => void
+  isBetaTester?: boolean
 }
 
 export function TabBar({ 
@@ -16,7 +19,10 @@ export function TabBar({
   onTabChange, 
   onAddModel, 
   onAddCollection, 
-  onAddBooking 
+  onAddBooking,
+  onAddWishlist,
+  onAddBattle,
+  isBetaTester = false
 }: TabBarProps) {
   const leftTabs = [
     {
@@ -68,22 +74,25 @@ export function TabBar({
               onAddModel={onAddModel}
               onAddCollection={onAddCollection}
               onAddBooking={onAddBooking}
+              onAddWishlist={onAddWishlist}
+              onAddBattle={onAddBattle}
+              isBetaTester={isBetaTester}
             />
           </div>
           
-          {/* Right tabs */}
-          <div className="flex items-center justify-between flex-1">
-            {rightTabs.map((tab) => (
-              <IconTabButton
-                key={tab.id}
-                icon={tab.icon}
-                label={tab.label}
-                isActive={activeTab === tab.id}
-                onClick={tab.id === 'soon' ? () => {} : () => onTabChange(tab.id)}
-                className=""
-              />
-            ))}
-          </div>
+                     {/* Right tabs */}
+           <div className="flex items-center justify-between flex-1">
+             {rightTabs.map((tab) => (
+               <IconTabButton
+                 key={tab.id}
+                 icon={tab.icon}
+                 label={tab.label}
+                 isActive={activeTab === tab.id}
+                 onClick={tab.id === 'soon' ? undefined : () => onTabChange(tab.id)}
+                 className={tab.id === 'soon' ? 'cursor-default opacity-50' : ''}
+               />
+             ))}
+           </div>
         </nav>
       </div>
     </div>

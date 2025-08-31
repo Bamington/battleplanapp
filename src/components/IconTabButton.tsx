@@ -5,14 +5,14 @@ interface IconTabButtonProps {
   icon: LucideIcon
   label: string
   isActive: boolean
-  onClick: () => void
+  onClick?: () => void
   className?: string
 }
 
 export function IconTabButton({ icon: Icon, label, isActive, onClick, className = '' }: IconTabButtonProps) {
   return (
     <button
-      onClick={onClick}
+      onClick={onClick || undefined}
       className={`
         relative flex flex-col items-center justify-center py-2 px-3
         transition-all duration-150 ease-out
