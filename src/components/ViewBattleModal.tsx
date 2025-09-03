@@ -5,6 +5,8 @@ import { EditBattleModal } from './EditBattleModal'
 import { formatLocalDate } from '../utils/timezone'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { useGameIcons } from '../hooks/useGameIcons'
+import { supabase } from '../lib/supabase'
 
 interface Battle {
   id: number
@@ -34,16 +36,10 @@ export function ViewBattleModal({ isOpen, onClose, onBattleDeleted, onBattleUpda
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
-
-  const isValidGameIcon = (iconUrl: string | null | undefined): boolean => {
-    return !!(iconUrl && 
-      typeof iconUrl === 'string' &&
-      iconUrl.trim() !== '' && 
-      iconUrl !== 'undefined' && 
-      iconUrl !== 'null' &&
-      iconUrl.startsWith('http') &&
-      iconUrl.includes('game-assets'))
-  }
+  const { getGameIcon, isValidGameIcon } = useGameIcons()
+  
+  // Get the game icon from cache using game_uid
+  const gameIcon = getGameIcon(battle?.game_uid)
 
   if (!isOpen || !battle) return null
 
@@ -138,15 +134,15 @@ export function ViewBattleModal({ isOpen, onClose, onBattleDeleted, onBattleUpda
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                              {/* Game */}
                <div className="flex items-center space-x-3 p-4 bg-bg-secondary rounded-lg">
-                 {isValidGameIcon(battle.game_icon) ? (
+                 {isValidGameIcon(gameIcon) ? (
                    <>
                      <img
-                       src={battle.game_icon || ''}
+                       src={gameIcon || ''}
                        alt={`${battle.game_name || 'Unknown Game'} icon`}
                        className="w-10 h-10 object-contain rounded flex-shrink-0"
                        onError={(e) => {
                          const target = e.target as HTMLImageElement
-                         console.warn('Game icon failed to load:', battle.game_icon, 'Falling back to letter icon')
+                         console.warn('Game icon failed to load:', gameIcon, 'Falling back to letter icon')
                          // Hide the broken image and show fallback
                          target.style.display = 'none'
                          const fallback = target.nextElementSibling as HTMLElement
@@ -271,16 +267,27 @@ export function ViewBattleModal({ isOpen, onClose, onBattleDeleted, onBattleUpda
       <DeleteBattleModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
+        battleName={battle.battle_name || undefined}
         onConfirm={async () => {
+          if (!battle) return
+          
           setDeleting(true)
           try {
-            // The actual delete logic is handled by the parent component
-            // This modal just triggers the callback
+            // Perform the actual deletion
+            const { error } = await supabase
+              .from('battles')
+              .delete()
+              .eq('id', battle.id)
+
+            if (error) throw error
+
+            // Call the callback to refresh the battles list
             onBattleDeleted?.()
             setShowDeleteModal(false)
             onClose()
           } catch (error) {
             console.error('Error deleting battle:', error)
+            // You could add error handling UI here
           } finally {
             setDeleting(false)
           }

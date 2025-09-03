@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Calendar, FileText, Hash, Image as ImageIcon, Package, Gamepad2, Trash2, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { useGames } from '../hooks/useGames';
 import { compressImage } from '../utils/imageCompression';
 import { ImageCropper } from './ImageCropper';
 import { GameDropdown } from './GameDropdown';
@@ -9,11 +10,6 @@ import { RichTextEditor } from './RichTextEditor';
 import { DatePicker } from './DatePicker';
 
 
-interface Game {
-  id: string;
-  name: string;
-  icon: string | null;
-}
 
 interface Model {
   id: string;
@@ -55,7 +51,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
   const [showImageCropper, setShowImageCropper] = useState(false);
   const [imageForCropping, setImageForCropping] = useState<File | null>(null);
   const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null);
-  const [games, setGames] = useState<Game[]>([]);
+  const { games } = useGames();
   const [deleteImage, setDeleteImage] = useState(false);
 
   useEffect(() => {
@@ -72,24 +68,6 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
     }
   }, [model]);
 
-  useEffect(() => {
-    const fetchGames = async () => {
-      const { data, error } = await supabase
-        .from('games')
-        .select('id, name, icon')
-        .order('name');
-
-      if (error) {
-        console.error('Error fetching games:', error);
-      } else {
-        setGames(data || []);
-      }
-    };
-
-    if (isOpen) {
-      fetchGames();
-    }
-  }, [isOpen]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

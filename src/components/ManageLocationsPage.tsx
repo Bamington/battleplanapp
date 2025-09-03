@@ -1,18 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { ArrowLeft, MapPin, Edit } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useLocations } from '../hooks/useLocations'
 import { EditLocationModal } from './EditLocationModal'
 import { useAuth } from '../hooks/useAuth'
 
-interface Location {
-  id: string
-  name: string
-  address: string
-  icon: string | null
-  tables: number
-  admins: string[]
-  created_at: string
-}
 
 interface ManageLocationsPageProps {
   onBack: () => void
@@ -20,7 +12,8 @@ interface ManageLocationsPageProps {
 }
 
 export function ManageLocationsPage({ onBack, isLocationAdmin = false }: ManageLocationsPageProps) {
-  const [locations, setLocations] = useState<Location[]>([])
+  const { locations: basicLocations, loading: basicLoading, error: basicError, refetch } = useLocations()
+  const [locations, setLocations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
@@ -33,11 +26,23 @@ export function ManageLocationsPage({ onBack, isLocationAdmin = false }: ManageL
   })
 
   useEffect(() => {
-    fetchLocations()
-  }, [])
+    fetchLocationsWithDetails()
+  }, [basicLocations, user, isLocationAdmin])
 
-  const fetchLocations = async () => {
+  const fetchLocationsWithDetails = async () => {
+    if (!basicLocations.length && basicLoading) {
+      setLoading(true)
+      return
+    }
+    
+    if (basicError) {
+      setError(basicError)
+      setLoading(false)
+      return
+    }
+    
     try {
+      // Get full location details with admin info since the basic hook doesn't include it
       let query = supabase
         .from('locations')
         .select('*')
@@ -67,7 +72,8 @@ export function ManageLocationsPage({ onBack, isLocationAdmin = false }: ManageL
   }
 
   const handleLocationUpdated = () => {
-    fetchLocations()
+    refetch() // Refetch the basic locations data
+    fetchLocationsWithDetails() // Also refetch the detailed data
     setEditModal({ isOpen: false, location: null })
   }
 

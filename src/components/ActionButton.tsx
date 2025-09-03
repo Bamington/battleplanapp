@@ -22,8 +22,6 @@ export function ActionButton({ onAddModel, onAddCollection, onAddBooking, onAddW
   const [isOpen, setIsOpen] = useState(false)
   const buttonRef = useRef<HTMLDivElement>(null)
 
-  // Debug logging
-  console.log('ActionButton render:', { onAddBattle: !!onAddBattle, isBetaTester })
 
   const baseOptions: ActionOption[] = [
     {
@@ -61,14 +59,8 @@ export function ActionButton({ onAddModel, onAddCollection, onAddBooking, onAddW
     label: 'Battle',
     icon: Sword,
     onClick: () => {
-      console.log('Battle option clicked!')
-      console.log('onAddBattle function:', onAddBattle)
       if (onAddBattle) {
-        console.log('Calling onAddBattle...')
         onAddBattle()
-        console.log('onAddBattle called successfully')
-      } else {
-        console.log('onAddBattle is not provided')
       }
       setIsOpen(false)
     }
@@ -90,8 +82,6 @@ export function ActionButton({ onAddModel, onAddCollection, onAddBooking, onAddW
   const optionsWithBattle = onAddBattle ? [...baseOptions, battleOption] : baseOptions
   const options = isBetaTester && onAddWishlist ? [...optionsWithBattle, wishlistOption] : optionsWithBattle
 
-  // Debug logging for options
-  console.log('ActionButton options:', options.map(opt => opt.id))
 
   // Close menu when clicking outside
   useEffect(() => {

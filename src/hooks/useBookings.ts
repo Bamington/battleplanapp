@@ -140,8 +140,6 @@ export function useBookings() {
      }
   }
 
-  // Debug logging
-  console.log('useBookings state:', { loading, hasInitialized, bookingsLength: bookings.length, authLoading })
 
   return { bookings, loading, error, hasInitialized, refetch: fetchBookings }
 }

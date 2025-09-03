@@ -1,26 +1,19 @@
 import React, { useState, useEffect } from 'react'
 import { ArrowLeft, Gamepad2, Edit } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useGames } from '../hooks/useGames'
+import { useGameIcons } from '../hooks/useGameIcons'
 import { EditGameModal } from './EditGameModal'
 
-interface Game {
-  id: string
-  name: string
-  manufacturer_id: string | null
-  image: string | null
-  icon: string | null
-  created_at: string
-  manufacturer?: {
-    name: string
-  }
-}
 
 interface ManageGamesPageProps {
   onBack: () => void
 }
 
 export function ManageGamesPage({ onBack }: ManageGamesPageProps) {
-  const [games, setGames] = useState<Game[]>([])
+  const { games: basicGames, loading: basicLoading, error: basicError, refetch, clearCache: clearGamesCache } = useGames()
+  const { refreshCache: refreshGameIconsCache } = useGameIcons()
+  const [games, setGames] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editModal, setEditModal] = useState<{
@@ -32,11 +25,23 @@ export function ManageGamesPage({ onBack }: ManageGamesPageProps) {
   })
 
   useEffect(() => {
-    fetchGames()
-  }, [])
+    fetchGamesWithManufacturer()
+  }, [basicGames])
 
-  const fetchGames = async () => {
+  const fetchGamesWithManufacturer = async () => {
+    if (!basicGames.length && basicLoading) {
+      setLoading(true)
+      return
+    }
+    
+    if (basicError) {
+      setError(basicError)
+      setLoading(false)
+      return
+    }
+    
     try {
+      // Get full game details with manufacturer info since the basic hook doesn't include it
       const { data, error } = await supabase
         .from('games')
         .select(`
@@ -61,8 +66,14 @@ export function ManageGamesPage({ onBack }: ManageGamesPageProps) {
     })
   }
 
-  const handleGameUpdated = () => {
-    fetchGames()
+  const handleGameUpdated = async () => {
+    // Clear caches first to ensure fresh data
+    clearGamesCache()
+    await refreshGameIconsCache()
+    
+    // Refetch data
+    refetch() // Refetch the basic games data
+    fetchGamesWithManufacturer() // Also refetch the detailed data
     setEditModal({ isOpen: false, game: null })
   }
 

@@ -2,12 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { X, MapPin, Calendar, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useLocations } from '../hooks/useLocations'
 
-interface Location {
-  id: string
-  name: string
-  address: string
-}
 
 interface NewBlockedDateModalProps {
   isOpen: boolean
@@ -16,39 +12,61 @@ interface NewBlockedDateModalProps {
 }
 
 export function NewBlockedDateModal({ isOpen, onClose, onBlockedDateCreated }: NewBlockedDateModalProps) {
-  const [locations, setLocations] = useState<Location[]>([])
+  const { locations: allLocations } = useLocations()
+  const [locations, setLocations] = useState<any[]>([])
   const [selectedLocation, setSelectedLocation] = useState<string>('')
   const [date, setDate] = useState<string>('')
   const [description, setDescription] = useState<string>('')
+  const [blockedTables, setBlockedTables] = useState<string>('')
+  const [blockAllTables, setBlockAllTables] = useState<boolean>(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
 
   useEffect(() => {
     if (isOpen) {
-      fetchLocations()
+      filterLocationsForUser()
       resetForm()
     }
-  }, [isOpen])
+  }, [isOpen, allLocations, user])
 
-  const fetchLocations = async () => {
+  const filterLocationsForUser = async () => {
+    if (!allLocations.length) return
+    
     try {
-      let query = supabase
-        .from('locations')
-        .select('id, name, address')
-        .order('name')
-
+      let filteredLocations = allLocations
+      
       // If user is location admin (but not full admin), only show locations they admin
       if (user?.is_location_admin && !user?.is_admin && user?.id) {
-        query = query.contains('admins', [user.id])
+        // We need to fetch the admins data for each location since the shared hook doesn't include it
+        const { data, error } = await supabase
+          .from('locations')
+          .select('id, admins')
+          .contains('admins', [user.id])
+          
+        if (error) throw error
+        
+        const adminLocationIds = new Set(data?.map(loc => loc.id) || [])
+        filteredLocations = allLocations.filter(loc => adminLocationIds.has(loc.id))
       }
-
-      const { data, error } = await query
-
-      if (error) throw error
-      setLocations(data || [])
+      
+      // Add tables information if not present in the shared hook data
+      const { data: tablesData, error: tablesError } = await supabase
+        .from('locations')
+        .select('id, tables')
+        .in('id', filteredLocations.map(loc => loc.id))
+        
+      if (tablesError) throw tablesError
+      
+      const tablesMap = new Map(tablesData?.map(loc => [loc.id, loc.tables]) || [])
+      const locationsWithTables = filteredLocations.map(loc => ({
+        ...loc,
+        tables: tablesMap.get(loc.id) || 0
+      }))
+      
+      setLocations(locationsWithTables)
     } catch (err) {
-      console.error('Error fetching locations:', err)
+      console.error('Error filtering locations:', err)
       setError('Failed to load locations')
     }
   }
@@ -57,6 +75,8 @@ export function NewBlockedDateModal({ isOpen, onClose, onBlockedDateCreated }: N
     setSelectedLocation('')
     setDate('')
     setDescription('')
+    setBlockedTables('')
+    setBlockAllTables(true)
     setError(null)
   }
 
@@ -66,6 +86,22 @@ export function NewBlockedDateModal({ isOpen, onClose, onBlockedDateCreated }: N
     if (!selectedLocation || !date) {
       setError('Please fill in all required fields')
       return
+    }
+
+    // Validate blocked tables if not blocking all
+    if (!blockAllTables) {
+      const selectedLocationData = locations.find(loc => loc.id === selectedLocation)
+      const blockedTablesNum = parseInt(blockedTables)
+      
+      if (!blockedTables || isNaN(blockedTablesNum) || blockedTablesNum < 1) {
+        setError('Please enter a valid number of tables to block')
+        return
+      }
+      
+      if (selectedLocationData && blockedTablesNum > selectedLocationData.tables) {
+        setError(`Cannot block more tables than available (${selectedLocationData.tables} total)`)
+        return
+      }
     }
 
     // Check if date is in the future
@@ -82,10 +118,13 @@ export function NewBlockedDateModal({ isOpen, onClose, onBlockedDateCreated }: N
     setError(null)
 
     try {
+      const blockedTablesValue = blockAllTables ? null : parseInt(blockedTables)
+      
       console.log('Submitting blocked date:', {
         location_id: selectedLocation,
         date,
-        description: description || null
+        description: description || null,
+        blocked_tables: blockedTablesValue
       })
 
       const { data, error } = await supabase
@@ -93,7 +132,8 @@ export function NewBlockedDateModal({ isOpen, onClose, onBlockedDateCreated }: N
         .insert({
           location_id: selectedLocation,
           date,
-          description: description || null
+          description: description || null,
+          blocked_tables: blockedTablesValue
         })
         .select()
 
@@ -189,6 +229,59 @@ export function NewBlockedDateModal({ isOpen, onClose, onBlockedDateCreated }: N
             </div>
           </div>
 
+          {/* Blocking Options */}
+          <div>
+            <label className="block text-sm font-medium text-text mb-3">
+              Blocking Options <span className="text-red-500">*</span>
+            </label>
+            <div className="space-y-3">
+              <div>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="blockingType"
+                    checked={blockAllTables}
+                    onChange={() => setBlockAllTables(true)}
+                    className="form-radio h-4 w-4 text-brand focus:ring-brand focus:ring-offset-0"
+                  />
+                  <span className="ml-2 text-text">Block all tables (no bookings allowed)</span>
+                </label>
+              </div>
+              <div>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="blockingType"
+                    checked={!blockAllTables}
+                    onChange={() => setBlockAllTables(false)}
+                    className="form-radio h-4 w-4 text-brand focus:ring-brand focus:ring-offset-0"
+                  />
+                  <span className="ml-2 text-text">Block specific number of tables</span>
+                </label>
+                {!blockAllTables && (
+                  <div className="mt-2 ml-6">
+                    <input
+                      type="number"
+                      value={blockedTables}
+                      onChange={(e) => setBlockedTables(e.target.value)}
+                      min="1"
+                      max={locations.find(loc => loc.id === selectedLocation)?.tables || 999}
+                      placeholder="Number of tables to block"
+                      disabled={loading}
+                      className="w-full px-3 py-2 border border-border-custom rounded-lg bg-bg-secondary text-text focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent disabled:opacity-50"
+                      required
+                    />
+                    {selectedLocation && (
+                      <p className="text-xs text-secondary-text mt-1">
+                        Total tables at this location: {locations.find(loc => loc.id === selectedLocation)?.tables || 'Unknown'}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-text mb-2">
@@ -219,7 +312,7 @@ export function NewBlockedDateModal({ isOpen, onClose, onBlockedDateCreated }: N
             </button>
             <button
               type="submit"
-              disabled={loading || !selectedLocation || !date}
+              disabled={loading || !selectedLocation || !date || (!blockAllTables && !blockedTables)}
               className="btn-primary btn-flex flex-1"
             >
               {loading ? 'Creating...' : 'Create Blocked Date'}

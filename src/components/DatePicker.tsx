@@ -49,6 +49,9 @@ export function DatePicker({
     if (value) {
       setSelectedDate(new Date(value))
       setCurrentMonth(new Date(value))
+    } else {
+      // Clear selected date when value is empty
+      setSelectedDate(null)
     }
   }, [value])
 

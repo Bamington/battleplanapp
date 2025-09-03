@@ -24,7 +24,7 @@ export function useBattles() {
   const [hasInitialized, setHasInitialized] = useState(false)
   const { user, loading: authLoading } = useAuth()
 
-  const fetchBattles = async () => {
+  const fetchBattles = async (isRefetch = false) => {
     // Show loading while auth is loading
     if (authLoading) {
       setLoading(true)
@@ -40,15 +40,19 @@ export function useBattles() {
     }
 
     const startTime = Date.now()
-    const minLoadingTime = 500 // Minimum 500ms loading time for better UX
+    // Only apply minimum loading time for initial loads, not refetches
+    const minLoadingTime = isRefetch ? 0 : 500
 
     try {
-      setLoading(true)
+      // Only show loading for initial loads, not refetches
+      if (!isRefetch) {
+        setLoading(true)
+      }
       
       const { data, error } = await supabase
         .from('battles')
         .select('*')
-        .eq('user_id', user.id) // Filter by user_id for proper isolation
+        .eq('user_id', user.id)
         .order('date_played', { ascending: false, nullsLast: true })
         .order('created_at', { ascending: false })
 
@@ -56,49 +60,21 @@ export function useBattles() {
         console.error('Error fetching battles:', error)
         setBattles([])
       } else {
-        // Fetch game icons for battles that have game_uid
-        const battlesWithIcons = await Promise.all(
-          (data || []).map(async (battle) => {
-            if (battle.game_uid) {
-              try {
-                const { data: gameData } = await supabase
-                  .from('games')
-                  .select('icon')
-                  .eq('id', battle.game_uid)
-                  .single()
-                
-                return {
-                  ...battle,
-                  game_icon: gameData?.icon || null
-                }
-              } catch (gameError) {
-                console.warn('Failed to fetch game icon for battle:', battle.id, gameError)
-                return {
-                  ...battle,
-                  game_icon: null
-                }
-              }
-            } else {
-              return {
-                ...battle,
-                game_icon: null
-              }
-            }
-          })
-        )
-        
-        setBattles(battlesWithIcons)
+        setBattles(data || [])
       }
     } catch (error) {
       console.error('Error fetching battles:', error)
       setBattles([])
     } finally {
-      // Ensure minimum loading time for better UX
+      // Ensure minimum loading time for better UX (only for initial loads)
       const elapsedTime = Date.now() - startTime
       const remainingTime = Math.max(0, minLoadingTime - elapsedTime)
       
       setTimeout(() => {
-        setLoading(false)
+        // Only change loading state if this is not a refetch or if loading was true
+        if (!isRefetch) {
+          setLoading(false)
+        }
         setHasInitialized(true)
       }, remainingTime)
     }
@@ -109,11 +85,9 @@ export function useBattles() {
   }, [user, authLoading])
 
   const refetch = () => {
-    fetchBattles()
+    fetchBattles(true) // Pass true to indicate this is a refetch
   }
 
-  // Debug logging
-  console.log('useBattles state:', { loading, hasInitialized, battlesLength: battles.length, authLoading })
 
   return {
     battles,

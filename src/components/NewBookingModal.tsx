@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { GameDropdown } from './GameDropdown'
 import { useRecentGames } from '../hooks/useRecentGames'
+import { useGames } from '../hooks/useGames'
+import { useLocations } from '../hooks/useLocations'
 import { DatePicker } from './DatePicker'
 import { getTodayLocalDate } from '../utils/timezone'
 
@@ -39,9 +41,9 @@ interface NewBookingModalProps {
 }
 
 export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelectedLocation = '', onLocationSelected }: NewBookingModalProps) {
-  const [locations, setLocations] = useState<Location[]>([])
+  const { games } = useGames()
+  const { locations } = useLocations()
   const [timeslots, setTimeslots] = useState<Timeslot[]>([])
-  const [games, setGames] = useState<Game[]>([])
   const [selectedLocation, setSelectedLocation] = useState(lastSelectedLocation)
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTimeslot, setSelectedTimeslot] = useState('')
@@ -53,7 +55,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
   const [checkingBookingLimit, setCheckingBookingLimit] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [blockedDateInfo, setBlockedDateInfo] = useState<{ description: string | null } | null>(null)
+  const [blockedDateInfo, setBlockedDateInfo] = useState<{ description: string | null, blocked_tables: number | null } | null>(null)
   const [checkingBlockedDate, setCheckingBlockedDate] = useState(false)
   const { user } = useAuth()
   const { recentGames, addRecentGame } = useRecentGames()
@@ -93,8 +95,6 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
 
   useEffect(() => {
     if (isOpen) {
-      fetchLocations()
-      fetchGames()
       checkCurrentBookings()
       // Set the last selected location when modal opens, prioritizing localStorage
       const savedLocation = getLastSelectedLocation()
@@ -135,9 +135,9 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
     }
   }, [selectedLocation, selectedDate])
 
-  // Clear timeslot when date becomes blocked
+  // Clear timeslot when date becomes fully blocked (all tables blocked)
   useEffect(() => {
-    if (blockedDateInfo) {
+    if (blockedDateInfo && blockedDateInfo.blocked_tables === null) {
       setSelectedTimeslot('')
     }
   }, [blockedDateInfo])
@@ -158,10 +158,10 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
     try {
       console.log('Checking blocked date for:', { selectedLocation, selectedDate })
       
-      // Try a simpler query first to test table access
+      // Query blocked dates with new blocked_tables field
       const { data, error } = await supabase
         .from('blocked_dates')
-        .select('description')
+        .select('description, blocked_tables')
         .eq('location_id', selectedLocation)
         .eq('date', selectedDate)
 
@@ -177,7 +177,10 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
       // Check if we found any blocked dates
       if (data && data.length > 0) {
         console.log('Found blocked date:', data[0])
-        setBlockedDateInfo({ description: data[0].description })
+        setBlockedDateInfo({ 
+          description: data[0].description, 
+          blocked_tables: data[0].blocked_tables 
+        })
       } else {
         console.log('No blocked date found for this location/date')
         setBlockedDateInfo(null)
@@ -266,7 +269,16 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
         bookedTables = regularBookings + allDayBookings
       }
       
-      const available = totalTables - bookedTables
+      // Subtract blocked tables from total available tables
+      let effectiveTotalTables = totalTables
+      if (blockedDateInfo && blockedDateInfo.blocked_tables !== null) {
+        effectiveTotalTables = totalTables - blockedDateInfo.blocked_tables
+      } else if (blockedDateInfo && blockedDateInfo.blocked_tables === null) {
+        // All tables are blocked
+        effectiveTotalTables = 0
+      }
+      
+      const available = effectiveTotalTables - bookedTables
 
       setAvailableTables(Math.max(0, available))
     } catch (err) {
@@ -301,19 +313,6 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
     }
   }
 
-  const fetchLocations = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .order('name')
-
-      if (error) throw error
-      setLocations(data || [])
-    } catch (err) {
-      console.error('Error fetching locations:', err)
-    }
-  }
 
   const fetchTimeslots = async () => {
     try {
@@ -338,19 +337,6 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
     }
   }
 
-  const fetchGames = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('games')
-        .select('id, name, icon')
-        .order('name')
-
-      if (error) throw error
-      setGames(data || [])
-    } catch (err) {
-      console.error('Error fetching games:', err)
-    }
-  }
 
   const getFavoriteGames = () => {
     if (!user?.fav_games || user.fav_games.length === 0) return []
@@ -452,7 +438,8 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
     }
   }
 
-  const isFormValid = selectedLocation && selectedDate && selectedTimeslot && userNameInput.trim() && currentBookingCount < 4 && !blockedDateInfo
+  const isDateFullyBlocked = blockedDateInfo && blockedDateInfo.blocked_tables === null
+  const isFormValid = selectedLocation && selectedDate && selectedTimeslot && userNameInput.trim() && currentBookingCount < 4 && !isDateFullyBlocked
 
   if (!isOpen) return null
 
@@ -466,17 +453,17 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50 modal-container"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 modal-container"
       onClick={handleBackdropClick}
     >
-      <div className={`bg-modal-bg rounded-none sm:rounded-lg max-w-lg w-full h-screen sm:h-auto sm:max-h-[90vh] flex flex-col transition-all duration-300 ease-out transform
+      <div className={`bg-modal-bg rounded-none sm:rounded-lg max-w-lg w-full h-screen sm:h-auto sm:max-h-[90vh] flex flex-col transition-all duration-300 ease-out transform p-6
         ${isOpen 
           ? 'translate-y-0 opacity-100' 
           : 'translate-y-full opacity-0'
         }`}>
         
         {/* Header - Fixed at top with shadow */}
-        <div className="flex items-center justify-between mb-6 flex-shrink-0 p-6 pb-4 shadow-sm bg-modal-bg rounded-t-lg">
+        <div className="flex items-center justify-between mb-6 flex-shrink-0 pb-4 shadow-sm bg-modal-bg rounded-t-lg">
           <h2 className="text-xl font-semibold text-text font-overpass">
             New Booking
           </h2>
@@ -618,13 +605,27 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
                 <span className="text-blue-700 text-sm font-medium">Checking date availability...</span>
               </div>
             </div>
-          ) : blockedDateInfo ? (
+          ) : isDateFullyBlocked ? (
             <div className="p-4 rounded-lg border bg-red-50 border-red-200">
               <div className="flex items-start space-x-2">
                 <span className="text-red-700 text-sm font-medium">🚫 Location Unavailable</span>
               </div>
               <p className="text-red-600 text-sm mt-1">
-                This location is blocked on the selected date.
+                This location is completely blocked on the selected date.
+                {blockedDateInfo?.description && (
+                  <span className="block mt-1">
+                    <strong>Reason:</strong> {blockedDateInfo.description}
+                  </span>
+                )}
+              </p>
+            </div>
+          ) : blockedDateInfo && blockedDateInfo.blocked_tables !== null ? (
+            <div className="p-4 rounded-lg border bg-yellow-50 border-yellow-200">
+              <div className="flex items-start space-x-2">
+                <span className="text-yellow-700 text-sm font-medium">⚠️ Limited Availability</span>
+              </div>
+              <p className="text-yellow-600 text-sm mt-1">
+                {blockedDateInfo.blocked_tables} table{blockedDateInfo.blocked_tables !== 1 ? 's are' : ' is'} blocked on this date.
                 {blockedDateInfo.description && (
                   <span className="block mt-1">
                     <strong>Reason:</strong> {blockedDateInfo.description}
@@ -640,8 +641,8 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
             </div>
           )}
 
-          {/* Table Availability Banner - Only show if date is not blocked */}
-          {!blockedDateInfo && selectedLocation && selectedDate && selectedTimeslot && (
+          {/* Table Availability Banner - Only show if date is not fully blocked */}
+          {!isDateFullyBlocked && selectedLocation && selectedDate && selectedTimeslot && (
             <div className={`p-4 rounded-lg border ${
               checkingAvailability 
                 ? 'bg-blue-50 border-blue-200' 
@@ -677,9 +678,9 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
           <div className="flex flex-col space-y-3">
           <button
             type="submit"
-            disabled={!isFormValid || loading || availableTables === 0 || currentBookingCount >= 4 || blockedDateInfo}
+            disabled={!isFormValid || loading || availableTables === 0 || currentBookingCount >= 4 || isDateFullyBlocked}
             className={`btn-full ${
-              isFormValid && !loading && availableTables !== 0 && currentBookingCount < 4 && !blockedDateInfo
+              isFormValid && !loading && availableTables !== 0 && currentBookingCount < 4 && !isDateFullyBlocked
                 ? 'btn-primary'
                 : 'btn-disabled'
             }`}
@@ -688,7 +689,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
             {loading ? 'Creating Booking...' : 
              currentBookingCount >= 4 ? 'Booking Limit Reached' :
              availableTables === 0 ? 'No Tables Available' : 
-             blockedDateInfo ? 'Location Unavailable' :
+             isDateFullyBlocked ? 'Location Unavailable' :
              'Confirm Booking'}
           </button>
           <button

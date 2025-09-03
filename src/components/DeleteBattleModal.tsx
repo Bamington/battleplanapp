@@ -1,64 +1,61 @@
 import React from 'react'
-import { X, AlertTriangle } from 'lucide-react'
+import { X } from 'lucide-react'
 
 interface DeleteBattleModalProps {
   isOpen: boolean
   onClose: () => void
   onConfirm: () => void
+  battleName?: string
   loading?: boolean
 }
 
-export function DeleteBattleModal({ isOpen, onClose, onConfirm, loading = false }: DeleteBattleModalProps) {
+export function DeleteBattleModal({ isOpen, onClose, onConfirm, battleName, loading = false }: DeleteBattleModalProps) {
   if (!isOpen) return null
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose()
+    }
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center modal-container">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black bg-opacity-50"
-        onClick={onClose}
-      />
-      
-      {/* Modal */}
-      <div className="relative bg-bg-primary rounded-lg shadow-lg max-w-md w-full mx-4 modal-content">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border-custom">
-          <div className="flex items-center space-x-3">
-            <AlertTriangle className="w-6 h-6 text-red-500" />
-            <h2 className="text-xl font-semibold text-title">Delete Battle</h2>
-          </div>
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50"
+      onClick={handleBackdropClick}
+    >
+      <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-md w-full p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-title">
+            Are you sure you want to delete {battleName ? `"${battleName}"` : 'this battle'}?
+          </h2>
           <button
             onClick={onClose}
-            className="text-secondary-text hover:text-text transition-colors"
+            className="text-secondary-text hover:text-text"
             disabled={loading}
           >
             <X className="w-6 h-6" />
           </button>
         </div>
-        
-        {/* Content */}
-        <div className="p-6">
-          <p className="text-base text-secondary-text mb-6">
-            Are you sure you want to delete this battle? This action cannot be undone.
-          </p>
-          
-          {/* Actions */}
-          <div className="flex space-x-3 modal-actions">
-            <button
-              onClick={onClose}
-              className="flex-1 btn-secondary"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={onConfirm}
-              className="flex-1 btn-danger"
-              disabled={loading}
-            >
-              {loading ? 'Deleting...' : 'Delete Battle'}
-            </button>
-          </div>
+
+        <p className="text-base text-secondary-text mb-6">
+          This cannot be undone. If you've added images or notes, these will be deleted as well.
+        </p>
+
+        <div className="flex space-x-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="btn-ghost btn-flex"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="btn-danger btn-flex"
+          >
+            {loading ? 'Deleting...' : 'Delete Battle'}
+          </button>
         </div>
       </div>
     </div>

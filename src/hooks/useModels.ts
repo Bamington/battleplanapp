@@ -75,9 +75,9 @@ export function useModels() {
             id,
             name,
             purchase_date,
-            game:games(id, name, icon, image)
+            game:games(id, name, icon)
           ),
-          game:games(id, name, icon, image)
+          game:games(id, name, icon)
         `)
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false })

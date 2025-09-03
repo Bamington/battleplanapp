@@ -6,7 +6,13 @@ import { SearchResultsModal } from './SearchResultsModal'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from './Button'
 
-export function WishlistPage() {
+interface WishlistPageProps {
+  showAddModal?: boolean
+  onCloseAddModal?: () => void
+  onAddItemSuccess?: () => void
+}
+
+export function WishlistPage({ showAddModal = false, onCloseAddModal, onAddItemSuccess }: WishlistPageProps = {}) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -118,9 +124,22 @@ export function WishlistPage() {
 
       {/* Add Item Modal */}
       <AddWishlistItemModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSuccess={refetch}
+        isOpen={showAddModal || isAddModalOpen}
+        onClose={() => {
+          if (onCloseAddModal) {
+            onCloseAddModal()
+          } else {
+            setIsAddModalOpen(false)
+          }
+        }}
+        onSuccess={() => {
+          refetch()
+          if (onAddItemSuccess) {
+            onAddItemSuccess()
+          } else {
+            setIsAddModalOpen(false)
+          }
+        }}
       />
 
       {/* Search Results Modal */}

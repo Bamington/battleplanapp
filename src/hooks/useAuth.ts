@@ -14,6 +14,14 @@ interface User {
   user_roles: string[] | null
 }
 
+// Cache for user roles and admin status
+let userRolesCache: { [userId: string]: { 
+  isLocationAdmin: boolean
+  isBetaTester: boolean
+  cacheTime: number 
+}} = {}
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -28,25 +36,55 @@ export function useAuth() {
     }
 
     try {
+      const userId = session.user.id
+      const cached = userRolesCache[userId]
+      const now = Date.now()
+
       // Fetch user profile from users table
       const { data, error } = await supabase
         .from('users')
         .select('is_admin, user_name_public, onboarded, fav_games, fav_locations, user_roles')
-        .eq('id', session.user.id)
+        .eq('id', userId)
         .single()
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching user profile:', error)
       }
 
-      // Check if user is a location admin
-      const { data: locationAdminData, error: locationAdminError } = await supabase
-        .from('locations')
-        .select('id')
-        .contains('admins', [session.user.id])
-        .limit(1)
+      let isLocationAdmin = false
+      let betaTesterStatus = false
 
-      const isLocationAdmin = !locationAdminError && locationAdminData && locationAdminData.length > 0
+      // Check cache first
+      if (cached && now < cached.cacheTime + CACHE_DURATION) {
+        isLocationAdmin = cached.isLocationAdmin
+        betaTesterStatus = cached.isBetaTester
+      } else {
+        // Fetch both location admin status and beta tester role in parallel
+        const [locationAdminResult, betaTesterResult] = await Promise.all([
+          supabase
+            .from('locations')
+            .select('id')
+            .contains('admins', [userId])
+            .limit(1),
+          supabase
+            .from('roles')
+            .select('users_assigned')
+            .eq('role_name', 'Beta Tester')
+            .single()
+        ])
+
+        isLocationAdmin = !locationAdminResult.error && locationAdminResult.data && locationAdminResult.data.length > 0
+        betaTesterStatus = !betaTesterResult.error && betaTesterResult.data?.users_assigned?.includes(userId) || false
+
+        // Update cache
+        userRolesCache[userId] = {
+          isLocationAdmin,
+          isBetaTester: betaTesterStatus,
+          cacheTime: now
+        }
+      }
+
+      setIsBetaTester(betaTesterStatus)
       setUser({
         ...session.user,
         is_admin: data?.is_admin || false,
@@ -208,34 +246,6 @@ export function useAuth() {
   // Check if user is a beta tester (synchronous check)
   const isBetaTesterSync = hasRole('Beta Tester')
 
-  // Check for Beta Tester role in the roles table
-  useEffect(() => {
-    const checkBetaTesterRole = async () => {
-      if (!user?.id) {
-        setIsBetaTester(false)
-        return
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('roles')
-          .select('users_assigned')
-          .eq('role_name', 'Beta Tester')
-          .single()
-        
-        if (!error && data?.users_assigned) {
-          setIsBetaTester(data.users_assigned.includes(user.id))
-        } else {
-          setIsBetaTester(false)
-        }
-      } catch (error) {
-        console.error('Error checking Beta Tester role:', error)
-        setIsBetaTester(false)
-      }
-    }
-
-    checkBetaTesterRole()
-  }, [user?.id])
 
   return {
     user,

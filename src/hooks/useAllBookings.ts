@@ -72,8 +72,9 @@ export function useAllBookings() {
         `)
 
       // If user is location admin (but not full admin), filter by their locations
+      // Note: is_location_admin is already computed and cached in useAuth hook
       if (user?.is_location_admin && !user?.is_admin && user?.id) {
-        // First get the locations this user is admin of
+        // Get the locations this user is admin of
         const { data: userLocations, error: locationsError } = await supabase
           .from('locations')
           .select('id')

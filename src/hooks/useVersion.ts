@@ -21,7 +21,7 @@ export function useVersion() {
 
       const { data, error: fetchError } = await supabase
         .from('version')
-        .select('*')
+        .select('id, ver_number, created_at, ver_notes')
         .order('created_at', { ascending: false })
         .limit(1)
 

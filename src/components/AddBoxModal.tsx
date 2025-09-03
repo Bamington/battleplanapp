@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { X, Calendar, DollarSign, Image, Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useGames } from '../hooks/useGames'
 import { GameDropdown } from './GameDropdown'
 import { useRecentGames } from '../hooks/useRecentGames'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
@@ -9,11 +10,6 @@ import { ImageCropper } from './ImageCropper'
 import { ImageSearchResults } from './ImageSearchResults'
 import { Button } from './Button'
 
-interface Game {
-  id: string
-  name: string
-  icon: string | null
-}
 
 interface AddBoxModalProps {
   isOpen: boolean
@@ -31,7 +27,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
   const [selectedImages, setSelectedImages] = useState<FileList | null>(null)
   const [showImageCropper, setShowImageCropper] = useState(false)
   const [imageForCropping, setImageForCropping] = useState<File | null>(null)
-  const [games, setGames] = useState<Game[]>([])
+  const { games } = useGames()
   const [loading, setLoading] = useState(false)
   const [compressing, setCompressing] = useState(false)
   const [error, setError] = useState('')
@@ -63,25 +59,6 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
     }
   }, [isOpen])
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchGames()
-    }
-  }, [isOpen])
-
-  const fetchGames = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('games')
-        .select('id, name, icon')
-        .order('name')
-
-      if (error) throw error
-      setGames(data || [])
-    } catch (err) {
-      console.error('Error fetching games:', err)
-    }
-  }
 
   const getFavoriteGames = () => {
     if (!user?.fav_games || user.fav_games.length === 0) return []
@@ -662,7 +639,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50 modal-container"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 modal-container"
       onClick={handleBackdropClick}
     >
       <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-lg w-full modal-content h-screen sm:h-auto sm:max-h-[90vh] flex flex-col">

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { HelpCircle } from 'lucide-react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { HelpCircle, Settings } from 'lucide-react'
 import { Header } from './components/Header'
 import { TabBar } from './components/TabBar'
 import { CollectionSubMenu } from './components/CollectionSubMenu'
@@ -23,11 +23,13 @@ import { ViewBoxModal } from './components/ViewBoxModal'
 import { PasswordResetModal } from './components/PasswordResetModal'
 import { NewBookingModal } from './components/NewBookingModal'
 import { NewBattleModal } from './components/NewBattleModal'
+import { RecentViewSettingsModal, RecentViewSettings } from './components/RecentViewSettingsModal'
 import { AuthCallback } from './components/AuthCallback'
 
 import { useAuth } from './hooks/useAuth'
 import { useModels } from './hooks/useModels'
 import { useBoxes } from './hooks/useBoxes'
+import { useGameIcons } from './hooks/useGameIcons'
 import { supabase } from './lib/supabase'
 import { getBuildInfo } from './utils/buildTimestamp'
 import { ModelFilters } from './components/ModelFilters'
@@ -115,6 +117,22 @@ function App() {
   const [addBoxModal, setAddBoxModal] = useState(false)
   const [showNewBookingModal, setShowNewBookingModal] = useState(false)
   const [showNewBattleModal, setShowNewBattleModal] = useState(false)
+  const [battlesRefetch, setBattlesRefetch] = useState<(() => void) | null>(null)
+  
+  // Stable callback to avoid infinite re-renders
+  const handleBattlesRefetchReady = useCallback((refetchFn: () => void) => {
+    setBattlesRefetch(() => refetchFn)
+  }, [])
+  const [showAddWishlistModal, setShowAddWishlistModal] = useState(false)
+  const [showRecentViewSettingsModal, setShowRecentViewSettingsModal] = useState(false)
+  const [recentViewSettings, setRecentViewSettings] = useState<RecentViewSettings>({
+    showPainted: true,
+    showPartiallyPainted: true,
+    showPrimed: true,
+    showAssembled: true,
+    showUnassembled: false,
+    sortOrder: 'mostRecentlyPainted'
+  })
   const [showAdminPage, setShowAdminPage] = useState(false)
   const [showSettingsPage, setShowSettingsPage] = useState(false)
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false)
@@ -136,6 +154,9 @@ function App() {
   })
   
   const { user, loading: authLoading, needsPasswordReset, isBetaTester } = useAuth()
+  
+  // Initialize game icons cache on app startup
+  useGameIcons()
   const { models, loading: modelsLoading, refetch: refetchModels } = useModels()
   const { boxes, loading: boxesLoading, refetch: refetchBoxes } = useBoxes()
 
@@ -227,22 +248,50 @@ function App() {
     return true
   })
 
-  // For Recent view, show only painted models sorted by painted date (most recent first), then by creation date
+  // For Recent view, filter models based on settings and apply sorting
   const recentModels = models
-    .filter(model => model.status === 'Painted')
+    .filter(model => {
+      // Filter by painted status based on settings
+      switch (model.status) {
+        case 'Painted':
+          return recentViewSettings.showPainted
+        case 'Partially Painted':
+          return recentViewSettings.showPartiallyPainted
+        case 'Primed':
+          return recentViewSettings.showPrimed
+        case 'Assembled':
+          return recentViewSettings.showAssembled
+        case 'None':
+        case 'Unassembled':
+        default:
+          return recentViewSettings.showUnassembled
+      }
+    })
     .sort((a, b) => {
-      // If both models have painted dates, sort by painted date (most recent first)
-      if (a.painted_date && b.painted_date) {
-        return new Date(b.painted_date).getTime() - new Date(a.painted_date).getTime()
+      if (recentViewSettings.sortOrder === 'mostRecentlyAdded') {
+        // Sort by creation date (most recent first)
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      } else {
+        // Sort by painted date (most recent first), fallback to creation date
+        if (a.painted_date && b.painted_date) {
+          return new Date(b.painted_date).getTime() - new Date(a.painted_date).getTime()
+        }
+        // If only one has a painted date, prioritize the one with painted date
+        if (a.painted_date && !b.painted_date) {
+          return -1
+        }
+        if (!a.painted_date && b.painted_date) {
+          return 1
+        }
+        // If neither has a painted date, sort by creation date (most recent first)
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       }
-      // If only one has a painted date, prioritize the one with painted date
-      if (a.painted_date && !b.painted_date) {
-        return -1
-      }
-      if (!a.painted_date && b.painted_date) {
-        return 1
-      }
-      // If neither has a painted date, sort by creation date (most recent first)
+    })
+
+  // For Recent Collections view, just show all collections with basic sorting
+  const recentCollections = boxes
+    .sort((a, b) => {
+      // Sort by creation date (most recent first) 
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
 
@@ -260,6 +309,7 @@ function App() {
 
   const totalPages = Math.ceil(filteredModels.length / itemsPerPage)
   const recentTotalPages = Math.ceil(recentModels.length / itemsPerPage)
+  const recentCollectionsTotalPages = Math.ceil(recentCollections.length / itemsPerPage)
   const boxTotalPages = Math.ceil(filteredBoxes.length / itemsPerPage)
 
   const paginatedModels = filteredModels.slice(
@@ -270,6 +320,11 @@ function App() {
   const paginatedRecentModels = recentModels.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
+  )
+
+  const paginatedRecentCollections = recentCollections.slice(
+    (boxCurrentPage - 1) * itemsPerPage,
+    boxCurrentPage * itemsPerPage
   )
 
   const paginatedBoxes = filteredBoxes.slice(
@@ -413,11 +468,38 @@ function App() {
     }
   }, [user, authLoading])
 
+  // Load saved recent view settings from localStorage
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('recentViewSettings')
+    if (savedSettings) {
+      try {
+        const parsedSettings = JSON.parse(savedSettings)
+        // Merge with defaults to handle any missing properties
+        setRecentViewSettings({
+          showPainted: parsedSettings.showPainted ?? true,
+          showPartiallyPainted: parsedSettings.showPartiallyPainted ?? true,
+          showPrimed: parsedSettings.showPrimed ?? true,
+          showAssembled: parsedSettings.showAssembled ?? true,
+          showUnassembled: parsedSettings.showUnassembled ?? false,
+          sortOrder: parsedSettings.sortOrder ?? 'mostRecentlyPainted'
+        })
+      } catch (error) {
+        console.error('Error parsing saved recent view settings:', error)
+      }
+    }
+  }, [])
+
   // Handle onboarding completion
   const handleOnboardingComplete = () => {
     setShowOnboardingModal(false)
     // Refresh user data to get updated onboarded status
     window.location.reload()
+  }
+
+  const handleRecentViewSettingsUpdate = (newSettings: RecentViewSettings) => {
+    setRecentViewSettings(newSettings)
+    // Could save to localStorage or user preferences here
+    localStorage.setItem('recentViewSettings', JSON.stringify(newSettings))
   }
 
   if (authLoading) {
@@ -496,7 +578,10 @@ function App() {
     return (
       <div className="min-h-screen bg-bg-secondary">
         <Header 
-          onAddModel={() => setAddModelModal(true)} 
+          onAddModel={() => {
+          setActiveTab('collection')
+          setAddModelModal(true)
+        }} 
           onAdminClick={handleAdminClick}
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
@@ -508,10 +593,26 @@ function App() {
         <TabBar 
           activeTab={activeTab} 
           onTabChange={setActiveTab}
-          onAddModel={() => setAddModelModal(true)}
-          onAddCollection={() => setAddBoxModal(true)}
-          onAddBooking={() => setShowNewBookingModal(true)}
-          onAddWishlist={() => setActiveTab('wishlist')}
+          onAddModel={() => {
+          setActiveTab('collection')
+          setAddModelModal(true)
+        }}
+          onAddCollection={() => {
+            setActiveTab('collection')
+            setAddBoxModal(true)
+          }}
+          onAddBooking={() => {
+            setActiveTab('battleplan')
+            setShowNewBookingModal(true)
+          }}
+          onAddWishlist={() => {
+            setActiveTab('wishlist')
+            setShowAddWishlistModal(true)
+          }}
+          onAddBattle={() => {
+            setActiveTab('battles')
+            setShowNewBattleModal(true)
+          }}
           isBetaTester={isBetaTester}
         />
       </div>
@@ -525,7 +626,10 @@ function App() {
     return (
       <div className="min-h-screen bg-bg-secondary">
         <Header 
-          onAddModel={() => setAddModelModal(true)} 
+          onAddModel={() => {
+          setActiveTab('collection')
+          setAddModelModal(true)
+        }} 
           onAdminClick={handleAdminClick}
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
@@ -537,10 +641,26 @@ function App() {
         <TabBar 
           activeTab={activeTab} 
           onTabChange={setActiveTab}
-          onAddModel={() => setAddModelModal(true)}
-          onAddCollection={() => setAddBoxModal(true)}
-          onAddBooking={() => setShowNewBookingModal(true)}
-          onAddWishlist={() => setActiveTab('wishlist')}
+          onAddModel={() => {
+          setActiveTab('collection')
+          setAddModelModal(true)
+        }}
+          onAddCollection={() => {
+            setActiveTab('collection')
+            setAddBoxModal(true)
+          }}
+          onAddBooking={() => {
+            setActiveTab('battleplan')
+            setShowNewBookingModal(true)
+          }}
+          onAddWishlist={() => {
+            setActiveTab('wishlist')
+            setShowAddWishlistModal(true)
+          }}
+          onAddBattle={() => {
+            setActiveTab('battles')
+            setShowNewBattleModal(true)
+          }}
           isBetaTester={isBetaTester}
         />
       </div>
@@ -552,7 +672,10 @@ function App() {
     return (
       <div className="min-h-screen bg-bg-secondary">
         <Header 
-          onAddModel={() => setAddModelModal(true)} 
+          onAddModel={() => {
+          setActiveTab('collection')
+          setAddModelModal(true)
+        }} 
           onAdminClick={handleAdminClick}
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
@@ -564,10 +687,26 @@ function App() {
         <TabBar 
           activeTab={activeTab} 
           onTabChange={setActiveTab}
-          onAddModel={() => setAddModelModal(true)}
-          onAddCollection={() => setAddBoxModal(true)}
-          onAddBooking={() => setShowNewBookingModal(true)}
-          onAddWishlist={() => setActiveTab('wishlist')}
+          onAddModel={() => {
+          setActiveTab('collection')
+          setAddModelModal(true)
+        }}
+          onAddCollection={() => {
+            setActiveTab('collection')
+            setAddBoxModal(true)
+          }}
+          onAddBooking={() => {
+            setActiveTab('battleplan')
+            setShowNewBookingModal(true)
+          }}
+          onAddWishlist={() => {
+            setActiveTab('wishlist')
+            setShowAddWishlistModal(true)
+          }}
+          onAddBattle={() => {
+            setActiveTab('battles')
+            setShowNewBattleModal(true)
+          }}
           isBetaTester={isBetaTester}
         />
       </div>
@@ -579,7 +718,10 @@ function App() {
     return (
       <div className="min-h-screen bg-bg-secondary">
         <Header 
-          onAddModel={() => setAddModelModal(true)} 
+          onAddModel={() => {
+          setActiveTab('collection')
+          setAddModelModal(true)
+        }} 
           onAdminClick={handleAdminClick}
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
@@ -597,10 +739,26 @@ function App() {
         <TabBar 
           activeTab={activeTab} 
           onTabChange={setActiveTab}
-          onAddModel={() => setAddModelModal(true)}
-          onAddCollection={() => setAddBoxModal(true)}
-          onAddBooking={() => setShowNewBookingModal(true)}
-          onAddWishlist={() => setActiveTab('wishlist')}
+          onAddModel={() => {
+          setActiveTab('collection')
+          setAddModelModal(true)
+        }}
+          onAddCollection={() => {
+            setActiveTab('collection')
+            setAddBoxModal(true)
+          }}
+          onAddBooking={() => {
+            setActiveTab('battleplan')
+            setShowNewBookingModal(true)
+          }}
+          onAddWishlist={() => {
+            setActiveTab('wishlist')
+            setShowAddWishlistModal(true)
+          }}
+          onAddBattle={() => {
+            setActiveTab('battles')
+            setShowNewBattleModal(true)
+          }}
           isBetaTester={isBetaTester}
         />
       </div>
@@ -612,24 +770,60 @@ function App() {
     return (
       <div className="min-h-screen bg-bg-secondary">
         <Header 
-          onAddModel={() => setAddModelModal(true)} 
+          onAddModel={() => {
+          setActiveTab('collection')
+          setAddModelModal(true)
+        }} 
           onAdminClick={handleAdminClick}
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
           onTabChange={setActiveTab}
           onLogoClick={handleLogoClick}
         />
-        <BattlesPage onBack={() => setActiveTab('collection')} />
+        <BattlesPage 
+          onBack={() => setActiveTab('collection')} 
+          onRefetchReady={handleBattlesRefetchReady}
+        />
         <Footer />
         <TabBar 
           activeTab={activeTab} 
           onTabChange={setActiveTab}
-          onAddModel={() => setAddModelModal(true)}
-          onAddCollection={() => setAddBoxModal(true)}
-          onAddBooking={() => setShowNewBookingModal(true)}
-          onAddWishlist={() => setActiveTab('wishlist')}
+          onAddModel={() => {
+          setActiveTab('collection')
+          setAddModelModal(true)
+        }}
+          onAddCollection={() => {
+            setActiveTab('collection')
+            setAddBoxModal(true)
+          }}
+          onAddBooking={() => {
+            setActiveTab('battleplan')
+            setShowNewBookingModal(true)
+          }}
+          onAddWishlist={() => {
+            setActiveTab('wishlist')
+            setShowAddWishlistModal(true)
+          }}
+          onAddBattle={() => {
+            setActiveTab('battles')
+            setShowNewBattleModal(true)
+          }}
           isBetaTester={isBetaTester}
         />
+
+        {/* New Battle Modal for battles view */}
+        <NewBattleModal
+          isOpen={showNewBattleModal}
+          onClose={() => setShowNewBattleModal(false)}
+          onBattleCreated={() => {
+            setShowNewBattleModal(false)
+            // Refetch battles to show the new battle immediately
+            if (battlesRefetch) {
+              battlesRefetch()
+            }
+          }}
+        />
+
       </div>
     )
   }
@@ -639,7 +833,10 @@ function App() {
     return (
       <div className="min-h-screen bg-bg-secondary">
         <Header 
-          onAddModel={() => setAddModelModal(true)} 
+          onAddModel={() => {
+          setActiveTab('collection')
+          setAddModelModal(true)
+        }} 
           onAdminClick={handleAdminClick}
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
@@ -654,10 +851,26 @@ function App() {
         <TabBar 
           activeTab={activeTab} 
           onTabChange={setActiveTab}
-          onAddModel={() => setAddModelModal(true)}
-          onAddCollection={() => setAddBoxModal(true)}
-          onAddBooking={() => setShowNewBookingModal(true)}
-          onAddWishlist={() => setActiveTab('wishlist')}
+          onAddModel={() => {
+          setActiveTab('collection')
+          setAddModelModal(true)
+        }}
+          onAddCollection={() => {
+            setActiveTab('collection')
+            setAddBoxModal(true)
+          }}
+          onAddBooking={() => {
+            setActiveTab('battleplan')
+            setShowNewBookingModal(true)
+          }}
+          onAddWishlist={() => {
+            setActiveTab('wishlist')
+            setShowAddWishlistModal(true)
+          }}
+          onAddBattle={() => {
+            setActiveTab('battles')
+            setShowNewBattleModal(true)
+          }}
           isBetaTester={isBetaTester}
         />
         
@@ -678,6 +891,20 @@ function App() {
             console.log('Location selected:', locationId)
           }}
         />
+
+        {/* New Battle Modal for battleplan view */}
+        <NewBattleModal
+          isOpen={showNewBattleModal}
+          onClose={() => setShowNewBattleModal(false)}
+          onBattleCreated={() => {
+            setShowNewBattleModal(false)
+            // Refetch battles to show the new battle immediately
+            if (battlesRefetch) {
+              battlesRefetch()
+            }
+          }}
+        />
+
       </div>
     )
   }
@@ -687,23 +914,59 @@ function App() {
     return (
       <div className="min-h-screen bg-bg-secondary">
         <Header 
-          onAddModel={() => setAddModelModal(true)} 
+          onAddModel={() => {
+          setActiveTab('collection')
+          setAddModelModal(true)
+        }} 
           onAdminClick={handleAdminClick}
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
           onTabChange={setActiveTab}
           onLogoClick={handleLogoClick}
         />
-        <WishlistPage />
+        <WishlistPage 
+          showAddModal={showAddWishlistModal}
+          onCloseAddModal={() => setShowAddWishlistModal(false)}
+          onAddItemSuccess={() => setShowAddWishlistModal(false)}
+        />
         <Footer />
         <TabBar 
           activeTab={activeTab} 
           onTabChange={setActiveTab}
-          onAddModel={() => setAddModelModal(true)}
-          onAddCollection={() => setAddBoxModal(true)}
-          onAddBooking={() => setShowNewBookingModal(true)}
-          onAddWishlist={() => setActiveTab('wishlist')}
+          onAddModel={() => {
+          setActiveTab('collection')
+          setAddModelModal(true)
+        }}
+          onAddCollection={() => {
+            setActiveTab('collection')
+            setAddBoxModal(true)
+          }}
+          onAddBooking={() => {
+            setActiveTab('battleplan')
+            setShowNewBookingModal(true)
+          }}
+          onAddWishlist={() => {
+            setActiveTab('wishlist')
+            setShowAddWishlistModal(true)
+          }}
+          onAddBattle={() => {
+            setActiveTab('battles')
+            setShowNewBattleModal(true)
+          }}
           isBetaTester={isBetaTester}
+        />
+
+        {/* New Battle Modal for wishlist view */}
+        <NewBattleModal
+          isOpen={showNewBattleModal}
+          onClose={() => setShowNewBattleModal(false)}
+          onBattleCreated={() => {
+            setShowNewBattleModal(false)
+            // Refetch battles to show the new battle immediately
+            if (battlesRefetch) {
+              battlesRefetch()
+            }
+          }}
         />
       </div>
     )
@@ -736,9 +999,18 @@ function App() {
           <>
             {/* Recent Models Section */}
             <section className="mb-16">
-              {recentModels.length > 0 && (
+              {models.length > 0 && (
                 <div className="flex flex-col items-center mb-8">
-                  <h2 className="text-lg font-bold text-secondary-text text-center mb-4">RECENTLY PAINTED MODELS</h2>
+                  <div className="flex items-center justify-center space-x-3 mb-4">
+                    <button
+                      onClick={() => setShowRecentViewSettingsModal(true)}
+                      className="p-1.5 text-secondary-text hover:text-text hover:bg-bg-secondary rounded-lg transition-colors"
+                      title="Recent view settings"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
+                    <h2 className="text-lg font-bold text-secondary-text">RECENT MODELS</h2>
+                  </div>
                 </div>
               )}
               
@@ -757,7 +1029,8 @@ function App() {
                 </div>
               ) : recentModels.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-base text-secondary-text mb-4">No painted models in your collection yet.</p>
+                  <p className="text-base text-secondary-text mb-4">No models match your current filter settings.</p>
+                  <p className="text-sm text-secondary-text">Try adjusting the settings using the ⚙️ icon above.</p>
                 </div>
               ) : (
                 <>
@@ -795,9 +1068,18 @@ function App() {
              <section>
                {boxes.length > 0 && (
                  <div className="flex flex-col items-center mb-8">
-                   <h2 className="text-lg font-bold text-secondary-text text-center mb-4">RECENT COLLECTIONS</h2>
-                </div>
-              )}
+                   <div className="flex items-center justify-center space-x-3 mb-4">
+                     <button
+                       onClick={() => setShowRecentViewSettingsModal(true)}
+                       className="p-1.5 text-secondary-text hover:text-text hover:bg-bg-secondary rounded-lg transition-colors"
+                       title="Recent view settings"
+                     >
+                       <Settings className="w-4 h-4" />
+                     </button>
+                     <h2 className="text-lg font-bold text-secondary-text">RECENT COLLECTIONS</h2>
+                   </div>
+                 </div>
+               )}
               
               {boxesLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -812,14 +1094,14 @@ function App() {
                     </div>
                   ))}
                 </div>
-              ) : boxes.length === 0 ? (
+              ) : recentCollections.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-base text-secondary-text mb-4">No collections in your collection yet.</p>
                 </div>
                 ) : (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {paginatedBoxes.map((box) => (
+                    {paginatedRecentCollections.map((box) => (
                       <BoxCard
                         key={box.id}
                         name={box.name}
@@ -833,10 +1115,10 @@ function App() {
                     ))}
                   </div>
                   
-                  {boxTotalPages > 1 && (
+                  {recentCollectionsTotalPages > 1 && (
                     <Pagination
                       currentPage={boxCurrentPage}
-                      totalPages={boxTotalPages}
+                      totalPages={recentCollectionsTotalPages}
                       onPageChange={setBoxCurrentPage}
                     />
                   )}
@@ -1111,7 +1393,11 @@ function App() {
 
         {/* Wishlist View */}
         {collectionView === 'wishlist' && isBetaTester && (
-          <WishlistPage />
+          <WishlistPage 
+            showAddModal={showAddWishlistModal}
+            onCloseAddModal={() => setShowAddWishlistModal(false)}
+            onAddItemSuccess={() => setShowAddWishlistModal(false)}
+          />
         )}
 
       </main>
@@ -1121,15 +1407,25 @@ function App() {
       <TabBar 
         activeTab={activeTab} 
         onTabChange={setActiveTab}
-        onAddModel={() => setAddModelModal(true)}
-        onAddCollection={() => setAddBoxModal(true)}
-                onAddBooking={() => setShowNewBookingModal(true)}
-        onAddWishlist={() => {}} // No-op since wishlist is now in collection sub-menu
+        onAddModel={() => {
+          setActiveTab('collection')
+          setAddModelModal(true)
+        }}
+        onAddCollection={() => {
+          setActiveTab('collection')
+          setAddBoxModal(true)
+        }}
+        onAddBooking={() => {
+          setActiveTab('battleplan')
+          setShowNewBookingModal(true)
+        }}
+        onAddWishlist={() => {
+          setActiveTab('wishlist')
+          setShowAddWishlistModal(true)
+        }}
         onAddBattle={() => {
-          console.log('onAddBattle called from TabBar')
-          console.log('Current showNewBattleModal state:', showNewBattleModal)
+          setActiveTab('battles')
           setShowNewBattleModal(true)
-          console.log('setShowNewBattleModal(true) called')
         }}
         isBetaTester={isBetaTester}
       />
@@ -1201,7 +1497,19 @@ function App() {
         onClose={() => setShowNewBattleModal(false)}
         onBattleCreated={() => {
           setShowNewBattleModal(false)
+          // Refetch battles to show the new battle immediately
+          if (battlesRefetch) {
+            battlesRefetch()
+          }
         }}
+      />
+
+      {/* Recent View Settings Modal */}
+      <RecentViewSettingsModal
+        isOpen={showRecentViewSettingsModal}
+        onClose={() => setShowRecentViewSettingsModal(false)}
+        onSave={handleRecentViewSettingsUpdate}
+        currentSettings={recentViewSettings}
       />
 
       {/* Add onboarding modal */}

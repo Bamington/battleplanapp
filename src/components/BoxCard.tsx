@@ -58,7 +58,10 @@ export function BoxCard({ name, gameName, modelCount, imageUrl, gameImage, gameI
   }
 
      return (
-     <div className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden max-w-[380px] flex flex-col hover:shadow-[0_4px_12px_rgba(114,77,221,0.2)] transition-shadow duration-200">
+     <div 
+       className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden max-w-[380px] flex flex-col hover:shadow-[0_8px_25px_rgba(114,77,221,0.25)] hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+       onClick={onViewBox}
+     >
        <div className="aspect-w-16 aspect-h-12 relative bg-bg-card-secondary">
          <img
            src={getImageSrc()}
@@ -112,15 +115,6 @@ export function BoxCard({ name, gameName, modelCount, imageUrl, gameImage, gameI
                 </div>
               )}
             </div>
-         </div>
-         
-         <div className="flex justify-center mt-auto">
-           <button 
-             onClick={onViewBox}
-             className="btn-secondary btn-flex"
-           >
-                           View Collection
-           </button>
          </div>
        </div>
     </div>

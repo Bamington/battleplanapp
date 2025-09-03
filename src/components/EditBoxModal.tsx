@@ -1,16 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { X, Package, Calendar, DollarSign, Image as ImageIcon, Trash2, Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useGames } from '../hooks/useGames'
 import { GameDropdown } from './GameDropdown'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
 import { ImageSearchResults } from './ImageSearchResults'
 
-interface Game {
-  id: string
-  name: string
-  icon: string | null
-}
 
 interface Box {
   id: string
@@ -39,7 +35,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
     purchase_date: '',
     image_url: ''
   })
-  const [games, setGames] = useState<Game[]>([])
+  const { games } = useGames()
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
   const [showImageCropper, setShowImageCropper] = useState(false)
   const [imageForCropping, setImageForCropping] = useState<File | null>(null)
@@ -66,32 +62,6 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
     }
   }, [box])
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchGames()
-    }
-  }, [isOpen])
-
-  // Also fetch games when box changes to ensure they're available
-  useEffect(() => {
-    if (isOpen && box) {
-      fetchGames()
-    }
-  }, [isOpen, box])
-
-  const fetchGames = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('games')
-        .select('id, name, icon')
-        .order('name')
-
-      if (error) throw error
-      setGames(data || [])
-    } catch (err) {
-      console.error('Error fetching games:', err)
-    }
-  }
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

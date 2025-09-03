@@ -1,24 +1,35 @@
-import React, { useState } from 'react'
-import { Sword, Plus, AlertTriangle } from 'lucide-react'
-import { BattleListItem } from './BattleListItem'
+import React, { useState, useEffect, useRef } from 'react'
+import { Sword } from 'lucide-react'
+import { BattleCard } from './BattleCard'
 import { ViewBattleModal } from './ViewBattleModal'
 import { DeleteBattleModal } from './DeleteBattleModal'
-
+import { BattleSubMenu } from './BattleSubMenu'
+import { StatisticsPage } from './StatisticsPage'
 import { EditBattleModal } from './EditBattleModal'
 import { useBattles } from '../hooks/useBattles'
 import { supabase } from '../lib/supabase'
+import type { Database } from '../lib/database.types'
 
-interface BattlesPageProps {
-  onBack: () => void
+// Use the Battle type from database types
+type Battle = Database['public']['Tables']['battles']['Row'] & {
+  game_icon?: string | null // Optional since it's added by the hook
 }
 
-export function BattlesPage({ onBack }: BattlesPageProps) {
+interface BattlesPageProps {
+  onBack?: () => void
+  onRefetchReady?: (refetchFn: () => void) => void
+}
+
+export function BattlesPage({ onBack, onRefetchReady }: BattlesPageProps) {
+  const [activeView, setActiveView] = useState<'battles' | 'statistics'>('battles')
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean
     battleId: number | null
+    battleName: string | null
   }>({
     isOpen: false,
-    battleId: null
+    battleId: null,
+    battleName: null
   })
   const [viewBattleModal, setViewBattleModal] = useState<{
     isOpen: boolean
@@ -37,13 +48,21 @@ export function BattlesPage({ onBack }: BattlesPageProps) {
   const [deleting, setDeleting] = useState(false)
   const { battles, loading, hasInitialized, refetch } = useBattles()
   
+  // Expose the refetch function to parent component only once when component mounts
+  useEffect(() => {
+    if (onRefetchReady) {
+      onRefetchReady(refetch)
+    }
+  }, [onRefetchReady]) // Only depend on onRefetchReady, not refetch
+  
   // Debug logging to help identify the issue
   console.log('BattlesPage render:', { loading, hasInitialized, battlesLength: battles.length })
 
-  const handleDeleteBattle = (battleId: number) => {
+  const handleDeleteBattle = (battle: Battle) => {
     setDeleteModal({
       isOpen: true,
-      battleId
+      battleId: battle.id,
+      battleName: battle.battle_name
     })
   }
 
@@ -68,7 +87,7 @@ export function BattlesPage({ onBack }: BattlesPageProps) {
 
       // Refresh battles and close modal
       await refetch()
-      setDeleteModal({ isOpen: false, battleId: null })
+      setDeleteModal({ isOpen: false, battleId: null, battleName: null })
     } catch (error) {
       console.error('Error deleting battle:', error)
       // You could add error handling UI here
@@ -77,9 +96,7 @@ export function BattlesPage({ onBack }: BattlesPageProps) {
     }
   }
 
-  const handleBattleCreated = () => {
-    refetch()
-  }
+
 
   const handleViewBattle = (battle: any) => {
     setViewBattleModal({
@@ -113,87 +130,89 @@ export function BattlesPage({ onBack }: BattlesPageProps) {
 
   return (
     <>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
-        <div className="text-center mb-8">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-4">
+        <div className="text-center">
           <h1 className="text-4xl font-bold text-title mb-4">YOUR BATTLES</h1>
         </div>
+      </div>
 
-        {/* Construction Alert Banner */}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-8">
-          <div className="flex items-start space-x-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h3 className="text-sm font-medium text-amber-800 mb-1">
-                Battle tracking is still under construction!
-              </h3>
-              <p className="text-sm text-amber-700">
-                Please feel free to experiment with this feature - but be warned! Your data may be lost as we continue to build this feature.
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* Sub Navigation */}
+      <BattleSubMenu
+        activeView={activeView}
+        onViewChange={setActiveView}
+      />
 
-        {/* Battles List */}
+      {/* Content based on active view */}
+      {activeView === 'statistics' ? (
+        <StatisticsPage />
+      ) : (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+          {/* Battles Content */}
+
+
+
+        {/* Battles Grid */}
         <div className="mb-8">
           {loading || !hasInitialized ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {/* Skeleton battle cards */}
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="bg-bg-card rounded-lg shadow-sm border border-border-custom p-4 animate-pulse">
-                  {/* Title skeleton */}
-                  <div className="h-6 bg-secondary-text opacity-20 rounded w-3/4 mb-3"></div>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden animate-pulse">
+                  {/* Image skeleton */}
+                  <div className="h-48 bg-secondary-text opacity-20"></div>
                   
-                  {/* Game skeleton */}
-                  <div className="flex items-center space-x-2 mb-3">
-                    <div className="w-4 h-4 bg-secondary-text opacity-20 rounded"></div>
-                    <div className="h-4 bg-secondary-text opacity-20 rounded w-1/3"></div>
-                  </div>
-                  
-                  {/* Date skeleton */}
-                  <div className="flex items-center space-x-2 mb-3">
-                    <div className="w-4 h-4 bg-secondary-text opacity-20 rounded"></div>
-                    <div className="h-4 bg-secondary-text opacity-20 rounded w-1/2"></div>
-                  </div>
-                  
-                  {/* Location skeleton */}
-                  <div className="flex items-center space-x-2 mb-3">
-                    <div className="w-4 h-4 bg-secondary-text opacity-20 rounded"></div>
-                    <div className="h-4 bg-secondary-text opacity-20 rounded w-2/3"></div>
+                  {/* Content skeleton */}
+                  <div className="p-4">
+                    {/* Title skeleton */}
+                    <div className="h-6 bg-secondary-text opacity-20 rounded w-3/4 mb-3"></div>
+                    
+                    {/* Game skeleton */}
+                    <div className="flex items-center space-x-2 mb-2">
+                      <div className="w-4 h-4 bg-secondary-text opacity-20 rounded"></div>
+                      <div className="h-4 bg-secondary-text opacity-20 rounded w-1/3"></div>
+                    </div>
+                    
+                    {/* Date skeleton */}
+                    <div className="flex items-center space-x-2 mb-2">
+                      <div className="w-4 h-4 bg-secondary-text opacity-20 rounded"></div>
+                      <div className="h-4 bg-secondary-text opacity-20 rounded w-1/2"></div>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : !loading && hasInitialized && battles.length === 0 ? (
-            <div className="text-center py-12">
-              <Sword className="w-16 h-16 text-secondary-text mx-auto mb-4" />
-              <p className="text-base text-secondary-text mb-4">No battles logged yet.</p>
-              <p className="text-sm text-secondary-text">Use the action button in the tab bar to log your first battle.</p>
+            <div className="text-center py-16">
+              <Sword className="w-20 h-20 text-secondary-text mx-auto mb-6" />
+              <p className="text-xl text-secondary-text mb-4">No battles logged yet.</p>
+              <p className="text-base text-secondary-text">Use the action button in the tab bar to log your first battle.</p>
             </div>
           ) : (
             <>
-              {/* Battles List */}
-              <div className="bg-bg-card rounded-lg border border-border-custom overflow-hidden">
-                <div className="divide-y divide-border-custom">
-                  {battles.map((battle) => (
-                    <BattleListItem
-                      key={battle.id}
-                      battle={battle}
-                      onViewBattle={() => handleViewBattle(battle)}
-                      onDeleteBattle={handleDeleteBattle}
-                      onEditBattle={handleEditBattle}
-                    />
-                  ))}
-                </div>
+              {/* Battles Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {battles.map((battle) => (
+                  <BattleCard
+                    key={battle.id}
+                    battle={battle}
+                    onViewBattle={() => handleViewBattle(battle)}
+                    onDeleteBattle={handleDeleteBattle}
+                    onEditBattle={handleEditBattle}
+                  />
+                ))}
               </div>
             </>
           )}
         </div>
-      </div>
+        </div>
+      )}
 
       <DeleteBattleModal
         isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ isOpen: false, battleId: null })}
+        onClose={() => setDeleteModal({ isOpen: false, battleId: null, battleName: null })}
         onConfirm={handleConfirmDelete}
+        battleName={deleteModal.battleName || undefined}
         loading={deleting}
       />
 

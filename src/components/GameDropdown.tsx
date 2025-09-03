@@ -100,11 +100,7 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
               className="w-6 h-6 object-contain flex-shrink-0"
               onError={(e) => {
                 const target = e.target as HTMLImageElement
-                console.warn('Dropdown game icon failed to load:', selectedGameData.icon)
                 target.style.display = 'none'
-              }}
-              onLoad={() => {
-                console.warn('Dropdown game icon loaded successfully:', selectedGameData.icon)
               }}
             />
           ) : (
@@ -164,11 +160,7 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
                             className="w-6 h-6 object-contain flex-shrink-0"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement
-                              console.warn('Game list icon failed to load:', game.icon)
                               target.style.display = 'none'
-                            }}
-                            onLoad={() => {
-                              console.warn('Game list icon loaded successfully:', game.icon)
                             }}
                           />
                         ) : (
@@ -204,11 +196,7 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
                             className="w-6 h-6 object-contain flex-shrink-0"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement
-                              console.warn('Game list icon failed to load:', game.icon)
                               target.style.display = 'none'
-                            }}
-                            onLoad={() => {
-                              console.warn('Game list icon loaded successfully:', game.icon)
                             }}
                           />
                         ) : (
@@ -244,11 +232,7 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
                             className="w-6 h-6 object-contain flex-shrink-0"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement
-                              console.warn('Game list icon failed to load:', game.icon)
                               target.style.display = 'none'
-                            }}
-                            onLoad={() => {
-                              console.warn('Game list icon loaded successfully:', game.icon)
                             }}
                           />
                         ) : (

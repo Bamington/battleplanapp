@@ -2,20 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { X, ArrowLeft, ArrowRight, User, Gamepad2, MapPin } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useGames } from '../hooks/useGames'
+import { useLocations } from '../hooks/useLocations'
 import { MultiSelectDropdown } from './MultiSelectDropdown'
 
-interface Game {
-  id: string
-  name: string
-  icon: string | null
-}
-
-interface Location {
-  id: string
-  name: string
-  address: string
-  icon: string | null
-}
 
 interface OnboardingModalProps {
   isOpen: boolean
@@ -35,8 +25,8 @@ export function OnboardingModal({ isOpen, onClose, onComplete }: OnboardingModal
   const [selectedLocations, setSelectedLocations] = useState<string[]>([])
   
   // Data for dropdowns
-  const [games, setGames] = useState<Game[]>([])
-  const [locations, setLocations] = useState<Location[]>([])
+  const { games } = useGames()
+  const { locations } = useLocations()
 
   // Profanity filter (comprehensive implementation)
   const profanityList = [
@@ -69,36 +59,6 @@ export function OnboardingModal({ isOpen, onClose, onComplete }: OnboardingModal
            /^[a-zA-Z0-9\s]+$/.test(userName)
   }
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchData()
-    }
-  }, [isOpen])
-
-  const fetchData = async () => {
-    try {
-      // Fetch games
-      const { data: gamesData, error: gamesError } = await supabase
-        .from('games')
-        .select('id, name, icon')
-        .order('name')
-
-      if (gamesError) throw gamesError
-      setGames(gamesData || [])
-
-      // Fetch locations
-      const { data: locationsData, error: locationsError } = await supabase
-        .from('locations')
-        .select('id, name, address, icon')
-        .order('name')
-
-      if (locationsError) throw locationsError
-      setLocations(locationsData || [])
-    } catch (err) {
-      console.error('Error fetching data:', err)
-      setError('Failed to load data')
-    }
-  }
 
   const handleNext = () => {
     if (currentStep < 3) {

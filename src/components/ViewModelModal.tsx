@@ -291,9 +291,18 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
         }`}
         onClick={handleBackdropClick}
       >
-        <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-2xl w-full h-screen sm:h-auto sm:max-h-[90vh] overflow-y-auto modal-content">
-          {/* Header Image */}
-          <div className="relative">
+        <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-2xl w-full h-screen sm:h-auto sm:max-h-[90vh] flex flex-col modal-content">
+          {/* Sticky Close Button */}
+          <button
+            onClick={onClose}
+            className="fixed top-4 right-4 md:absolute text-white hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full p-2 z-20"
+          >
+            <X className="w-6 h-6 text-icon" />
+          </button>
+
+          {/* Content - Scrollable area */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Header Image - Now scrolls with content */}
             <img
               src={(() => {
                 // Check if we have a valid model image URL
@@ -321,7 +330,7 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
                 return 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
               })()}
               alt={model.name}
-              className="w-full max-h-[60%] object-cover"
+              className="w-full object-cover"
               loading="lazy"
               onError={(e) => {
                 const target = e.target as HTMLImageElement
@@ -332,18 +341,8 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
                 }
               }}
             />
-          </div>
-
-          {/* Sticky Close Button */}
-          <button
-            onClick={onClose}
-            className="fixed top-4 right-4 md:absolute text-white hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full p-2 z-20"
-          >
-            <X className="w-6 h-6 text-icon" />
-          </button>
-
-          {/* Content */}
-          <div className="p-6">
+            
+            <div className="p-6">
             {/* Title Section */}
             <div className="text-center mb-6 relative">
               <div className="flex items-center justify-center space-x-2 mb-2">
@@ -574,6 +573,7 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
                   Delete this model
                 </button>
               </div>
+            </div>
             </div>
           </div>
         </div>

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { X, Calendar, User, Image, Camera } from 'lucide-react'
+import { X, User, Image, Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useGames } from '../hooks/useGames'
 import { useRecentGames } from '../hooks/useRecentGames'
 import { GameDropdown } from './GameDropdown'
 import { RichTextEditor } from './RichTextEditor'
+import { DatePicker } from './DatePicker'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
 
@@ -32,7 +34,7 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
   const [showImageCropper, setShowImageCropper] = useState(false)
   const [imageForCropping, setImageForCropping] = useState<File | null>(null)
   const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null)
-  const [games, setGames] = useState<Game[]>([])
+  const { games } = useGames()
   const [loading, setLoading] = useState(false)
   const [compressing, setCompressing] = useState(false)
   const [error, setError] = useState('')
@@ -57,24 +59,20 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
 
   useEffect(() => {
     if (isOpen) {
-      fetchGames()
+      // Reset form when modal opens
+      setDatePlayed('')
+      setOpponentName('')
+      setBattleNotes('')
+      setSelectedGame('')
+      setResult('')
+      setLocation('')
+      setSelectedImage(null)
+      setError('')
+      setFileSizeError('')
+      setCompressionInfo('')
     }
   }, [isOpen])
 
-  const fetchGames = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('games')
-        .select('id, name, icon')
-        .order('name')
-
-      if (error) throw error
-      setGames(data || [])
-    } catch (error) {
-      console.error('Error fetching games:', error)
-      setError('Failed to load games')
-    }
-  }
 
   const getFavoriteGames = () => {
     if (!user?.fav_games || user.fav_games.length === 0) return []
@@ -476,11 +474,13 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] modal-container"
       onClick={handleBackdropClick}
     >
-      <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-lg w-full h-screen sm:h-auto sm:max-h-[90vh] flex flex-col overflow-y-auto p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-lg w-full h-screen sm:h-auto sm:max-h-[90vh] flex flex-col transition-all duration-300 ease-out transform">
+        
+        {/* Header - Fixed at top with shadow */}
+        <div className="flex items-center justify-between mb-6 flex-shrink-0 p-6 pb-4 shadow-sm bg-modal-bg rounded-t-lg">
           <h2 className="text-xl font-semibold text-text font-overpass">
             Log New Battle
           </h2>
@@ -492,7 +492,9 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Form - Scrollable content with padding */}
+        <form id="battle-form" onSubmit={handleSubmit} className="space-y-6 flex-1 overflow-y-auto px-6">
+          <div className="py-4 space-y-6">
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <p className="text-red-600">{error}</p>
@@ -502,23 +504,18 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
           {/* Date Played */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label htmlFor="datePlayed" className="block text-sm font-medium text-input-label font-overpass">
+              <label className="block text-sm font-medium text-input-label font-overpass">
                 Date Played
               </label>
               <span className="text-sm text-gray-500">Required</span>
             </div>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-icon" />
-              <input
-                type="date"
-                id="datePlayed"
-                value={datePlayed}
-                onChange={(e) => setDatePlayed(e.target.value)}
-                max={new Date().toISOString().split('T')[0]}
-                className="w-full pl-10 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text"
-                disabled={loading}
-              />
-            </div>
+            <DatePicker
+              value={datePlayed}
+              onChange={setDatePlayed}
+              placeholder="Select battle date"
+              minDate=""
+              disabled={loading}
+            />
           </div>
 
           {/* Opponent */}
@@ -541,30 +538,6 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
                 disabled={loading}
               />
             </div>
-          </div>
-
-          {/* Result */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label htmlFor="result" className="block text-sm font-medium text-input-label font-overpass">
-                Result
-              </label>
-              <span className="text-sm text-gray-500">Required</span>
-            </div>
-            <select
-              id="result"
-              value={result}
-              onChange={(e) => setResult(e.target.value)}
-              className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text"
-              disabled={loading}
-            >
-              <option value="">Select result...</option>
-              <option value="I won">I won</option>
-              <option value={`${opponentName.trim() || 'Opponent'} won`}>
-                {opponentName.trim() || 'Opponent'} won
-              </option>
-              <option value="Draw">Draw</option>
-            </select>
           </div>
 
           {/* Result */}
@@ -747,9 +720,12 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
               <p className="text-blue-600 text-sm mt-2">{compressionInfo}</p>
             )}
           </div>
-
-          {/* Submit Button */}
-          <div className="flex space-x-3 pt-4">
+          </div>
+        </form>
+        
+        {/* Submit Button - Fixed at bottom with shadow */}
+        <div className="p-6 pt-4 shadow-sm bg-modal-bg rounded-b-lg flex-shrink-0">
+          <div className="flex space-x-3">
             <button
               type="button"
               onClick={onClose}
@@ -760,13 +736,14 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
             </button>
             <button
               type="submit"
+              form="battle-form"
               className="flex-1 btn-primary"
-              disabled={loading || compressing || !datePlayed || !opponentName.trim() || !selectedGame}
+              disabled={loading || compressing || !datePlayed || !opponentName.trim() || !selectedGame || !result}
             >
               {compressing ? 'Compressing...' : loading ? 'Creating...' : 'Log Battle'}
             </button>
           </div>
-        </form>
+        </div>
       </div>
 
       {/* Image Cropper Modal */}

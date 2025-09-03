@@ -2,17 +2,13 @@ import React, { useState, useEffect } from 'react'
 import { X, Calendar, DollarSign, Hash, Image, Package, Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useGames } from '../hooks/useGames'
 import { GameDropdown } from './GameDropdown'
 import { useRecentGames } from '../hooks/useRecentGames'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
 import { DatePicker } from './DatePicker'
 
-interface Game {
-  id: string
-  name: string
-  icon: string | null
-}
 
 interface Box {
   id: string
@@ -47,7 +43,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
   const [selectedImages, setSelectedImages] = useState<FileList | null>(null)
   const [showImageCropper, setShowImageCropper] = useState(false)
   const [imageForCropping, setImageForCropping] = useState<File | null>(null)
-  const [games, setGames] = useState<Game[]>([])
+  const { games } = useGames()
   const [boxes, setBoxes] = useState<Box[]>([])
   const [loading, setLoading] = useState(false)
   const [compressing, setCompressing] = useState(false)
@@ -82,7 +78,6 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
 
   useEffect(() => {
     if (isOpen) {
-      fetchGames()
       fetchBoxes()
       // Set preselected box if provided
       if (preselectedBoxId) {
@@ -108,19 +103,6 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
     }
   }, [isOpen, user])
 
-  const fetchGames = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('games')
-        .select('id, name, icon')
-        .order('name')
-
-      if (error) throw error
-      setGames(data || [])
-    } catch (err) {
-      console.error('Error fetching games:', err)
-    }
-  }
 
   const getFavoriteGames = () => {
     if (!user?.fav_games || user.fav_games.length === 0) return []
@@ -751,7 +733,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50 modal-container"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 modal-container"
       onClick={handleBackdropClick}
     >
       <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-lg w-full modal-content h-screen sm:h-auto sm:max-h-[90vh] flex flex-col">

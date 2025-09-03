@@ -86,7 +86,10 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
   }
 
   return (
-    <div className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden max-w-[380px] flex flex-col h-full hover:shadow-[0_4px_12px_rgba(114,77,221,0.2)] transition-shadow duration-200">
+    <div 
+      className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden max-w-[380px] flex flex-col h-full hover:shadow-[0_8px_25px_rgba(114,77,221,0.25)] hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+      onClick={onViewModel}
+    >
       <div className="aspect-w-16 aspect-h-12 relative bg-bg-card-secondary">
         {(() => {
           const imageData = getImageSrc()
@@ -122,7 +125,10 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
             <h3 className="text-lg font-bold text-title mb-1 break-words">{name}</h3>
             {model?.box && (
               <button
-                onClick={() => onViewBox?.(model.box)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onViewBox?.(model.box)
+                }}
                 className="text-sm text-secondary-text hover:text-brand transition-colors text-left"
               >
                 {boxName}
@@ -168,12 +174,6 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
               </div>
             )}
           </div>
-        </div>
-        
-        <div className="flex justify-center mt-auto">
-          <button onClick={onViewModel} className="btn-secondary btn-flex">
-            View Model
-          </button>
         </div>
       </div>
     </div>

@@ -35,7 +35,7 @@ interface BookingCardProps {
 export function BookingCard({ booking, onClick, onCancelBooking, isPast = false }: BookingCardProps) {
 
   return (
-    <div className="bg-bg-card rounded-lg shadow-sm border border-border-custom p-4 w-full">
+    <div className="bg-bg-card rounded-lg shadow-sm border border-border-custom p-4 w-full hover:shadow-[0_8px_25px_rgba(114,77,221,0.25)] hover:-translate-y-1 transition-all duration-300">
       <div 
         onClick={onClick}
         className="cursor-pointer hover:bg-bg-secondary transition-colors text-left rounded p-2 -m-2 mb-2"

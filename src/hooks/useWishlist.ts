@@ -37,7 +37,7 @@ export function useWishlist() {
       
       const { data, error } = await supabase
         .from('wishlist')
-        .select('*')
+        .select('id, item_name, user_uid, created_at')
         .eq('user_uid', user.id)
         .order('created_at', { ascending: false })
 

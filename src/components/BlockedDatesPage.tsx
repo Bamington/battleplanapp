@@ -109,6 +109,15 @@ export function BlockedDatesPage({ onBack }: BlockedDatesPageProps) {
                       {formatDate(blockedDate.date)}
                     </span>
                   </div>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Ban className="w-4 h-4 text-icon" />
+                    <span className="text-text text-sm">
+                      {blockedDate.blocked_tables === null 
+                        ? 'All tables blocked' 
+                        : `${blockedDate.blocked_tables} table${blockedDate.blocked_tables !== 1 ? 's' : ''} blocked`
+                      }
+                    </span>
+                  </div>
                   {blockedDate.description && (
                     <p className="text-secondary-text text-sm">
                       {blockedDate.description}

@@ -2,20 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { ArrowLeft, User, Save, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useGames } from '../hooks/useGames'
+import { useLocations } from '../hooks/useLocations'
 import { MultiSelectDropdown } from './MultiSelectDropdown'
 
-interface Game {
-  id: string
-  name: string
-  icon: string | null
-}
-
-interface Location {
-  id: string
-  name: string
-  address: string
-  icon: string | null
-}
 
 interface SettingsPageProps {
   onBack: () => void
@@ -33,8 +23,8 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
   const [selectedLocations, setSelectedLocations] = useState<string[]>([])
   
   // Data for dropdowns
-  const [games, setGames] = useState<Game[]>([])
-  const [locations, setLocations] = useState<Location[]>([])
+  const { games } = useGames()
+  const { locations } = useLocations()
 
   // Profanity filter (same as onboarding)
   const profanityList = [
@@ -70,41 +60,9 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       setSelectedGames(user.fav_games || [])
       setSelectedLocations(user.fav_locations || [])
       
-      // Load available games and locations
-      fetchGames()
-      fetchLocations()
     }
   }, [user])
 
-  const fetchGames = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('games')
-        .select('id, name, icon')
-        .order('name')
-
-      if (error) throw error
-      setGames(data || [])
-    } catch (err) {
-      console.error('Error fetching games:', err)
-      setError('Failed to load games')
-    }
-  }
-
-  const fetchLocations = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('locations')
-        .select('id, name, address, icon')
-        .order('name')
-
-      if (error) throw error
-      setLocations(data || [])
-    } catch (err) {
-      console.error('Error fetching locations:', err)
-      setError('Failed to load locations')
-    }
-  }
 
   const handleSave = async () => {
     if (!user) return

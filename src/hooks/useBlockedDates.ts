@@ -7,6 +7,7 @@ export interface BlockedDate {
   location_id: string
   date: string
   description: string | null
+  blocked_tables: number | null
   created_at: string
   locations: {
     id: string
@@ -28,10 +29,19 @@ export function useBlockedDates() {
 
       let query = supabase
         .from('blocked_dates')
-        .select('*, locations(*)')
+        .select(`
+          id,
+          location_id,
+          date,
+          description,
+          blocked_tables,
+          created_at,
+          locations(id, name, address)
+        `)
         .order('date', { ascending: true })
 
       // If user is a location admin (but not a full admin), filter by their locations
+      // Note: is_location_admin is already computed and cached in useAuth hook
       if (user?.is_location_admin && !user?.is_admin) {
         // Get locations where the user is an admin
         const { data: userLocations, error: locationError } = await supabase

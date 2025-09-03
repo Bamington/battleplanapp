@@ -1,18 +1,15 @@
 import React, { useState, useEffect } from 'react'
-import { X, Calendar, User, Image, Camera } from 'lucide-react'
+import { X, User, Image, Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useGames } from '../hooks/useGames'
 import { useRecentGames } from '../hooks/useRecentGames'
 import { GameDropdown } from './GameDropdown'
 import { RichTextEditor } from './RichTextEditor'
+import { DatePicker } from './DatePicker'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
 
-interface Game {
-  id: string
-  name: string
-  icon: string | null
-}
 
 interface Battle {
   id: number
@@ -49,7 +46,7 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
   const [showImageCropper, setShowImageCropper] = useState(false)
   const [imageForCropping, setImageForCropping] = useState<File | null>(null)
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null)
-  const [games, setGames] = useState<Game[]>([])
+  const { games } = useGames()
   const [loading, setLoading] = useState(false)
   const [compressing, setCompressing] = useState(false)
   const [error, setError] = useState('')
@@ -86,26 +83,6 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
     }
   }, [isOpen])
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchGames()
-    }
-  }, [isOpen])
-
-  const fetchGames = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('games')
-        .select('id, name, icon')
-        .order('name')
-
-      if (error) throw error
-      setGames(data || [])
-    } catch (error) {
-      console.error('Error fetching games:', error)
-      setError('Failed to load games')
-    }
-  }
 
   const getFavoriteGames = () => {
     if (!user?.fav_games || user.fav_games.length === 0) return []
@@ -531,23 +508,18 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
           {/* Date Played */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label htmlFor="datePlayed" className="block text-sm font-medium text-input-label font-overpass">
+              <label className="block text-sm font-medium text-input-label font-overpass">
                 Date Played
               </label>
               <span className="text-sm text-gray-500">Required</span>
             </div>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-icon" />
-              <input
-                type="date"
-                id="datePlayed"
-                value={datePlayed}
-                onChange={(e) => setDatePlayed(e.target.value)}
-                max={new Date().toISOString().split('T')[0]}
-                className="w-full pl-10 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text"
-                disabled={loading}
-              />
-            </div>
+            <DatePicker
+              value={datePlayed}
+              onChange={setDatePlayed}
+              placeholder="Select battle date"
+              minDate=""
+              disabled={loading}
+            />
           </div>
 
           {/* Opponent */}

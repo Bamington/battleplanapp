@@ -40,7 +40,7 @@ export function useBoxes() {
         return
       }
 
-      // First, fetch all boxes
+      // Fetch boxes with aggregated model counts in a single query
       const { data: boxesData, error: boxesError } = await supabase
         .from('boxes')
         .select(`
@@ -49,7 +49,8 @@ export function useBoxes() {
           purchase_date,
           image_url,
           public,
-          game:games(id, name, icon, image)
+          game:games(id, name, icon, image),
+          models(count)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -57,35 +58,23 @@ export function useBoxes() {
 
       if (boxesError) throw boxesError
 
-      // Transform the boxes data
-      const transformedBoxes = (boxesData || []).map(box => ({
-        ...box,
-        game: box.game && Array.isArray(box.game) ? box.game[0] : box.game
-      }))
+      // Transform the boxes data and calculate model counts
+      const transformedBoxes = (boxesData || []).map(box => {
+        const models = Array.isArray(box.models) ? box.models : []
+        const totalCount = models.reduce((sum, model) => sum + (model.count || 0), 0)
+        
+        return {
+          id: box.id,
+          name: box.name,
+          purchase_date: box.purchase_date,
+          image_url: box.image_url,
+          public: box.public,
+          models_count: totalCount,
+          game: box.game && Array.isArray(box.game) ? box.game[0] : box.game
+        }
+      })
 
-      // Fetch model counts for each box
-      const boxesWithCounts = await Promise.all(
-        transformedBoxes.map(async (box) => {
-          const { data: modelsData, error: modelsError } = await supabase
-            .from('models')
-            .select('count')
-            .eq('box_id', box.id)
-
-          if (modelsError) {
-            console.error(`Error fetching models for box ${box.id}:`, modelsError)
-            return { ...box, models_count: 0 }
-          }
-
-          // Sum up the count field from all models in this box
-          const totalCount = (modelsData || []).reduce((sum, model) => {
-            return sum + (model.count || 0)
-          }, 0)
-
-          return { ...box, models_count: totalCount }
-        })
-      )
-
-      setBoxes(boxesWithCounts)
+      setBoxes(transformedBoxes)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch boxes')
     } finally {
