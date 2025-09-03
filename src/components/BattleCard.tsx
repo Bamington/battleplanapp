@@ -12,6 +12,7 @@ interface Battle {
   game_uid: string | null
   game_icon: string | null
   image_url: string | null
+  location: string | null
   opp_name: string | null
   opp_id: string[] | null
   result: string | null
@@ -42,6 +43,32 @@ export function BattleCard({ battle, onViewBattle, onDeleteBattle, onEditBattle 
 
   // Get the game icon from cache using game_uid
   const gameIcon = getGameIcon(battle.game_uid)
+
+  const getResultColor = (result: string | null) => {
+    if (!result) return 'bg-gray-100 text-gray-800'
+    
+    const lowerResult = result.toLowerCase()
+    if (lowerResult.includes('i won') || lowerResult.includes('win')) {
+      return 'bg-green-100 text-green-800'
+    } else if (lowerResult.includes('draw') || lowerResult.includes('tie')) {
+      return 'bg-yellow-100 text-yellow-800'
+    } else {
+      return 'bg-red-100 text-red-800'
+    }
+  }
+
+  const getResultText = (result: string | null) => {
+    if (!result) return 'No Result'
+    
+    const lowerResult = result.toLowerCase()
+    if (lowerResult.includes('i won') || lowerResult.includes('win')) {
+      return 'Win'
+    } else if (lowerResult.includes('draw') || lowerResult.includes('tie')) {
+      return 'Draw'
+    } else {
+      return 'Loss'
+    }
+  }
 
   return (
     <div 
@@ -91,6 +118,13 @@ export function BattleCard({ battle, onViewBattle, onDeleteBattle, onEditBattle 
               {battle.game_name?.charAt(0) || '?'}
             </span>
           </div>
+        </div>
+
+        {/* Result pill */}
+        <div className="absolute top-2 left-2">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getResultColor(battle.result)}`}>
+            {getResultText(battle.result)}
+          </span>
         </div>
 
         {/* Action buttons overlay */}

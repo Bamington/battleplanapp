@@ -1068,14 +1068,7 @@ function App() {
              <section>
                {boxes.length > 0 && (
                  <div className="flex flex-col items-center mb-8">
-                   <div className="flex items-center justify-center space-x-3 mb-4">
-                     <button
-                       onClick={() => setShowRecentViewSettingsModal(true)}
-                       className="p-1.5 text-secondary-text hover:text-text hover:bg-bg-secondary rounded-lg transition-colors"
-                       title="Recent view settings"
-                     >
-                       <Settings className="w-4 h-4" />
-                     </button>
+                   <div className="flex items-center justify-center mb-4">
                      <h2 className="text-lg font-bold text-secondary-text">RECENT COLLECTIONS</h2>
                    </div>
                  </div>

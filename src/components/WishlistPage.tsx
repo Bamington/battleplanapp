@@ -134,10 +134,9 @@ export function WishlistPage({ showAddModal = false, onCloseAddModal, onAddItemS
         }}
         onSuccess={() => {
           refetch()
+          setIsAddModalOpen(false) // Always clear local state
           if (onAddItemSuccess) {
             onAddItemSuccess()
-          } else {
-            setIsAddModalOpen(false)
           }
         }}
       />

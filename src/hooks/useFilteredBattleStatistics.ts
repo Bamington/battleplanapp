@@ -24,6 +24,15 @@ interface OpponentStats {
   winRate: number
 }
 
+interface LocationStats {
+  name: string
+  battles: number
+  wins: number
+  losses: number
+  draws: number
+  winRate: number
+}
+
 interface BattleStatistics {
   totalBattles: number
   totalWins: number
@@ -32,6 +41,7 @@ interface BattleStatistics {
   overallWinRate: number
   mostPlayedGames: GameStats[]
   favoriteOpponents: OpponentStats[]
+  frequentLocations: LocationStats[]
   battlesByMonth: { month: string; battles: number }[]
   longestWinStreak: number
   longestLossStreak: number
@@ -165,6 +175,7 @@ export function useFilteredBattleStatistics() {
         overallWinRate: 0,
         mostPlayedGames: [],
         favoriteOpponents: [],
+        frequentLocations: [],
         battlesByMonth: [],
         longestWinStreak: 0,
         longestLossStreak: 0,
@@ -183,6 +194,8 @@ export function useFilteredBattleStatistics() {
     const gameStats: { [key: string]: GameStats } = {}
     // Group battles by opponent
     const opponentStats: { [key: string]: OpponentStats } = {}
+    // Group battles by location
+    const locationStats: { [key: string]: LocationStats } = {}
     // Group battles by month for trend analysis
     const monthlyStats: { [key: string]: number } = {}
 
@@ -191,6 +204,7 @@ export function useFilteredBattleStatistics() {
       const gameKey = battle.game_uid || battle.game_name || 'Unknown Game'
       const gameName = battle.game_name || 'Unknown Game'
       const opponentName = battle.opp_name || 'Unknown Opponent'
+      const locationName = battle.location || 'No Location'
       
       // Initialize game stats if not exists
       if (!gameStats[gameKey]) {
@@ -219,9 +233,22 @@ export function useFilteredBattleStatistics() {
         }
       }
 
+      // Initialize location stats if not exists
+      if (!locationStats[locationName]) {
+        locationStats[locationName] = {
+          name: locationName,
+          battles: 0,
+          wins: 0,
+          losses: 0,
+          draws: 0,
+          winRate: 0
+        }
+      }
+
       // Increment battle counts
       gameStats[gameKey].battles++
       opponentStats[opponentName].battles++
+      locationStats[locationName].battles++
 
       // Group by month
       const battleDate = battle.date_played ? new Date(battle.date_played) : new Date(battle.created_at)
@@ -234,14 +261,17 @@ export function useFilteredBattleStatistics() {
       if (result.includes('i won') || result.includes('win')) {
         gameStats[gameKey].wins++
         opponentStats[opponentName].wins++
+        locationStats[locationName].wins++
         totalWins++
       } else if (result.includes('draw') || result.includes('tie')) {
         gameStats[gameKey].draws++
         opponentStats[opponentName].draws++
+        locationStats[locationName].draws++
         totalDraws++
       } else {
         gameStats[gameKey].losses++
         opponentStats[opponentName].losses++
+        locationStats[locationName].losses++
         totalLosses++
       }
     })
@@ -296,6 +326,12 @@ export function useFilteredBattleStatistics() {
       opponent.winRate = total > 0 ? (opponent.wins / total) * 100 : 0
     })
 
+    // Calculate win rates for locations
+    Object.values(locationStats).forEach(location => {
+      const total = location.wins + location.losses + location.draws
+      location.winRate = total > 0 ? (location.wins / total) * 100 : 0
+    })
+
     // Sort games by most played, then by win rate
     const mostPlayedGames = Object.values(gameStats)
       .sort((a, b) => {
@@ -308,6 +344,11 @@ export function useFilteredBattleStatistics() {
 
     // Sort opponents by most played
     const favoriteOpponents = Object.values(opponentStats)
+      .sort((a, b) => b.battles - a.battles)
+      .slice(0, 5)
+
+    // Sort locations by most played
+    const frequentLocations = Object.values(locationStats)
       .sort((a, b) => b.battles - a.battles)
       .slice(0, 5)
 
@@ -370,6 +411,7 @@ export function useFilteredBattleStatistics() {
       overallWinRate,
       mostPlayedGames,
       favoriteOpponents,
+      frequentLocations,
       battlesByMonth,
       longestWinStreak,
       longestLossStreak,

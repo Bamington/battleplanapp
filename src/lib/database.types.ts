@@ -24,6 +24,7 @@ export type Database = {
           game_uid: string | null
           id: number
           image_url: string | null
+          location: string | null
           opp_id: string[] | null
           opp_name: string | null
           result: string | null
@@ -38,6 +39,7 @@ export type Database = {
           game_uid?: string | null
           id?: number
           image_url?: string | null
+          location?: string | null
           opp_id?: string[] | null
           opp_name?: string | null
           result?: string | null
@@ -52,6 +54,7 @@ export type Database = {
           game_uid?: string | null
           id?: number
           image_url?: string | null
+          location?: string | null
           opp_id?: string[] | null
           opp_name?: string | null
           result?: string | null

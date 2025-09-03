@@ -199,7 +199,8 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
           game_uid: selectedGame,
           result: result,
           image_url: imageUrl,
-          battle_notes: battleNotes.trim() || null
+          battle_notes: battleNotes.trim() || null,
+          location: location.trim() || null
         })
         .eq('id', battle.id)
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { X, Edit, Trash2, Calendar, User, Gamepad2, Trophy, Image, FileText } from 'lucide-react'
+import { X, Edit, Trash2, Calendar, User, Gamepad2, Trophy, Image, FileText, MapPin } from 'lucide-react'
 import { DeleteBattleModal } from './DeleteBattleModal'
 import { EditBattleModal } from './EditBattleModal'
 import { formatLocalDate } from '../utils/timezone'
@@ -17,6 +17,7 @@ interface Battle {
   game_uid: string | null
   game_icon: string | null
   image_url: string | null
+  location: string | null
   opp_name: string | null
   opp_id: string[] | null
   result: string | null
@@ -211,6 +212,15 @@ export function ViewBattleModal({ isOpen, onClose, onBattleDeleted, onBattleUpda
                   <p className={`font-medium ${getResultColor(battle.result)}`}>
                     {battle.result || 'No result recorded'}
                   </p>
+                </div>
+              </div>
+
+              {/* Location */}
+              <div className="flex items-center space-x-3 p-4 bg-bg-secondary rounded-lg">
+                <MapPin className="w-10 h-10 text-icon flex-shrink-0" />
+                <div>
+                  <p className="text-sm text-secondary-text">Location</p>
+                  <p className="font-medium text-text">{battle.location || 'No location'}</p>
                 </div>
               </div>
             </div>

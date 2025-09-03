@@ -21,7 +21,7 @@ export function StatisticsPage() {
 
   if (loading || !hasInitialized) {
     return (
-      <div className="min-h-screen bg-bg-primary">
+      <div className="min-h-screen bg-bg-secondary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="animate-pulse">
             {/* Stats Cards Skeleton */}
@@ -55,12 +55,10 @@ export function StatisticsPage() {
 
   if (statistics.totalBattles === 0) {
     return (
-      <div className="min-h-screen bg-bg-primary">
+      <div className="min-h-screen bg-bg-secondary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center py-16">
-            <div className="mx-auto w-24 h-24 bg-bg-secondary rounded-full flex items-center justify-center mb-6">
-              <BarChart3 className="w-12 h-12 text-icon" />
-            </div>
+            <BarChart3 className="w-20 h-20 text-secondary-text mx-auto mb-6" />
             <h2 className="text-2xl font-bold text-text mb-4 font-overpass">No Battle Data Yet</h2>
             <p className="text-secondary-text mb-6 max-w-md mx-auto">
               Start logging your battles to see detailed statistics about your gaming performance!
@@ -75,7 +73,7 @@ export function StatisticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-primary">
+    <div className="min-h-screen bg-bg-secondary">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Battle Filters */}
         <BattleFiltersComponent
@@ -150,7 +148,7 @@ export function StatisticsPage() {
                   {statistics.mostPlayedGames[0].game_name}
                 </p>
                 <p className="text-sm text-secondary-text text-center">
-                  {statistics.mostPlayedGames[0].battles} battles • {statistics.mostPlayedGames[0].winRate.toFixed(1)}% win rate
+                  {statistics.mostPlayedGames[0].battles} {statistics.mostPlayedGames[0].battles === 1 ? 'battle' : 'battles'} • {statistics.mostPlayedGames[0].winRate.toFixed(1)}% win rate
                 </p>
               </>
             ) : (
@@ -230,7 +228,7 @@ export function StatisticsPage() {
                     </div>
                     
                     <div className="text-right">
-                      <p className="font-semibold text-text">{game.battles} battles</p>
+                      <p className="font-semibold text-text">{game.battles} {game.battles === 1 ? 'battle' : 'battles'}</p>
                       <p className={`text-sm font-medium ${
                         game.winRate >= 70 ? 'text-green-600' :
                         game.winRate >= 50 ? 'text-yellow-600' :
@@ -268,15 +266,6 @@ export function StatisticsPage() {
                       {index === 0 ? <Crown className="w-4 h-4" /> : index + 1}
                     </div>
                     
-                    {/* Opponent Icon */}
-                    <div className="w-10 h-10 rounded-lg bg-bg-card border border-border-custom flex items-center justify-center flex-shrink-0">
-                      <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">
-                          {opponent.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
-                    
                     {/* Opponent Info */}
                     <div>
                       <h3 className="font-medium text-text">{opponent.name}</h3>
@@ -287,13 +276,60 @@ export function StatisticsPage() {
                   </div>
                   
                   <div className="text-right">
-                    <p className="font-semibold text-text">{opponent.battles} battles</p>
+                    <p className="font-semibold text-text">{opponent.battles} {opponent.battles === 1 ? 'battle' : 'battles'}</p>
                     <p className={`text-sm font-medium ${
                       opponent.winRate >= 70 ? 'text-green-600' :
                       opponent.winRate >= 50 ? 'text-yellow-600' :
                       'text-red-600'
                     }`}>
                       {opponent.winRate.toFixed(1)}% win rate
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Frequent Locations */}
+        {statistics.frequentLocations.length > 0 && (
+          <div className="bg-bg-card rounded-lg border border-border-custom p-6">
+            <div className="flex items-center mb-6">
+              <Target className="w-6 h-6 text-icon mr-3" />
+              <h2 className="text-xl font-semibold text-text font-overpass">Frequent Locations</h2>
+            </div>
+            
+            <div className="space-y-4">
+              {statistics.frequentLocations.map((location, index) => (
+                <div key={location.name} className="flex items-center justify-between p-4 bg-bg-secondary rounded-lg hover:bg-bg-primary transition-colors">
+                  <div className="flex items-center space-x-4">
+                    {/* Ranking Badge */}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                      index === 0 ? 'bg-yellow-100 text-yellow-700' :
+                      index === 1 ? 'bg-gray-100 text-gray-700' :
+                      index === 2 ? 'bg-orange-100 text-orange-700' :
+                      'bg-blue-100 text-blue-700'
+                    }`}>
+                      {index === 0 ? <Crown className="w-4 h-4" /> : index + 1}
+                    </div>
+                    
+                    {/* Location Info */}
+                    <div>
+                      <h3 className="font-medium text-text">{location.name}</h3>
+                      <p className="text-sm text-secondary-text">
+                        {location.wins}W - {location.losses}L {location.draws > 0 && `- ${location.draws}D`}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <p className="font-semibold text-text">{location.battles} {location.battles === 1 ? 'battle' : 'battles'}</p>
+                    <p className={`text-sm font-medium ${
+                      location.winRate >= 70 ? 'text-green-600' :
+                      location.winRate >= 50 ? 'text-yellow-600' :
+                      'text-red-600'
+                    }`}>
+                      {location.winRate.toFixed(1)}% win rate
                     </p>
                   </div>
                 </div>
@@ -313,7 +349,7 @@ export function StatisticsPage() {
                   <h3 className="text-lg font-semibold text-text font-overpass">Most Active Period</h3>
                 </div>
                 <p className="text-2xl font-bold text-text mb-2">{statistics.mostActivePeriod.period}</p>
-                <p className="text-secondary-text">{statistics.mostActivePeriod.battles} battles played</p>
+                <p className="text-secondary-text">{statistics.mostActivePeriod.battles} {statistics.mostActivePeriod.battles === 1 ? 'battle' : 'battles'} played</p>
               </div>
             )}
 

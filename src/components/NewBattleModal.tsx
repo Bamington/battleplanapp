@@ -454,6 +454,7 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
           result: result,
           image_url: imageUrl,
           battle_notes: battleNotes.trim() || null,
+          location: location.trim() || null,
           user_id: user.id
         })
 
