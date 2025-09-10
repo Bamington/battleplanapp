@@ -34,7 +34,35 @@ export function formatLocalDate(
   }
 ): string {
   const date = toLocalDate(dateString)
-  return date.toLocaleDateString('en-US', options)
+  return date.toLocaleDateString('en-AU', options)
+}
+
+/**
+ * Format a date in Australian format (DD/MM/YY)
+ * @param dateString - Date string
+ * @returns Formatted date string in DD/MM/YY format
+ */
+export function formatAustralianDate(dateString: string): string {
+  const date = toLocalDate(dateString)
+  return date.toLocaleDateString('en-AU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit'
+  })
+}
+
+/**
+ * Format a date in Australian format with full year (DD/MM/YYYY)
+ * @param dateString - Date string
+ * @returns Formatted date string in DD/MM/YYYY format
+ */
+export function formatAustralianDateFull(dateString: string): string {
+  const date = toLocalDate(dateString)
+  return date.toLocaleDateString('en-AU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
 }
 
 /**

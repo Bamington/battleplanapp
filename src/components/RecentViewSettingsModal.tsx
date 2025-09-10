@@ -16,8 +16,14 @@ export interface RecentViewSettings {
   showAssembled: boolean
   showUnassembled: boolean
   
+  // Image filter
+  showImagesOnly: boolean
+  
   // Model sort order
   sortOrder: 'mostRecentlyAdded' | 'mostRecentlyPainted'
+  
+  // Collection sort order
+  collectionSortOrder: 'mostRecentlyAdded' | 'mostRecentlyPurchased'
 }
 
 export function RecentViewSettingsModal({ isOpen, onClose, onSave, currentSettings }: RecentViewSettingsModalProps) {
@@ -122,6 +128,25 @@ export function RecentViewSettingsModal({ isOpen, onClose, onSave, currentSettin
                 </div>
               </div>
 
+              {/* Image Filter */}
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold text-text">Image Filter</h3>
+                <div className="space-y-3">
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={settings.showImagesOnly}
+                      onChange={(e) => setSettings({...settings, showImagesOnly: e.target.checked})}
+                      className="w-4 h-4 text-brand bg-bg-primary border-border-custom rounded focus:ring-brand focus:ring-2"
+                    />
+                    <div>
+                      <span className="text-sm text-text font-medium">Show only models with images</span>
+                      <p className="text-xs text-secondary-text">Hide models that don't have uploaded images</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               {/* Model Sorting Options */}
               <div className="space-y-4">
                 <h3 className="text-base font-semibold text-text">Model Sort Order</h3>
@@ -153,6 +178,42 @@ export function RecentViewSettingsModal({ isOpen, onClose, onSave, currentSettin
                     <div>
                       <span className="text-sm text-text font-medium">Most Recently Painted</span>
                       <p className="text-xs text-secondary-text">Show models by painted date</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Collection Sorting Options */}
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold text-text">Collection Sort Order</h3>
+                <div className="space-y-3">
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="radio"
+                      name="collectionSortOrder"
+                      value="mostRecentlyAdded"
+                      checked={settings.collectionSortOrder === 'mostRecentlyAdded'}
+                      onChange={(e) => setSettings({...settings, collectionSortOrder: e.target.value as 'mostRecentlyAdded' | 'mostRecentlyPurchased'})}
+                      className="w-4 h-4 text-brand bg-bg-primary border-border-custom focus:ring-brand focus:ring-2"
+                    />
+                    <div>
+                      <span className="text-sm text-text font-medium">Most Recently Added</span>
+                      <p className="text-xs text-secondary-text">Show collections by creation date</p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="radio"
+                      name="collectionSortOrder"
+                      value="mostRecentlyPurchased"
+                      checked={settings.collectionSortOrder === 'mostRecentlyPurchased'}
+                      onChange={(e) => setSettings({...settings, collectionSortOrder: e.target.value as 'mostRecentlyAdded' | 'mostRecentlyPurchased'})}
+                      className="w-4 h-4 text-brand bg-bg-primary border-border-custom focus:ring-brand focus:ring-2"
+                    />
+                    <div>
+                      <span className="text-sm text-text font-medium">Most Recently Purchased</span>
+                      <p className="text-xs text-secondary-text">Show collections by purchase date</p>
                     </div>
                   </label>
                 </div>

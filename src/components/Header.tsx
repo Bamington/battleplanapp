@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Menu, X, User, Plus, Settings, Moon, Sun, Shield, Package, Calendar, Ban, Sword } from 'lucide-react'
+import { Menu, X, User, Plus, Settings, Moon, Sun, Shield, Package, Calendar, Ban, Sword, ChevronDown, ChevronRight, Clock, Layers, BarChart3, Brush, Heart } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useDarkMode } from '../hooks/useDarkMode'
 import { Toast } from './Toast'
@@ -9,7 +9,7 @@ interface HeaderProps {
   onAdminClick?: () => void
   onSettingsClick?: () => void
   activeTab?: string
-  onTabChange?: (tab: string) => void
+  onTabChange?: (tab: string, subView?: string) => void
   onLogoClick?: () => void
 }
 
@@ -19,8 +19,9 @@ export function Header({ onAddModel, onAdminClick, onSettingsClick, activeTab, o
   const [toastMessage, setToastMessage] = useState('')
   const [showToast, setShowToast] = useState(false)
   const [profileMenuPosition, setProfileMenuPosition] = useState({ top: 0, left: 0 })
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const { isDarkMode, toggleDarkMode } = useDarkMode()
-  const { user, signOut } = useAuth()
+  const { user, signOut, isBetaTester } = useAuth()
   const profileButtonRef = useRef<HTMLButtonElement>(null)
   const profileMenuRef = useRef<HTMLDivElement>(null)
 
@@ -103,17 +104,34 @@ export function Header({ onAddModel, onAdminClick, onSettingsClick, activeTab, o
     {
       id: 'collection',
       name: 'Collection',
-      icon: Package
+      icon: Package,
+      hasSubItems: true,
+      subItems: [
+        { id: 'collection-recent', name: 'Recent', icon: Clock, parentId: 'collection' },
+        { id: 'collection-models', name: 'Models', icon: Layers, parentId: 'collection' },
+        { id: 'collection-collections', name: 'Collections', icon: Package, parentId: 'collection' },
+        { id: 'collection-statistics', name: 'Statistics', icon: BarChart3, parentId: 'collection' },
+        ...(isBetaTester ? [
+          { id: 'collection-painting-table', name: 'Painting Table', icon: Brush, parentId: 'collection' },
+          { id: 'collection-wishlist', name: 'Wishlist', icon: Heart, parentId: 'collection' }
+        ] : [])
+      ]
     },
     {
       id: 'battles',
       name: 'Battles',
-      icon: Sword
+      icon: Sword,
+      hasSubItems: true,
+      subItems: [
+        { id: 'battles-battles', name: 'Battles', icon: Sword, parentId: 'battles' },
+        { id: 'battles-statistics', name: 'Statistics', icon: BarChart3, parentId: 'battles' }
+      ]
     },
     {
       id: 'battleplan',
       name: 'Battleplan',
-      icon: Calendar
+      icon: Calendar,
+      hasSubItems: false
     }
   ]
 
@@ -121,6 +139,27 @@ export function Header({ onAddModel, onAdminClick, onSettingsClick, activeTab, o
     setIsNavigationMenuOpen(false)
     onTabChange?.(tabId)
   }
+
+  const handleSubItemClick = (subItemId: string, parentId: string) => {
+    setIsNavigationMenuOpen(false)
+    // Extract the sub-view from the sub-item ID (e.g., 'collection-recent' -> 'recent')
+    const subView = subItemId.replace(`${parentId}-`, '')
+    onTabChange?.(parentId, subView)
+  }
+
+  const toggleExpanded = (itemId: string) => {
+    setExpandedItems(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId)
+      } else {
+        newSet.add(itemId)
+      }
+      return newSet
+    })
+  }
+
+  const isItemExpanded = (itemId: string) => expandedItems.has(itemId)
 
   return (
     <>
@@ -196,28 +235,72 @@ export function Header({ onAddModel, onAdminClick, onSettingsClick, activeTab, o
             
             {/* Navigation Items */}
             <nav className="flex-1 p-4">
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {navigationItems.map((item) => {
                   const Icon = item.icon
                   const isActive = activeTab === item.id
+                  const isExpanded = isItemExpanded(item.id)
                   
                   return (
-                                         <button
-                       key={item.id}
-                       onClick={() => handleNavigationItemClick(item.id)}
-                       className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                         isActive
-                           ? 'bg-brand/10 text-brand border border-brand/20'
-                           : 'text-secondary-text hover:text-text hover:bg-bg-secondary'
-                       }`}
-                     >
-                       <Icon className={`w-5 h-5 ${
-                         isActive
-                           ? 'text-icon-active'
-                           : 'text-icon hover:text-icon-hover'
-                       }`} />
-                       <span className={`font-medium ${isActive ? 'text-brand' : ''}`}>{item.name}</span>
-                     </button>
+                    <div key={item.id} className="space-y-1">
+                      {/* Main Navigation Item */}
+                      <div className="flex items-center">
+                        <button
+                          onClick={() => {
+                            if (item.hasSubItems) {
+                              toggleExpanded(item.id)
+                            } else {
+                              handleNavigationItemClick(item.id)
+                            }
+                          }}
+                          className={`flex-1 flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                            isActive
+                              ? 'bg-brand/10 text-brand border border-brand/20'
+                              : 'text-secondary-text hover:text-text hover:bg-bg-secondary'
+                          }`}
+                        >
+                          <Icon className={`w-5 h-5 ${
+                            isActive
+                              ? 'text-icon-active'
+                              : 'text-icon hover:text-icon-hover'
+                          }`} />
+                          <span className={`font-medium ${isActive ? 'text-brand' : ''}`}>{item.name}</span>
+                        </button>
+                        
+                        {/* Expand/Collapse Button */}
+                        {item.hasSubItems && (
+                          <button
+                            onClick={() => toggleExpanded(item.id)}
+                            className="p-2 text-secondary-text hover:text-text transition-colors"
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="w-4 h-4" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Sub Items */}
+                      {item.hasSubItems && isExpanded && (
+                        <div className="ml-4 space-y-1">
+                          {item.subItems?.map((subItem) => {
+                            const SubIcon = subItem.icon
+                            return (
+                              <button
+                                key={subItem.id}
+                                onClick={() => handleSubItemClick(subItem.id, subItem.parentId)}
+                                className="w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors text-sm text-secondary-text hover:text-text hover:bg-bg-secondary"
+                              >
+                                <SubIcon className="w-4 h-4 text-icon" />
+                                <span>{subItem.name}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
                   )
                 })}
                 

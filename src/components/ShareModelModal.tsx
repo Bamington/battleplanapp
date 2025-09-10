@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { X, Share2, Globe, Lock, Copy } from 'lucide-react'
+import { X, Share2, Globe, Lock, Copy, Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { getShareUrl } from '../utils/environment'
 import { Toast } from './Toast'
+import { ShareScreenshotPreview } from './ShareScreenshotPreview'
 
 interface ShareModelModalProps {
   isOpen: boolean
@@ -12,6 +13,11 @@ interface ShareModelModalProps {
     id: string
     name: string
     public: boolean | null
+    image_url?: string
+    painted_date?: string | null
+    box?: {
+      name: string
+    } | null
   } | null
 }
 
@@ -22,6 +28,7 @@ export function ShareModelModal({ isOpen, onClose, onModelUpdated, model }: Shar
   const [error, setError] = useState('')
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  const [showScreenshotPreview, setShowScreenshotPreview] = useState(false)
 
   // Update local state when model changes
   useEffect(() => {
@@ -177,17 +184,31 @@ export function ShareModelModal({ isOpen, onClose, onModelUpdated, model }: Shar
             </div>
           )}
 
-          {/* Copy URL Button - Only show when public */}
-          {isPublic && (
-            <button
-              onClick={handleCopyUrl}
-              disabled={copying}
-              className="btn-secondary btn-full btn-with-icon"
-            >
-              <Copy className="w-4 h-4" />
-              <span>{copying ? 'Copying...' : 'Copy URL'}</span>
-            </button>
-          )}
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            {/* Copy URL Button - Only show when public */}
+            {isPublic && (
+              <button
+                onClick={handleCopyUrl}
+                disabled={copying}
+                className="btn-secondary btn-full btn-with-icon"
+              >
+                <Copy className="w-4 h-4" />
+                <span>{copying ? 'Copying...' : 'Copy URL'}</span>
+              </button>
+            )}
+            
+            {/* Share Screenshot Button - Only show if model has an image */}
+            {model.image_url && (
+              <button
+                onClick={() => setShowScreenshotPreview(true)}
+                className="btn-primary btn-full btn-with-icon"
+              >
+                <Camera className="w-4 h-4" />
+                <span>Share Screenshot</span>
+              </button>
+            )}
+          </div>
 
           {/* Error Message */}
           {error && (
@@ -213,6 +234,13 @@ export function ShareModelModal({ isOpen, onClose, onModelUpdated, model }: Shar
         message={toastMessage}
         isVisible={showToast}
         onClose={() => setShowToast(false)}
+      />
+      
+      {/* Share Screenshot Preview Modal */}
+      <ShareScreenshotPreview
+        isOpen={showScreenshotPreview}
+        onClose={() => setShowScreenshotPreview(false)}
+        model={model}
       />
     </div>
   )

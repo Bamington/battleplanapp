@@ -6,22 +6,17 @@ import { DeleteBattleModal } from './DeleteBattleModal'
 import { BattleSubMenu } from './BattleSubMenu'
 import { StatisticsPage } from './StatisticsPage'
 import { EditBattleModal } from './EditBattleModal'
-import { useBattles } from '../hooks/useBattles'
+import { useBattles, Battle } from '../hooks/useBattles'
 import { supabase } from '../lib/supabase'
-import type { Database } from '../lib/database.types'
-
-// Use the Battle type from database types
-type Battle = Database['public']['Tables']['battles']['Row'] & {
-  game_icon?: string | null // Optional since it's added by the hook
-}
 
 interface BattlesPageProps {
   onBack?: () => void
   onRefetchReady?: (refetchFn: () => void) => void
+  initialView?: 'battles' | 'statistics'
 }
 
-export function BattlesPage({ onBack, onRefetchReady }: BattlesPageProps) {
-  const [activeView, setActiveView] = useState<'battles' | 'statistics'>('battles')
+export function BattlesPage({ onBack, onRefetchReady, initialView = 'battles' }: BattlesPageProps) {
+  const [activeView, setActiveView] = useState<'battles' | 'statistics'>(initialView)
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean
     battleId: number | null
@@ -47,6 +42,11 @@ export function BattlesPage({ onBack, onRefetchReady }: BattlesPageProps) {
   })
   const [deleting, setDeleting] = useState(false)
   const { battles, loading, hasInitialized, refetch } = useBattles()
+
+  // Update activeView when initialView prop changes
+  useEffect(() => {
+    setActiveView(initialView)
+  }, [initialView])
   
   // Expose the refetch function to parent component only once when component mounts
   useEffect(() => {

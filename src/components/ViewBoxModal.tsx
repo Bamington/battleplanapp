@@ -6,7 +6,7 @@ import { EditBoxModal } from './EditBoxModal'
 import { RemoveModelFromBoxModal } from './RemoveModelFromBoxModal'
 import { ShareCollectionModal } from './ShareCollectionModal'
 import { supabase } from '../lib/supabase'
-import { formatLocalDate } from '../utils/timezone'
+import { formatLocalDate, formatAustralianDate } from '../utils/timezone'
 
 interface ViewBoxModalProps {
   isOpen: boolean
@@ -94,6 +94,17 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
             id,
             name,
             icon
+          ),
+          box:boxes(
+            id,
+            name,
+            purchase_date,
+            game:games(
+              id,
+              name,
+              icon,
+              image
+            )
           )
         `)
         .eq('box_id', box.id)
@@ -199,11 +210,7 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
   }
 
   const formatDate = (dateString: string) => {
-    return formatLocalDate(dateString, {
-      month: '2-digit',
-      day: '2-digit',
-      year: '2-digit'
-    })
+    return formatAustralianDate(dateString)
   }
 
   const getImageSrc = () => {
@@ -229,7 +236,7 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
     }
     
     // Final fallback to default image
-    return 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+    return '/bp-unkown.svg'
   }
 
   const getStatusColor = (status: string) => {
@@ -265,7 +272,7 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
     }
     
     // Fallback to default image
-    return { src: 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg', isGameFallback: false }
+    return { src: '/bp-unkown.svg', isGameFallback: false }
   }
 
   const handleShareClick = () => {
@@ -342,11 +349,15 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
             <img
               src={getImageSrc()}
               alt={box.name}
-              className="w-full object-cover"
+              className="w-full object-cover rounded-none sm:rounded-t-lg"
+              style={{ 
+                marginTop: 'calc(-1 * max(1rem, env(safe-area-inset-top)))', 
+                paddingTop: 'max(1rem, env(safe-area-inset-top))'
+              }}
               loading="lazy"
               onError={(e) => {
                 const target = e.target as HTMLImageElement
-                const fallbackUrl = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                const fallbackUrl = '/bp-unkown.svg'
                 if (target.src !== fallbackUrl) {
                   console.log('Box modal image failed to load:', target.src, 'Falling back to default')
                   target.src = fallbackUrl
@@ -370,7 +381,7 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
                 {box.game?.icon ? (
                   <img
                     src={box.game.icon}
-                    alt={`${box.game.name} icon`}
+                    alt={`${box.game?.name || 'Unknown Game'} icon`}
                     className="object-cover rounded max-h-[32px]"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement
@@ -445,7 +456,7 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
                   <p className="text-sm text-secondary-text mt-2">Use the "Add Models to Collection" button to add some!</p>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-64 overflow-y-auto">
+                <div className="space-y-3">
                   {boxModels.map((model) => (
                     <div
                       key={model.id}
@@ -461,7 +472,7 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
                                 className={`w-12 h-12 object-cover rounded ${imageData.isGameFallback ? 'opacity-10' : ''}`}
                                 onError={(e) => {
                                  const target = e.target as HTMLImageElement
-                                 target.src = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                                 target.src = '/bp-unkown.svg'
                                }}
                              />
                            )

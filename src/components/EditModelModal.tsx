@@ -3,9 +3,11 @@ import { X, Upload, Calendar, FileText, Hash, Image as ImageIcon, Package, Gamep
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useGames } from '../hooks/useGames';
+import { useRecentGames } from '../hooks/useRecentGames';
 import { compressImage } from '../utils/imageCompression';
 import { ImageCropper } from './ImageCropper';
 import { GameDropdown } from './GameDropdown';
+import { AddNewGameModal } from './AddNewGameModal';
 import { RichTextEditor } from './RichTextEditor';
 import { DatePicker } from './DatePicker';
 
@@ -21,6 +23,15 @@ interface Model {
   notes: string | null;
   image_url: string;
   game_id: string | null;
+  images?: {
+    id: string;
+    model_id: string;
+    image_url: string;
+    display_order: number;
+    is_primary: boolean;
+    created_at: string;
+    user_id: string;
+  }[];
   box?: {
     id: string;
     name: string;
@@ -51,8 +62,27 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
   const [showImageCropper, setShowImageCropper] = useState(false);
   const [imageForCropping, setImageForCropping] = useState<File | null>(null);
   const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null);
-  const { games } = useGames();
+  const { games, createGame, refetch: refetchGames } = useGames();
+  const { addRecentGame } = useRecentGames();
   const [deleteImage, setDeleteImage] = useState(false);
+  const [showAddGameModal, setShowAddGameModal] = useState(false);
+  
+  // Multiple images state
+  const [modelImages, setModelImages] = useState<{
+    id: string;
+    model_id: string;
+    image_url: string;
+    display_order: number;
+    is_primary: boolean;
+    created_at: string;
+    user_id: string;
+  }[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
+  const [newImagesToUpload, setNewImagesToUpload] = useState<{
+    file: File;
+    blob: Blob;
+    display_order: number;
+  }[]>([]);
 
   useEffect(() => {
     if (model) {
@@ -65,22 +95,31 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
         status: model.status || '',
         painted_date: model.painted_date || ''
       });
+      
+      // Initialize model images
+      setModelImages(model.images || []);
+      setImagesToDelete([]);
+      setNewImagesToUpload([]);
     }
   }, [model]);
 
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
-        return;
-      }
-
-      setSelectedFile(file);
-      setImageForCropping(file);
-      setShowImageCropper(true);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    // Validate all files are images
+    const invalidFiles = files.filter(file => !file.type.startsWith('image/'));
+    if (invalidFiles.length > 0) {
+      alert('Please select only image files');
+      return;
     }
+    
+    // For now, handle single file (we'll add multiple file support later)
+    const file = files[0];
+    setSelectedFile(file);
+    setImageForCropping(file);
+    setShowImageCropper(true);
   };
 
   const handleCameraCapture = async () => {
@@ -256,10 +295,18 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
       const compressedFile = await compressImage(croppedFile, 1200, 1200, 0.8);
       
       console.log('Compressed size:', (compressedFile.size / 1024).toFixed(2), 'KB');
-      setCroppedImageBlob(compressedFile);
+      
+      // Add to new images to upload
+      addNewImage(croppedFile, compressedFile);
+      
+      // Clear the single image state
+      setCroppedImageBlob(null);
+      setSelectedFile(null);
     } catch (error) {
       console.error('Compression failed, using original cropped image:', error);
-      setCroppedImageBlob(croppedFile);
+      addNewImage(croppedFile, croppedFile);
+      setCroppedImageBlob(null);
+      setSelectedFile(null);
     } finally {
       setCompressing(false);
       setShowImageCropper(false);
@@ -272,6 +319,42 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
     setSelectedFile(null);
   };
 
+  // Helper functions for multiple images
+  const addNewImage = (file: File, blob: Blob) => {
+    const nextOrder = Math.max(0, ...modelImages.map(img => img.display_order), ...newImagesToUpload.map(img => img.display_order)) + 1;
+    setNewImagesToUpload(prev => [...prev, { file, blob, display_order: nextOrder }]);
+  };
+
+  const removeNewImage = (index: number) => {
+    setNewImagesToUpload(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const deleteExistingImage = (imageId: string) => {
+    setImagesToDelete(prev => [...prev, imageId]);
+    setModelImages(prev => prev.filter(img => img.id !== imageId));
+  };
+
+  const setPrimaryImage = (imageId: string) => {
+    setModelImages(prev => prev.map(img => ({
+      ...img,
+      is_primary: img.id === imageId
+    })));
+  };
+
+  const reorderImages = (fromIndex: number, toIndex: number) => {
+    const newImages = [...modelImages];
+    const [movedImage] = newImages.splice(fromIndex, 1);
+    newImages.splice(toIndex, 0, movedImage);
+    
+    // Update display_order
+    const updatedImages = newImages.map((img, index) => ({
+      ...img,
+      display_order: index
+    }));
+    
+    setModelImages(updatedImages);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -279,14 +362,15 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
     setUploading(true);
 
     try {
-      let imageUrl: string | null = model.image_url;
+      // Handle multiple images
+      let primaryImageUrl: string | null = model.image_url;
 
-      // Handle image deletion
-      if (deleteImage) {
-        // Delete the image from storage if it exists and is from our storage
-        if (model.image_url && model.image_url.includes('supabase')) {
+      // 1. Delete images marked for deletion
+      for (const imageId of imagesToDelete) {
+        const imageToDelete = model.images?.find(img => img.id === imageId);
+        if (imageToDelete?.image_url && imageToDelete.image_url.includes('supabase')) {
           try {
-            const urlParts = model.image_url.split('/')
+            const urlParts = imageToDelete.image_url.split('/')
             const bucketIndex = urlParts.findIndex(part => part === 'model-images')
             if (bucketIndex !== -1) {
               const filePath = urlParts.slice(bucketIndex + 1).join('/')
@@ -295,37 +379,27 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                 .remove([filePath])
             }
           } catch (deleteError) {
-            console.warn('Failed to delete old image:', deleteError)
+            console.warn('Failed to delete image:', deleteError)
           }
         }
-        imageUrl = null;
+        
+        // Delete from database
+        await supabase
+          .from('model_images')
+          .delete()
+          .eq('id', imageId)
       }
-      // Upload new image if selected
-      else if (croppedImageBlob) {
-        // Delete old image if it exists and is from our storage
-        if (model.image_url && model.image_url.includes('supabase')) {
-          try {
-            const urlParts = model.image_url.split('/')
-            const bucketIndex = urlParts.findIndex(part => part === 'model-images')
-            if (bucketIndex !== -1) {
-              const filePath = urlParts.slice(bucketIndex + 1).join('/')
-              await supabase.storage
-                .from('model-images')
-                .remove([filePath])
-            }
-          } catch (deleteError) {
-            console.warn('Failed to delete old image:', deleteError)
-          }
-        }
 
-        // Upload new image
-        const fileExt = selectedFile?.name.split('.').pop() || 'jpg'
+      // 2. Upload new images
+      const uploadedImages = [];
+      for (const newImage of newImagesToUpload) {
+        const fileExt = newImage.file.name.split('.').pop() || 'jpg'
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
         const filePath = `${user.id}/${fileName}`
 
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('model-images')
-          .upload(filePath, croppedImageBlob)
+          .upload(filePath, newImage.blob)
 
         if (uploadError) {
           console.error('Upload error:', uploadError)
@@ -336,8 +410,65 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
           .from('model-images')
           .getPublicUrl(uploadData.path)
 
-        imageUrl = data.publicUrl
-        console.log('New image uploaded:', imageUrl)
+        // Insert into model_images table
+        const { data: imageData, error: imageError } = await supabase
+          .from('model_images')
+          .insert({
+            model_id: model.id,
+            image_url: data.publicUrl,
+            display_order: newImage.display_order,
+            is_primary: false, // Will be set below
+            user_id: user.id
+          })
+          .select()
+          .single()
+
+        if (imageError) {
+          console.error('Error inserting image record:', imageError)
+          throw new Error(`Failed to save image record: ${imageError.message}`)
+        }
+
+        uploadedImages.push(imageData)
+      }
+
+      // 3. Update display_order for existing images
+      for (let i = 0; i < modelImages.length; i++) {
+        const image = modelImages[i]
+        await supabase
+          .from('model_images')
+          .update({ display_order: i })
+          .eq('id', image.id)
+      }
+
+      // 4. Set primary image
+      const allImages = [...modelImages, ...uploadedImages]
+      const primaryImage = allImages.find(img => img.is_primary)
+      if (primaryImage) {
+        primaryImageUrl = primaryImage.image_url
+      } else if (allImages.length > 0) {
+        // If no primary image set, make the first one primary
+        const firstImage = allImages[0]
+        await supabase
+          .from('model_images')
+          .update({ is_primary: true })
+          .eq('id', firstImage.id)
+        primaryImageUrl = firstImage.image_url
+      }
+
+      // Handle new game creation and other option
+      let gameIdToSave = formData.game_id || null
+      
+      // Find the 'Other' game to check if selected game is the 'Other' option
+      const otherGame = games.find(game => game.name.toLowerCase() === 'other')
+      
+      if (formData.game_id === otherGame?.id) {
+        gameIdToSave = null
+      } else if (formData.game_id && formData.game_id.startsWith('new:')) {
+        const gameName = formData.game_id.replace('new:', '')
+        const newGame = await createGame(gameName)
+        gameIdToSave = newGame.id
+        // Add to recent games
+        addRecentGame(newGame)
       }
 
       const { error } = await supabase
@@ -347,8 +478,8 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
           count: formData.count,
           purchase_date: formData.purchase_date || null,
           notes: formData.notes || null,
-          game_id: formData.game_id || null,
-          image_url: imageUrl,
+          game_id: gameIdToSave,
+          image_url: primaryImageUrl,
           status: formData.status || 'None',
           painted_date: formData.painted_date || null
         })
@@ -364,6 +495,8 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
       setCroppedImageBlob(null);
       setImageForCropping(null);
       setDeleteImage(false);
+      setNewImagesToUpload([]);
+      setImagesToDelete([]);
     } catch (error) {
       console.error('Error updating model:', error);
       alert('Failed to update model. Please try again.');
@@ -448,17 +581,22 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
 
             {/* Game - Only show if no box is assigned */}
             {!model.box && (
-              <div>
-                <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <Gamepad2 className="w-4 h-4 mr-2" />
-                  Game
-                </label>
-                <GameDropdown
-                  games={games}
-                  selectedGame={formData.game_id}
-                  onGameSelect={(gameId) => setFormData({ ...formData, game_id: gameId })}
-                />
-              </div>
+              <>
+                <div>
+                  <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <Gamepad2 className="w-4 h-4 mr-2" />
+                    Game
+                  </label>
+                  <GameDropdown
+                    games={games}
+                    selectedGame={formData.game_id}
+                    onGameSelect={(gameId) => setFormData({ ...formData, game_id: gameId })}
+                    showAddNewButton={true}
+                    onAddNewGame={() => setShowAddGameModal(true)}
+                  />
+                </div>
+                
+              </>
             )}
 
             {/* Painted Status */}
@@ -496,7 +634,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
               </div>
             )}
 
-            {/* Purchase Date - Only show if no box is assigned */}
+            {/* Purchase Date - Show editable field if no box, or disabled field if box has purchase date */}
             {!model.box && (
               <div>
                 <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -509,6 +647,25 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                   placeholder="Select purchase date"
                   minDate=""
                 />
+              </div>
+            )}
+            
+            {/* Purchase Date - Show disabled field when box has purchase date */}
+            {model.box && model.box.purchase_date && (
+              <div>
+                <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Purchase Date
+                </label>
+                <input
+                  type="text"
+                  value={new Date(model.box.purchase_date).toLocaleDateString('en-AU')}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  We'll use the collection's purchase date.
+                </p>
               </div>
             )}
 
@@ -537,100 +694,134 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                 <span className="text-sm text-gray-500">Optional</span>
               </div>
               
-              {/* Image Upload Area */}
-              <div className="border-2 border-dashed border-border-custom rounded-lg p-6 text-center hover:border-[var(--color-brand)] transition-colors">
-                {selectedFile ? (
-                  <div className="space-y-4">
-                    <div className="relative mx-auto w-32 h-32">
-                      <img
-                        src={URL.createObjectURL(selectedFile)}
-                        alt="Selected model image"
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedFile(null)
-                          setCroppedImageBlob(null)
-                        }}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <p className="text-sm text-secondary-text">{selectedFile.name}</p>
-                  </div>
-                ) : model.image_url && !deleteImage ? (
-                  <div className="space-y-4">
-                    <div className="relative mx-auto w-32 h-32">
-                      <img
-                        src={model.image_url}
-                        alt="Current model image"
-                        className="w-full h-full object-cover rounded-lg"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleDeleteImage}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
-                        title="Remove current image"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <p className="text-sm text-secondary-text">Current image</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex justify-center space-x-4">
-                      <label className="cursor-pointer">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleFileSelect}
-                          className="hidden"
-                          disabled={uploading}
-                        />
-                        <div className="flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-bg-secondary transition-colors">
-                          <ImageIcon className="w-8 h-8 text-icon" />
-                          <span className="text-sm font-medium text-text">Upload Image</span>
+              {/* Multiple Images Gallery */}
+              <div className="space-y-4">
+                {/* Existing Images */}
+                {modelImages.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-text">Current Images</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {modelImages.map((image, index) => (
+                        <div key={image.id} className="relative group">
+                          <img
+                            src={image.image_url}
+                            alt={`Model image ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all rounded-lg flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 flex space-x-2 transition-opacity">
+                              <button
+                                type="button"
+                                onClick={() => setPrimaryImage(image.id)}
+                                className={`p-1 rounded-full ${
+                                  image.is_primary 
+                                    ? 'bg-yellow-500 text-white' 
+                                    : 'bg-white text-gray-700 hover:bg-yellow-100'
+                                }`}
+                                title={image.is_primary ? 'Primary image' : 'Set as primary'}
+                              >
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteExistingImage(image.id)}
+                                className="p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                                title="Delete image"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                          {image.is_primary && (
+                            <div className="absolute top-1 left-1 bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">
+                              Primary
+                            </div>
+                          )}
                         </div>
-                      </label>
-                      
-                      <button
-                        type="button"
-                        onClick={handleCameraCapture}
-                        disabled={uploading}
-                        className="flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-bg-secondary transition-colors"
-                      >
-                        <Camera className="w-8 h-8 text-icon" />
-                        <span className="text-sm font-medium text-text">Take Photo</span>
-                      </button>
+                      ))}
                     </div>
-                    <p className="text-xs text-secondary-text">
-                      JPEG, PNG, or WebP up to 50MB
-                    </p>
                   </div>
                 )}
+
+                {/* New Images to Upload */}
+                {newImagesToUpload.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-text">New Images</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {newImagesToUpload.map((newImage, index) => (
+                        <div key={index} className="relative">
+                          <img
+                            src={URL.createObjectURL(newImage.file)}
+                            alt={`New image ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeNewImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                            title="Remove image"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Upload Controls */}
+                <div className="border-2 border-dashed border-border-custom rounded-lg p-6 text-center hover:border-[var(--color-brand)] transition-colors">
+                  <div className="flex justify-center space-x-4">
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        disabled={uploading}
+                      />
+                      <div className="flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-bg-secondary transition-colors">
+                        <ImageIcon className="w-8 h-8 text-icon" />
+                        <span className="text-sm font-medium text-text">Add Image</span>
+                      </div>
+                    </label>
+                    
+                    <button
+                      type="button"
+                      onClick={handleCameraCapture}
+                      disabled={uploading}
+                      className="flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-bg-secondary transition-colors"
+                    >
+                      <Camera className="w-8 h-8 text-icon" />
+                      <span className="text-sm font-medium text-text">Take Photo</span>
+                    </button>
+                  </div>
+                  <p className="text-xs text-secondary-text mt-2">
+                    JPEG, PNG, or WebP up to 50MB
+                  </p>
+                </div>
               </div>
 
               {/* Status Messages */}
-              {croppedImageBlob && (
-                <p className="text-green-600 text-sm mt-2">
-                  ✓ Cropped image ready for upload ({(croppedImageBlob.size / 1024).toFixed(1)} KB)
-                </p>
-              )}
-              
               {compressing && (
                 <p className="text-blue-600 text-sm mt-2">Compressing image...</p>
               )}
               
-              {deleteImage && (
+              {newImagesToUpload.length > 0 && (
+                <p className="text-green-600 text-sm mt-2">
+                  ✓ {newImagesToUpload.length} new image{newImagesToUpload.length > 1 ? 's' : ''} ready for upload
+                </p>
+              )}
+              
+              {imagesToDelete.length > 0 && (
                 <p className="text-red-600 text-sm mt-2">
-                  ✓ Image will be deleted when you save changes
+                  ⚠️ {imagesToDelete.length} image{imagesToDelete.length > 1 ? 's' : ''} will be deleted when you save changes
                 </p>
               )}
             </div>
@@ -669,6 +860,18 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
             </div>
           </form>
         )}
+        
+        <AddNewGameModal
+          isOpen={showAddGameModal}
+          onClose={() => setShowAddGameModal(false)}
+          onGameCreated={async (newGame) => {
+            setFormData({ ...formData, game_id: newGame.id })
+            addRecentGame(newGame)
+            // Refetch games to ensure all components see the new game
+            await refetchGames()
+            setShowAddGameModal(false)
+          }}
+        />
       </div>
     </div>
   );

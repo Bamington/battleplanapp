@@ -81,7 +81,8 @@ export function useFilteredBattleStatistics() {
 
       // Opponent filter
       if (filters.selectedOpponents.length > 0) {
-        if (!battle.opp_name || !filters.selectedOpponents.includes(battle.opp_name)) {
+        const opponentName = battle.opponent?.opp_name || battle.opp_name
+        if (!opponentName || !filters.selectedOpponents.includes(opponentName)) {
           return false
         }
       }
@@ -125,7 +126,7 @@ export function useFilteredBattleStatistics() {
         const query = filters.searchQuery.toLowerCase()
         const searchableText = [
           battle.battle_name,
-          battle.opp_name,
+          battle.opponent?.opp_name || battle.opp_name,
           battle.game_name,
           battle.battle_notes,
           battle.result
@@ -144,8 +145,9 @@ export function useFilteredBattleStatistics() {
     
     const opponents = new Set<string>()
     battles.forEach(battle => {
-      if (battle.opp_name) {
-        opponents.add(battle.opp_name)
+      const opponentName = battle.opponent?.opp_name || battle.opp_name
+      if (opponentName) {
+        opponents.add(opponentName)
       }
     })
     return Array.from(opponents).sort()
@@ -355,7 +357,7 @@ export function useFilteredBattleStatistics() {
     // Create battles by month array
     const battlesByMonth = Object.entries(monthlyStats)
       .map(([month, battles]) => ({
-        month: new Date(month + '-01').toLocaleDateString('en-US', { 
+        month: new Date(month + '-01').toLocaleDateString('en-AU', { 
           month: 'short', 
           year: 'numeric' 
         }),

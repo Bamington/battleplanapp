@@ -2,10 +2,129 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom Fonts */
+/* Imperium Theme - Conduit ITC */
+@font-face {
+  font-family: 'Conduit ITC';
+  src: url('/fonts/imperium/ConduitITC-Bold.woff2') format('woff2');
+  font-weight: bold;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Conduit ITC';
+  src: url('/fonts/imperium/ConduitITC-Regular.woff2') format('woff2');
+  font-weight: normal;
+  font-display: swap;
+}
+
+/* Heroic Theme - Agency FB Bold */
+@font-face {
+  font-family: 'Agency FB';
+  src: url('/fonts/heroic/AGENCYFB-BOLD-2.woff2') format('woff2');
+  font-weight: bold;
+  font-display: swap;
+}
+
+/* Mini Myths Theme */
+@font-face {
+  font-family: 'Mini Myths';
+  src: url('/fonts/mini-myths/mini-myths.woff2') format('woff2');
+  font-weight: normal;
+  font-display: swap;
+}
+
+/* Eternal Theme - Minion Pro */
+@font-face {
+  font-family: 'Minion Pro';
+  src: url('/fonts/eternal/MinionPro-Regular.woff2') format('woff2');
+  font-weight: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Minion Pro';
+  src: url('/fonts/eternal/MinionPro-Bold.woff2') format('woff2');
+  font-weight: bold;
+  font-display: swap;
+}
+
+/* Marathon Theme Font */
+@font-face {
+  font-family: 'Halo';
+  src: url('/fonts/marathon/Halo.woff2') format('woff2');
+  font-weight: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'AUTOMATA';
+  src: url('/fonts/marathon/AUTOMATA.woff2') format('woff2');
+  font-weight: normal;
+  font-display: swap;
+}
+
+/* Red Fog Theme Font */
+@font-face {
+  font-family: 'WoodenBridge';
+  src: url('/fonts/red-fog/WoodenBridge-ClassicTexture.woff') format('woff');
+  font-weight: normal;
+  font-display: swap;
+}
+
+/* Dragonslayer Theme Font */
+@font-face {
+  font-family: 'SerifGothic';
+  src: url('/fonts/dragonslayer/SerifGothicStd-Heavy.woff') format('woff');
+  font-weight: normal;
+  font-display: swap;
+}
+
+/* Ringbearer Theme Font */
+@font-face {
+  font-family: 'Beaufort';
+  src: url('/fonts/ringbearer/BeaufortforLOL-Medium.woff') format('woff');
+  font-weight: normal;
+  font-display: swap;
+}
+
+/* Eightpoints Theme Font */
+@font-face {
+  font-family: 'Rodchenko';
+  src: url('/fonts/eightpoints/RodchenkoCond-Regular.woff2') format('woff2');
+  font-weight: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Rodchenko';
+  src: url('/fonts/eightpoints/RodchenkoCond-Bold.woff2') format('woff2');
+  font-weight: bold;
+  font-display: swap;
+}
+
+/* Shatterpoint Theme Font */
+@font-face {
+  font-family: 'TeutonFett';
+  src: url('/fonts/shatterpoint/TeutonFett-Bold(1).woff2') format('woff2');
+  font-weight: normal;
+  font-display: swap;
+}
+
 @layer base {
   * {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Invert bp-unkown.svg in light mode */
+  img[src="/bp-unkown.svg"] {
+    filter: invert(1);
+  }
+  
+  /* Don't invert in dark mode */
+  .dark img[src="/bp-unkown.svg"] {
+    filter: invert(0);
   }
   
   /* Hide scrollbars but maintain scroll functionality */
@@ -88,9 +207,8 @@
 
 @font-face {
   font-family: 'Colus';
-  src: url('/Colus-Regular.woff2') format('woff2');
+  src: url('/fonts/mini-myths/Colus-Regular.woff2') format('woff2');
   font-weight: normal;
-  font-style: normal;
   font-display: swap;
 }
 
@@ -733,4 +851,15 @@
     padding-top: 0.5rem;
     padding-bottom: max(1rem, calc(0.5rem + env(safe-area-inset-bottom)));
   }
+}
+
+/* Utility classes */
+.scrollbar-hide {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
 }

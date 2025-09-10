@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { X, User, Image, Camera } from 'lucide-react'
+import { X, Image, Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useGames } from '../hooks/useGames'
@@ -7,24 +7,22 @@ import { useRecentGames } from '../hooks/useRecentGames'
 import { GameDropdown } from './GameDropdown'
 import { RichTextEditor } from './RichTextEditor'
 import { DatePicker } from './DatePicker'
+import { OpponentSelector } from './OpponentSelector'
+import { useOpponents } from '../hooks/useOpponents'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
 
-interface Game {
-  id: string
-  name: string
-  icon: string | null
-}
 
 interface NewBattleModalProps {
   isOpen: boolean
   onClose: () => void
-  onBattleCreated: () => void
+  onBattleCreated: () => Promise<void>
 }
 
 export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleModalProps) {
   const [datePlayed, setDatePlayed] = useState('')
-  const [opponentName, setOpponentName] = useState('')
+  const [selectedOpponentId, setSelectedOpponentId] = useState<number | null>(null)
+  const [selectedOpponentName, setSelectedOpponentName] = useState<string | null>(null)
   const [battleNotes, setBattleNotes] = useState('')
   const [selectedGame, setSelectedGame] = useState('')
   const [result, setResult] = useState('')
@@ -33,15 +31,21 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [showImageCropper, setShowImageCropper] = useState(false)
   const [imageForCropping, setImageForCropping] = useState<File | null>(null)
-  const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null)
   const { games } = useGames()
   const [loading, setLoading] = useState(false)
   const [compressing, setCompressing] = useState(false)
+  const [creatingOpponent, setCreatingOpponent] = useState(false)
   const [error, setError] = useState('')
   const [fileSizeError, setFileSizeError] = useState('')
   const [compressionInfo, setCompressionInfo] = useState('')
   const { user } = useAuth()
   const { addRecentGame } = useRecentGames()
+  const { createOpponent } = useOpponents()
+
+  // Debug logging for game selection
+  React.useEffect(() => {
+    console.log('NewBattleModal - selectedGame changed:', selectedGame)
+  }, [selectedGame])
 
   // Prevent body scroll when modal is open
   React.useEffect(() => {
@@ -61,7 +65,8 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
     if (isOpen) {
       // Reset form when modal opens
       setDatePlayed('')
-      setOpponentName('')
+      setSelectedOpponentId(null)
+      setSelectedOpponentName(null)
       setBattleNotes('')
       setSelectedGame('')
       setResult('')
@@ -104,10 +109,12 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
 
 
   const handleGameSelect = (gameId: string) => {
+    console.log('Game selected:', gameId)
     setSelectedGame(gameId)
     // Add to recent games
     const selectedGameData = games.find(game => game.id === gameId)
     if (selectedGameData) {
+      console.log('Adding to recent games:', selectedGameData)
       addRecentGame(selectedGameData)
     }
   }
@@ -375,12 +382,59 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
       return
     }
 
-    if (!opponentName.trim()) {
-      setError('Opponent name is required')
-      return
+    if (!selectedOpponentId) {
+      console.log('Validation failed - selectedOpponentId:', selectedOpponentId, 'selectedOpponentName:', selectedOpponentName)
+      console.log('Current form state:', {
+        datePlayed,
+        selectedOpponentId,
+        selectedOpponentName,
+        selectedGame,
+        result
+      })
+      
+      // Check if there's text in the opponent field but no selection - try to create opponent
+      const opponentInput = document.querySelector('input[placeholder*="opponent"]') as HTMLInputElement
+      if (opponentInput && opponentInput.value.trim()) {
+        console.log('Attempting to auto-create opponent:', opponentInput.value.trim())
+        setCreatingOpponent(true)
+        setError('Creating opponent...')
+        
+        try {
+          const newOpponent = await createOpponent(opponentInput.value.trim())
+          
+          if (newOpponent) {
+            console.log('Auto-created opponent:', newOpponent)
+            setSelectedOpponentId(newOpponent.id)
+            setSelectedOpponentName(newOpponent.opp_name)
+            setError('')
+            setCreatingOpponent(false)
+          } else {
+            setError('Failed to create opponent. Please try again.')
+            setCreatingOpponent(false)
+            return
+          }
+        } catch (error) {
+          console.error('Error auto-creating opponent:', error)
+          setError('Failed to create opponent. Please try again.')
+          setCreatingOpponent(false)
+          return
+        }
+      } else {
+        setError('Opponent is required')
+        return
+      }
     }
 
     if (!selectedGame) {
+      console.log('Game validation failed - selectedGame:', selectedGame)
+      console.log('Available games:', games.map(g => ({ id: g.id, name: g.name })))
+      console.log('Current form state at game validation:', {
+        datePlayed,
+        selectedOpponentId,
+        selectedOpponentName,
+        selectedGame,
+        result
+      })
       setError('Game is required')
       return
     }
@@ -397,7 +451,7 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
       const selectedGameData = games.find(game => game.id === selectedGame)
       
       // Generate battle name: "[Game] against [Opponent]"
-      const generatedBattleName = `${selectedGameData?.name || 'Unknown Game'} against ${opponentName.trim()}`
+      const generatedBattleName = `${selectedGameData?.name || 'Unknown Game'} against ${selectedOpponentName || 'Unknown Opponent'}`
       
       let imageUrl = null
 
@@ -413,7 +467,7 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
           const fileName = `battle-images/${user.id}/${Date.now()}.${fileExt}`
           
           // Upload to Supabase Storage
-          const { data: uploadData, error: uploadError } = await supabase.storage
+          const { error: uploadError } = await supabase.storage
             .from('battle-images')
             .upload(fileName, compressedImage, {
               cacheControl: '3600',
@@ -448,7 +502,8 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
         .insert({
           battle_name: generatedBattleName,
           date_played: datePlayed,
-          opp_name: opponentName.trim(),
+          opponent_id: selectedOpponentId,
+          opp_name: selectedOpponentName, // Keep for backward compatibility
           game_name: selectedGameData?.name || '',
           game_uid: selectedGame,
           result: result,
@@ -461,7 +516,7 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
       if (error) throw error
 
       // Close modal and trigger refresh
-      onBattleCreated()
+      await onBattleCreated()
       onClose()
     } catch (error) {
       console.error('Error creating battle:', error)
@@ -522,23 +577,53 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
           {/* Opponent */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label htmlFor="opponentName" className="block text-sm font-medium text-input-label font-overpass">
+              <label htmlFor="opponent" className="block text-sm font-medium text-input-label font-overpass">
                 Opponent
               </label>
               <span className="text-sm text-gray-500">Required</span>
             </div>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-icon" />
-              <input
-                type="text"
-                id="opponentName"
-                value={opponentName}
-                onChange={(e) => setOpponentName(e.target.value)}
-                placeholder="Enter opponent's name"
-                className="w-full pl-10 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] placeholder-secondary-text bg-bg-primary text-text"
-                disabled={loading}
-              />
+            <OpponentSelector
+              selectedOpponentId={selectedOpponentId}
+              onOpponentChange={(opponentId, opponentName) => {
+                console.log('Opponent changed:', { opponentId, opponentName })
+                setSelectedOpponentId(opponentId)
+                setSelectedOpponentName(opponentName)
+              }}
+              disabled={loading || creatingOpponent}
+              placeholder="Select or create opponent..."
+              className={!selectedOpponentId ? "border-red-500" : ""}
+            />
+            
+            {/* Debug info */}
+            <div className="text-xs text-gray-500 mt-1">
+              Debug: selectedOpponentId={selectedOpponentId ? selectedOpponentId.toString() : 'null'}, 
+              selectedOpponentName={selectedOpponentName || 'null'}
             </div>
+            
+            {/* Test button */}
+            <button
+              type="button"
+              onClick={async () => {
+                console.log('Testing opponent creation...')
+                try {
+                  const { data, error } = await supabase
+                    .from('opponents')
+                    .insert({
+                      opp_name: 'Test Opponent',
+                      created_by: user?.id
+                    })
+                    .select()
+                    .single()
+                  
+                  console.log('Test opponent creation result:', { data, error })
+                } catch (err) {
+                  console.error('Test opponent creation error:', err)
+                }
+              }}
+              className="mt-2 px-2 py-1 text-xs bg-blue-500 text-white rounded"
+            >
+              Test Create Opponent
+            </button>
           </div>
 
           {/* Result */}
@@ -558,8 +643,8 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
             >
               <option value="">Select result...</option>
               <option value="I won">I won</option>
-              <option value={`${opponentName.trim() || 'Opponent'} won`}>
-                {opponentName.trim() || 'Opponent'} won
+              <option value={`${selectedOpponentName || 'Opponent'} won`}>
+                {selectedOpponentName || 'Opponent'} won
               </option>
               <option value="Draw">Draw</option>
             </select>
@@ -627,6 +712,11 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
               placeholder="Choose a Game"
               favoriteGames={getFavoriteGames()}
             />
+            
+            {/* Debug info for game */}
+            <div className="text-xs text-gray-500 mt-1">
+              Debug: selectedGame={selectedGame || 'null'}
+            </div>
           </div>
 
           {/* Battle Notes */}
@@ -739,9 +829,9 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
               type="submit"
               form="battle-form"
               className="flex-1 btn-primary"
-              disabled={loading || compressing || !datePlayed || !opponentName.trim() || !selectedGame || !result}
+              disabled={loading || compressing || creatingOpponent || !datePlayed || !selectedOpponentId || !selectedGame || !result}
             >
-              {compressing ? 'Compressing...' : loading ? 'Creating...' : 'Log Battle'}
+              {compressing ? 'Compressing...' : creatingOpponent ? 'Creating Opponent...' : loading ? 'Creating...' : 'Log Battle'}
             </button>
           </div>
         </div>

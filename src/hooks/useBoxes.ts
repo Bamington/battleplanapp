@@ -9,6 +9,7 @@ interface Box {
   image_url: string | null
   public: boolean | null
   models_count: number
+  created_at: string | null
   game: {
     id: string
     name: string
@@ -49,6 +50,7 @@ export function useBoxes() {
           purchase_date,
           image_url,
           public,
+          created_at,
           game:games(id, name, icon, image),
           models(count)
         `)

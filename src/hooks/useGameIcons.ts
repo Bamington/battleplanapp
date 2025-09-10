@@ -52,8 +52,6 @@ export function useGameIcons() {
 
         gameIconsCache = newCache
         cacheInitialized = true
-        
-        console.log('Game icons cache initialized with', Object.keys(gameIconsCache).length, 'entries')
       } catch (err) {
         console.error('Error initializing game icons cache:', err)
         setError('Failed to initialize game icons cache')

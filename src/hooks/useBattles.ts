@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
-interface Battle {
+export interface Battle {
   id: number
   battle_name: string | null
   battle_notes: string | null
@@ -11,8 +11,17 @@ interface Battle {
   game_uid: string | null
   game_icon: string | null
   image_url: string | null
-  opp_name: string | null
+  location: string | null
+  opp_name: string | null // Keep for backward compatibility during migration
   opp_id: string[] | null
+  opponent_id: number | null
+  opponent?: {
+    id: number
+    opp_name: string | null
+    opp_rel_uuid: string | null
+    created_by: string | null
+    created_at: string
+  } | null
   result: string | null
   user_id: string | null
   created_at: string
@@ -51,7 +60,10 @@ export function useBattles() {
       
       const { data, error } = await supabase
         .from('battles')
-        .select('*')
+        .select(`
+          *,
+          opponent:opponents(*)
+        `)
         .eq('user_id', user.id)
         .order('date_played', { ascending: false, nullsLast: true })
         .order('created_at', { ascending: false })
@@ -84,8 +96,8 @@ export function useBattles() {
     fetchBattles()
   }, [user, authLoading])
 
-  const refetch = () => {
-    fetchBattles(true) // Pass true to indicate this is a refetch
+  const refetch = async () => {
+    await fetchBattles(true) // Pass true to indicate this is a refetch
   }
 
 

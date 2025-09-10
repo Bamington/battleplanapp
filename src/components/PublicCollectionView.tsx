@@ -192,7 +192,7 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
      }
      
      // Final fallback to default image
-     return 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+     return '/bp-unkown.svg'
    }
 
   const getModelImageSrc = (model: Model) => {
@@ -218,7 +218,7 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
     }
     
     // Fallback to default image
-    return { src: 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg', isGameFallback: false }
+    return { src: '/bp-unkown.svg', isGameFallback: false }
   }
 
   const getStatusColor = (status: string) => {
@@ -313,7 +313,7 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
             loading="lazy"
             onError={(e) => {
               const target = e.target as HTMLImageElement
-              const fallbackUrl = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+              const fallbackUrl = '/bp-unkown.svg'
               if (target.src !== fallbackUrl) {
                 target.src = fallbackUrl
               }
@@ -339,7 +339,7 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
                 {collection.game?.icon ? (
                   <img
                     src={collection.game.icon}
-                    alt={`${collection.game.name} icon`}
+                    alt={`${collection.game?.name || 'Unknown Game'} icon`}
                     className="w-12 h-12 object-cover rounded"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement
@@ -424,7 +424,7 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
                               className={`w-16 h-16 object-cover rounded ${imageData.isGameFallback ? 'opacity-10' : ''}`}
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement
-                                target.src = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                                target.src = '/bp-unkown.svg'
                               }}
                             />
                           )

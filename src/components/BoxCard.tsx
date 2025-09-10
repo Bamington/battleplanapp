@@ -44,7 +44,7 @@ export function BoxCard({ name, gameName, modelCount, imageUrl, gameImage, gameI
     }
     
     // Fallback to default image (we don't have access to game image in BoxCard props)
-    return 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+    return '/bp-unkown.svg'
   }
 
   const isValidGameIcon = (iconUrl: string | null | undefined): boolean => {

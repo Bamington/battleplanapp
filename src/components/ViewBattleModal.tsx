@@ -18,8 +18,16 @@ interface Battle {
   game_icon: string | null
   image_url: string | null
   location: string | null
-  opp_name: string | null
+  opp_name: string | null // Keep for backward compatibility
   opp_id: string[] | null
+  opponent_id: number | null
+  opponent?: {
+    id: number
+    opp_name: string | null
+    opp_rel_uuid: string | null
+    created_by: string | null
+    created_at: string
+  } | null
   result: string | null
   user_id: string | null
   created_at: string
@@ -200,7 +208,7 @@ export function ViewBattleModal({ isOpen, onClose, onBattleDeleted, onBattleUpda
                 <User className="w-10 h-10 text-icon flex-shrink-0" />
                 <div>
                   <p className="text-sm text-secondary-text">Opponent</p>
-                  <p className="font-medium text-text">{battle.opp_name || 'No opponent'}</p>
+                  <p className="font-medium text-text">{battle.opponent?.opp_name || battle.opp_name || 'No opponent'}</p>
                 </div>
               </div>
 

@@ -7,6 +7,7 @@ import { useRecentGames } from '../hooks/useRecentGames'
 import { GameDropdown } from './GameDropdown'
 import { RichTextEditor } from './RichTextEditor'
 import { DatePicker } from './DatePicker'
+import { OpponentSelector } from './OpponentSelector'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
 
@@ -20,9 +21,18 @@ interface Battle {
   game_uid: string | null
   game_icon: string | null
   image_url: string | null
-  opp_name: string | null
+  opp_name: string | null // Keep for backward compatibility
   opp_id: string[] | null
+  opponent_id: number | null
+  opponent?: {
+    id: number
+    opp_name: string | null
+    opp_rel_uuid: string | null
+    created_by: string | null
+    created_at: string
+  } | null
   result: string | null
+  location: string | null
   user_id: string | null
   created_at: string
 }
@@ -36,7 +46,8 @@ interface EditBattleModalProps {
 
 export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: EditBattleModalProps) {
   const [datePlayed, setDatePlayed] = useState('')
-  const [opponentName, setOpponentName] = useState('')
+  const [selectedOpponentId, setSelectedOpponentId] = useState<number | null>(null)
+  const [selectedOpponentName, setSelectedOpponentName] = useState<string | null>(null)
   const [battleNotes, setBattleNotes] = useState('')
   const [selectedGame, setSelectedGame] = useState('')
   const [result, setResult] = useState('')
@@ -59,11 +70,12 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
   useEffect(() => {
     if (battle) {
       setDatePlayed(battle.date_played || '')
-      setOpponentName(battle.opp_name || '')
+      setSelectedOpponentId(battle.opponent_id || null)
+      setSelectedOpponentName(battle.opponent?.opp_name || battle.opp_name || null)
       setBattleNotes(battle.battle_notes || '')
       setSelectedGame(battle.game_uid || '')
       setResult(battle.result || '')
-      setLocation('') // Location is not stored in database, so always start empty
+      setLocation(battle.location || '') // Use the actual location value from the battle
       setCurrentImageUrl(battle.image_url)
       setSelectedImage(null) // Reset selected image when battle changes
     }
@@ -121,8 +133,8 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
       return
     }
 
-    if (!opponentName.trim()) {
-      setError('Opponent name is required')
+    if (!selectedOpponentId) {
+      setError('Opponent is required')
       return
     }
 
@@ -143,7 +155,7 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
       const selectedGameData = games.find(game => game.id === selectedGame)
       
       // Generate new battle name: "[Game] against [Opponent]"
-      const generatedBattleName = `${selectedGameData?.name || 'Unknown Game'} against ${opponentName.trim()}`
+      const generatedBattleName = `${selectedGameData?.name || 'Unknown Game'} against ${selectedOpponentName || 'Unknown Opponent'}`
       
       let imageUrl = currentImageUrl
 
@@ -194,7 +206,8 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
         .update({
           battle_name: generatedBattleName,
           date_played: datePlayed,
-          opp_name: opponentName.trim(),
+          opponent_id: selectedOpponentId,
+          opp_name: selectedOpponentName, // Keep for backward compatibility
           game_name: selectedGameData?.name || '',
           game_uid: selectedGame,
           result: result,
@@ -526,23 +539,20 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
           {/* Opponent */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label htmlFor="opponentName" className="block text-sm font-medium text-input-label font-overpass">
+              <label htmlFor="opponent" className="block text-sm font-medium text-input-label font-overpass">
                 Opponent
               </label>
               <span className="text-sm text-gray-500">Required</span>
             </div>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-icon" />
-              <input
-                type="text"
-                id="opponentName"
-                value={opponentName}
-                onChange={(e) => setOpponentName(e.target.value)}
-                placeholder="Enter opponent's name"
-                className="w-full pl-10 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] placeholder-secondary-text bg-bg-primary text-text"
-                disabled={loading}
-              />
-            </div>
+            <OpponentSelector
+              selectedOpponentId={selectedOpponentId}
+              onOpponentChange={(opponentId, opponentName) => {
+                setSelectedOpponentId(opponentId)
+                setSelectedOpponentName(opponentName)
+              }}
+              disabled={loading}
+              placeholder="Select or create opponent..."
+            />
           </div>
 
           {/* Result */}
@@ -562,8 +572,8 @@ export function EditBattleModal({ isOpen, onClose, battle, onBattleUpdated }: Ed
             >
               <option value="">Select result...</option>
               <option value="I won">I won</option>
-              <option value={`${opponentName.trim() || 'Opponent'} won`}>
-                {opponentName.trim() || 'Opponent'} won
+              <option value={`${selectedOpponentName || 'Opponent'} won`}>
+                {selectedOpponentName || 'Opponent'} won
               </option>
               <option value="Draw">Draw</option>
             </select>

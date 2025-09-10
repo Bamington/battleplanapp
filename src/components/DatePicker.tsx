@@ -137,7 +137,7 @@ export function DatePicker({
         <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
         <input
           type="text"
-          value={selectedDate ? selectedDate.toLocaleDateString('en-US', {
+          value={selectedDate ? selectedDate.toLocaleDateString('en-AU', {
             weekday: 'short',
             year: 'numeric',
             month: 'short',

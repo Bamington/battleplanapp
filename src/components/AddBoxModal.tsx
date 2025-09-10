@@ -27,7 +27,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
   const [selectedImages, setSelectedImages] = useState<FileList | null>(null)
   const [showImageCropper, setShowImageCropper] = useState(false)
   const [imageForCropping, setImageForCropping] = useState<File | null>(null)
-  const { games } = useGames()
+  const { games, createGame } = useGames()
   const [loading, setLoading] = useState(false)
   const [compressing, setCompressing] = useState(false)
   const [error, setError] = useState('')
@@ -344,30 +344,55 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
       const selectedGameData = games.find(g => g.id === selectedGame)
       const gameName = selectedGameData?.name || ''
       
-      // Create search query combining box name and game
-      const searchQuery = `${boxName.trim()} ${gameName}`.trim()
+      // Create search queries - normal and with 'box' appended
+      const baseQuery = `${boxName.trim()} ${gameName}`.trim()
+      const boxQuery = `${baseQuery} box`.trim()
       
-      // Call our edge function to search for images
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-images`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: searchQuery,
-          count: 6
+      // Make both API calls in parallel
+      const [normalResponse, boxResponse] = await Promise.all([
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-images`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: baseQuery,
+            count: 9
+          })
+        }),
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-images`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: boxQuery,
+            count: 9
+          })
         })
-      })
+      ])
 
-      if (!response.ok) {
+      if (!normalResponse.ok || !boxResponse.ok) {
         throw new Error('Failed to search for images')
       }
 
-      const data = await response.json()
-      const newImages = data.images || []
-      setSuggestedImages(newImages)
-      setPreviousSearchResults(newImages)
+      const [normalData, boxData] = await Promise.all([
+        normalResponse.json(),
+        boxResponse.json()
+      ])
+      
+      const normalImages = normalData.images || []
+      const boxImages = boxData.images || []
+      
+      // Combine results, removing duplicates
+      const allImages = [...normalImages]
+      const uniqueBoxImages = boxImages.filter((img: string) => !normalImages.includes(img))
+      allImages.push(...uniqueBoxImages)
+      
+      setSuggestedImages(allImages)
+      setPreviousSearchResults(allImages)
       setShowImageSearch(true)
     } catch (error) {
       console.error('Error searching for images:', error)
@@ -379,6 +404,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
   }
 
   const findMoreImages = async () => {
+    console.log('findMoreImages called with boxName:', boxName.trim())
     if (!boxName.trim()) return
 
     setIsLoadingMore(true)
@@ -402,13 +428,15 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
         },
         body: JSON.stringify({
           query: searchQuery,
-          count: 6,
+          count: 9,
           exclude: previousSearchResults
         })
       })
 
       if (!response.ok) {
-        throw new Error('Failed to search for more images')
+        const errorText = await response.text()
+        console.error('Search images API error:', response.status, errorText)
+        throw new Error(`Failed to search for more images: ${response.status} ${response.statusText}`)
       }
 
       const data = await response.json()
@@ -423,8 +451,9 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
       
       console.log('Unique new images after filtering:', uniqueNewImages)
       
-      // Show only the new results, but keep track of all for future exclusions
-      setSuggestedImages(uniqueNewImages)
+      // Show all results (original + new), and keep track of all for future exclusions
+      const allImages = [...suggestedImages, ...uniqueNewImages]
+      setSuggestedImages(allImages)
       setPreviousSearchResults([...previousSearchResults, ...uniqueNewImages])
     } catch (error) {
       console.error('Error searching for more images:', error)
@@ -572,12 +601,22 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
         }
       }
 
+      // Handle new game creation
+      let gameIdToSave = selectedGame || null
+      if (selectedGame && selectedGame.startsWith('new:')) {
+        const gameName = selectedGame.replace('new:', '')
+        const newGame = await createGame(gameName)
+        gameIdToSave = newGame.id
+        // Add to recent games
+        addRecentGame(newGame)
+      }
+
       // Create the box
       const { data: boxData, error: boxError } = await supabase
         .from('boxes')
         .insert({
           name: boxName.trim(),
-          game_id: selectedGame || null,
+          game_id: gameIdToSave,
           purchase_date: purchaseDate || null,
           user_id: user.id,
           image_url: imageUrl
@@ -697,6 +736,26 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
               favoriteGames={getFavoriteGames()}
             />
           </div>
+
+          {/* Custom Game Name - Only show when "Other" is selected */}
+          {(() => {
+            const otherGame = games.find(game => game.name.toLowerCase() === 'other')
+            return selectedGame === otherGame?.id
+          })() && (
+            <div>
+              <label htmlFor="customGame" className="block text-sm font-medium text-input-label font-overpass mb-2">
+                Game Name
+              </label>
+              <input
+                type="text"
+                id="customGame"
+                value={customGame}
+                onChange={(e) => setCustomGame(e.target.value)}
+                placeholder="Enter the name of the game"
+                className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] placeholder-secondary-text bg-bg-primary text-text"
+              />
+            </div>
+          )}
 
           {/* Purchase Date */}
           <div>

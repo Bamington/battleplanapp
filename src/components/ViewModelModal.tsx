@@ -310,31 +310,34 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
                    typeof model.image_url === 'string' &&
                    model.image_url.trim() !== '' && 
                    model.image_url !== 'undefined' && 
-                   model.image_url !== 'null' &&
-                   (model.image_url.startsWith('http') || model.image_url.startsWith('/'))) {
+                   model.image_url !== 'null') {
                   return model.image_url
                 }
                 
-                // Try to use the game's image as fallback
-                const gameImage = model.box?.game?.image || model.game?.image
-                if (gameImage && 
-                    typeof gameImage === 'string' &&
-                    gameImage.trim() !== '' && 
-                    gameImage !== 'undefined' && 
-                    gameImage !== 'null' &&
-                    gameImage.startsWith('http')) {
-                  return gameImage
+                // Try to use the game's icon as fallback
+                const gameIcon = model.box?.game?.icon || model.game?.icon
+                if (gameIcon && 
+                    typeof gameIcon === 'string' &&
+                    gameIcon.trim() !== '' && 
+                    gameIcon !== 'undefined' && 
+                    gameIcon !== 'null' &&
+                    gameIcon.startsWith('http')) {
+                  return gameIcon
                 }
                 
                 // Final fallback to default image
-                return 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                return '/bp-unkown.svg'
               })()}
               alt={model.name}
-              className="w-full object-cover"
+              className="w-full object-cover rounded-none sm:rounded-t-lg"
+              style={{ 
+                marginTop: 'calc(-1 * max(1rem, env(safe-area-inset-top)))', 
+                paddingTop: 'max(1rem, env(safe-area-inset-top))'
+              }}
               loading="lazy"
               onError={(e) => {
                 const target = e.target as HTMLImageElement
-                const fallbackUrl = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                const fallbackUrl = '/bp-unkown.svg'
                 if (target.src !== fallbackUrl) {
                   console.log('Modal image failed to load:', target.src, 'Falling back to default')
                   target.src = fallbackUrl
@@ -421,12 +424,12 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
                   </span>
                 </div>
 
-                {/* Purchase Date - only show if purchase date exists */}
-                {model.box?.purchase_date && (
+                {/* Purchase Date - show model's purchase date if it exists, otherwise show collection's */}
+                {(model.purchase_date || model.box?.purchase_date) && (
                 <div className="bg-bg-secondary rounded-lg p-4 flex items-center space-x-3">
                   <Calendar className="w-5 h-5 text-secondary-text" />
                   <span className="text-base text-text font-medium">
-                    Purchased {formatDate(model.box.purchase_date)}
+                    Purchased {formatDate(model.purchase_date || model.box.purchase_date)}
                   </span>
                 </div>
                 )}

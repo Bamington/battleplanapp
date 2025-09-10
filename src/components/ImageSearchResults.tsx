@@ -1,5 +1,6 @@
-import React from 'react'
-import { X, Search, RefreshCw } from 'lucide-react'
+import React, { useState } from 'react'
+import { X, Search, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Button } from './Button'
 
 interface ImageSearchResultsProps {
   isOpen: boolean
@@ -20,12 +21,33 @@ export function ImageSearchResults({
   onFindMoreImages, 
   isLoadingMore 
 }: ImageSearchResultsProps) {
+  const [currentPage, setCurrentPage] = useState(0)
+  const imagesPerPage = 4
+  const totalPages = Math.ceil(images.length / imagesPerPage)
+  
+  // Get images for current page
+  const startIndex = currentPage * imagesPerPage
+  const currentImages = images.slice(startIndex, startIndex + imagesPerPage)
+  
+  // Reset to first page when images change
+  React.useEffect(() => {
+    setCurrentPage(0)
+  }, [images])
+  
   if (!isOpen) return null
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose()
     }
+  }
+
+  const goToNextPage = () => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages - 1))
+  }
+
+  const goToPreviousPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 0))
   }
 
   return (
@@ -42,12 +64,12 @@ export function ImageSearchResults({
               <p className="text-sm text-secondary-text">Search results for: "{searchQuery}"</p>
             </div>
           </div>
-          <button
+          <Button
             onClick={onClose}
-            className="text-secondary-text hover:text-text transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
+            variant="ghost"
+            icon={X}
+            className="!p-2"
+          />
         </div>
 
         {images.length === 0 ? (
@@ -55,29 +77,37 @@ export function ImageSearchResults({
             <p className="text-base text-secondary-text mb-4">
               No images found for "{searchQuery}". Try uploading your own image instead.
             </p>
-            <button
+            <Button
               onClick={onClose}
-              className="btn-primary"
+              variant="primary"
             >
               Upload My Own Image
-            </button>
+            </Button>
           </div>
         ) : (
           <>
-            <p className="text-sm text-secondary-text mb-6">
+            <p className="text-sm text-secondary-text mb-4">
               Click on an image to use it for your box. Images are sourced from Google Image Search.
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              {images.map((imageUrl, index) => (
+            {/* Pagination Info */}
+            <div className="text-center mb-4">
+              <span className="text-sm text-secondary-text">
+                Showing {startIndex + 1}-{Math.min(startIndex + imagesPerPage, images.length)} of {images.length} images
+              </span>
+            </div>
+            
+            {/* 2x2 Grid */}
+            <div className="grid grid-cols-2 gap-4 mb-6 max-w-lg mx-auto">
+              {currentImages.map((imageUrl, index) => (
                 <button
-                  key={index}
+                  key={startIndex + index}
                   onClick={() => onImageSelect(imageUrl)}
-                  className="group relative aspect-square overflow-hidden rounded-lg border-2 border-transparent hover:border---color-brand transition-all duration-200"
+                  className="group relative aspect-square overflow-hidden rounded-lg border-2 border-transparent hover:border-[var(--color-brand)] transition-all duration-200"
                 >
                   <img
                     src={imageUrl}
-                    alt={`Suggested image ${index + 1}`}
+                    alt={`Suggested image ${startIndex + index + 1}`}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                     loading="lazy"
                   />
@@ -90,36 +120,60 @@ export function ImageSearchResults({
               ))}
             </div>
             
-            {/* Find More Images Button */}
-            {onFindMoreImages && (
-              <div className="flex justify-center mb-4">
-                <button
-                  onClick={onFindMoreImages}
-                  disabled={isLoadingMore}
-                  className="btn-primary btn-with-icon"
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center space-x-4 mb-6">
+                <Button
+                  onClick={goToPreviousPage}
+                  disabled={currentPage === 0}
+                  variant="ghost"
+                  icon={ChevronLeft}
                 >
-                  {isLoadingMore ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Finding more images...</span>
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="w-4 h-4" />
-                      <span>Find more images</span>
-                    </>
-                  )}
-                </button>
+                  Previous
+                </Button>
+                
+                <div className="flex space-x-1">
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <Button
+                      key={i}
+                      onClick={() => setCurrentPage(i)}
+                      variant={i === currentPage ? "primary" : "ghost"}
+                      className="!w-8 !h-8 !min-w-8 !rounded-full !text-sm"
+                    >
+                      {i + 1}
+                    </Button>
+                  ))}
+                </div>
+                
+                <Button
+                  onClick={goToNextPage}
+                  disabled={currentPage === totalPages - 1}
+                  variant="ghost"
+                  icon={ChevronRight}
+                >
+                  Next
+                </Button>
               </div>
             )}
             
-            <div className="flex justify-center">
-              <button
+            <div className="flex justify-center space-x-4">
+              {onFindMoreImages && (
+                <Button
+                  onClick={onFindMoreImages}
+                  variant="secondary"
+                  disabled={isLoadingMore}
+                  icon={isLoadingMore ? RefreshCw : undefined}
+                  iconClassName={isLoadingMore ? "animate-spin" : ""}
+                >
+                  {isLoadingMore ? 'Finding More...' : 'Find More Images'}
+                </Button>
+              )}
+              <Button
                 onClick={onClose}
-                className="btn-ghost"
+                variant="ghost"
               >
                 Upload My Own Image Instead
-              </button>
+              </Button>
             </div>
           </>
         )}

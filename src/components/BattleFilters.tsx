@@ -43,12 +43,23 @@ export function BattleFiltersComponent({
     filters.dateTo || 
     filters.searchQuery.length > 0
 
+  // Find the 'Other' game from the database
+  const otherGame = games.find(game => game.name.toLowerCase() === 'other')
+
   // Convert to MultiSelectDropdown format
-  const gameOptions = games.map(game => ({
-    id: game.id,
-    name: game.name,
-    icon: game.icon
-  }))
+  const gameOptions = [
+    // Add the real 'Other' game from database if it exists
+    ...(otherGame ? [{
+      id: otherGame.id,
+      name: 'Other',
+      icon: otherGame.icon || '/bp-unkown.svg'
+    }] : []),
+    ...games.filter(game => game.name.toLowerCase() !== 'other').map(game => ({
+      id: game.id,
+      name: game.name,
+      icon: game.icon
+    }))
+  ]
 
   const opponentOptions = opponents.map(opponent => ({
     id: opponent,
@@ -81,14 +92,14 @@ export function BattleFiltersComponent({
 
   const formatDateRange = () => {
     if (filters.dateFrom && filters.dateTo) {
-      const from = new Date(filters.dateFrom).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-      const to = new Date(filters.dateTo).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      const from = new Date(filters.dateFrom).toLocaleDateString('en-AU', { month: 'short', day: 'numeric', year: 'numeric' })
+      const to = new Date(filters.dateTo).toLocaleDateString('en-AU', { month: 'short', day: 'numeric', year: 'numeric' })
       return `${from} - ${to}`
     } else if (filters.dateFrom) {
-      const from = new Date(filters.dateFrom).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      const from = new Date(filters.dateFrom).toLocaleDateString('en-AU', { month: 'short', day: 'numeric', year: 'numeric' })
       return `From ${from}`
     } else if (filters.dateTo) {
-      const to = new Date(filters.dateTo).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      const to = new Date(filters.dateTo).toLocaleDateString('en-AU', { month: 'short', day: 'numeric', year: 'numeric' })
       return `Until ${to}`
     }
     return null

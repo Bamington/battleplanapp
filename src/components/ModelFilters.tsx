@@ -98,7 +98,7 @@ export function ModelFilters({
       const gameId = model.box?.game?.id || model.game?.id
       const gameName = model.box?.game?.name || model.game?.name
       
-      if (gameId && gameName) {
+      if (gameName && gameId) {
         const current = gameCounts.get(gameId) || { name: gameName, count: 0 }
         current.count++
         gameCounts.set(gameId, current)
@@ -127,6 +127,9 @@ export function ModelFilters({
   const availableGames = getAvailableGames()
   const availableStatuses = getAvailableStatuses()
 
+  // Find the 'Other' game from the database
+  const otherGame = games.find(game => game.name.toLowerCase() === 'other')
+
   // Convert to MultiSelectDropdown format
   const boxOptions = availableBoxes.map(box => {
     const boxData = boxes.find(b => b.id === box.id)
@@ -137,14 +140,25 @@ export function ModelFilters({
     }
   })
 
-  const gameOptions = availableGames.map(game => {
-    const gameData = games.find(g => g.id === game.id)
-    return {
-      id: game.id,
-      name: `${game.name} (${game.count})`,
-      icon: gameData?.icon || null
-    }
-  })
+  const gameOptions = [
+    // Add the real 'Other' game from database if it exists
+    ...(otherGame ? [{
+      id: otherGame.id,
+      name: (() => {
+        const otherGameData = availableGames.find(game => game.id === otherGame.id)
+        return otherGameData ? `Other (${otherGameData.count})` : 'Other'
+      })(),
+      icon: otherGame.icon || '/bp-unkown.svg'
+    }] : []),
+    ...availableGames.filter(game => game.id !== otherGame?.id).map(game => {
+      const gameData = games.find(g => g.id === game.id)
+      return {
+        id: game.id,
+        name: `${game.name} (${game.count})`,
+        icon: gameData?.icon || null
+      }
+    })
+  ]
 
   const statusOptions = availableStatuses.map(({ status, count }) => ({
     id: status,

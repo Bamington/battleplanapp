@@ -348,6 +348,51 @@ export type Database = {
           },
         ]
       }
+      model_images: {
+        Row: {
+          id: string
+          model_id: string
+          image_url: string
+          display_order: number
+          is_primary: boolean
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          model_id: string
+          image_url: string
+          display_order?: number
+          is_primary?: boolean
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          model_id?: string
+          image_url?: string
+          display_order?: number
+          is_primary?: boolean
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "model_images_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "model_images_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       opponents: {
         Row: {
           created_at: string

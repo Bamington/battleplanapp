@@ -6,6 +6,7 @@ interface WishlistItem {
   id: number
   item_name: string | null
   user_uid: string | null
+  image_url: string | null
   created_at: string
 }
 

@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, Gamepad2, Edit } from 'lucide-react'
+import { ArrowLeft, Gamepad2, Edit, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useGames } from '../hooks/useGames'
 import { useGameIcons } from '../hooks/useGameIcons'
 import { EditGameModal } from './EditGameModal'
+import { AddNewGameModal } from './AddNewGameModal'
+import { DeleteGameModal } from './DeleteGameModal'
+import { Button } from './Button'
 
 
 interface ManageGamesPageProps {
@@ -11,7 +14,7 @@ interface ManageGamesPageProps {
 }
 
 export function ManageGamesPage({ onBack }: ManageGamesPageProps) {
-  const { games: basicGames, loading: basicLoading, error: basicError, refetch, clearCache: clearGamesCache } = useGames()
+  const { games: basicGames, loading: basicLoading, error: basicError, refetch, clearCache: clearGamesCache, createGame, deleteGame } = useGames()
   const { refreshCache: refreshGameIconsCache } = useGameIcons()
   const [games, setGames] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -23,6 +26,15 @@ export function ManageGamesPage({ onBack }: ManageGamesPageProps) {
     isOpen: false,
     game: null
   })
+  const [addModal, setAddModal] = useState(false)
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean
+    game: Game | null
+  }>({
+    isOpen: false,
+    game: null
+  })
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     fetchGamesWithManufacturer()
@@ -41,17 +53,40 @@ export function ManageGamesPage({ onBack }: ManageGamesPageProps) {
     }
     
     try {
-      // Get full game details with manufacturer info since the basic hook doesn't include it
+      // Get full game details with manufacturer info and model counts
+      // We need to count models both directly assigned to the game AND models in boxes assigned to the game
       const { data, error } = await supabase
         .from('games')
         .select(`
           *,
-          manufacturer:manufacturers(name)
+          manufacturer:manufacturers(name),
+          direct_models:models(count),
+          box_models:boxes(models(count))
         `)
         .order('name')
 
       if (error) throw error
-      setGames(data || [])
+      
+      // Process the data to calculate total model counts
+      const gamesWithCounts = (data || []).map(game => {
+        // Count models directly assigned to this game
+        const directModelsCount = game.direct_models?.reduce((sum: number, model: any) => sum + (model.count || 1), 0) || 0
+        
+        // Count models in boxes assigned to this game
+        const boxModelsCount = game.box_models?.reduce((sum: number, box: any) => {
+          const boxModelCount = box.models?.reduce((boxSum: number, model: any) => boxSum + (model.count || 1), 0) || 0
+          return sum + boxModelCount
+        }, 0) || 0
+        
+        const totalModelsCount = directModelsCount + boxModelsCount
+        
+        return {
+          ...game,
+          total_models_count: totalModelsCount
+        }
+      })
+      
+      setGames(gamesWithCounts)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch games')
     } finally {
@@ -75,6 +110,43 @@ export function ManageGamesPage({ onBack }: ManageGamesPageProps) {
     refetch() // Refetch the basic games data
     fetchGamesWithManufacturer() // Also refetch the detailed data
     setEditModal({ isOpen: false, game: null })
+  }
+
+  const handleGameCreated = async (newGame: any) => {
+    // Clear caches first to ensure fresh data
+    clearGamesCache()
+    await refreshGameIconsCache()
+    
+    // Refetch data
+    refetch() // Refetch the basic games data
+    fetchGamesWithManufacturer() // Also refetch the detailed data
+    setAddModal(false)
+  }
+
+  const handleDeleteGame = (game: Game) => {
+    setDeleteModal({ isOpen: true, game })
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteModal.game) return
+    
+    setDeleting(true)
+    try {
+      await deleteGame(deleteModal.game.id)
+      
+      // Clear caches and refetch data
+      clearGamesCache()
+      await refreshGameIconsCache()
+      refetch()
+      fetchGamesWithManufacturer()
+      
+      setDeleteModal({ isOpen: false, game: null })
+    } catch (err) {
+      console.error('Error deleting game:', err)
+      setError(err instanceof Error ? err.message : 'Failed to delete game')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   if (loading) {
@@ -107,6 +179,18 @@ export function ManageGamesPage({ onBack }: ManageGamesPageProps) {
         </div>
       )}
 
+      {/* Add New Game Button */}
+      <div className="mb-6">
+        <Button
+          variant="primary"
+          withIcon
+          onClick={() => setAddModal(true)}
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add New Game</span>
+        </Button>
+      </div>
+
       <div className="space-y-4">
         {games.map((game) => (
           <div
@@ -137,16 +221,33 @@ export function ManageGamesPage({ onBack }: ManageGamesPageProps) {
                 <p className="text-sm text-secondary-text">
                   {game.manufacturer?.name || 'No manufacturer'}
                 </p>
+                <p className="text-xs text-secondary-text mt-1">
+                  {game.total_models_count || 0} {game.total_models_count === 1 ? 'model' : 'models'}
+                </p>
               </div>
             </div>
             
-            <button
-              onClick={() => handleEditGame(game)}
-              className="btn-secondary-sm btn-with-icon-sm"
-            >
-              <Edit className="w-4 h-4" />
-              <span>Edit</span>
-            </button>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="secondary-sm"
+                size="small"
+                withIcon
+                onClick={() => handleEditGame(game)}
+              >
+                <Edit className="w-4 h-4" />
+                <span>Edit</span>
+              </Button>
+              <Button
+                variant="danger-sm"
+                size="small"
+                withIcon
+                onClick={() => handleDeleteGame(game)}
+                title="Delete Game"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete</span>
+              </Button>
+            </div>
           </div>
         ))}
       </div>
@@ -162,6 +263,20 @@ export function ManageGamesPage({ onBack }: ManageGamesPageProps) {
         onClose={() => setEditModal({ isOpen: false, game: null })}
         onGameUpdated={handleGameUpdated}
         game={editModal.game}
+      />
+
+      <AddNewGameModal
+        isOpen={addModal}
+        onClose={() => setAddModal(false)}
+        onGameCreated={handleGameCreated}
+      />
+
+      <DeleteGameModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, game: null })}
+        onConfirm={handleDeleteConfirm}
+        gameName={deleteModal.game?.name || ''}
+        loading={deleting}
       />
     </div>
   )

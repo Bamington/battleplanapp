@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { X, Package, Check, Plus } from 'lucide-react'
+import { X, Package, Check, Plus, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from './Button'
@@ -12,6 +12,7 @@ interface Model {
   image_url: string
   game_id: string | null
   box_id: string | null
+  purchase_date: string | null
   game: {
     id: string
     name: string
@@ -29,7 +30,8 @@ interface AddModelsToBoxModalProps {
     id: string
     name: string
     public: boolean
-    game: {
+    purchase_date: string | null
+      game: {
       id: string
       name: string
       icon: string | null
@@ -41,6 +43,7 @@ interface AddModelsToBoxModalProps {
 export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewModel, box }: AddModelsToBoxModalProps) {
   const [models, setModels] = useState<Model[]>([])
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set())
+  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -65,6 +68,7 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
           image_url,
           game_id,
           box_id,
+          purchase_date,
           game:games(
             id,
             name,
@@ -80,8 +84,9 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
 
       // Sort models: same game first, then others
       const sortedModels = (data || []).sort((a, b) => {
-        const aIsSameGame = a.game_id === box.game?.id
-        const bIsSameGame = b.game_id === box.game?.id
+        // Check if model matches the box's game
+        const aIsSameGame = box.game?.id && a.game_id === box.game.id
+        const bIsSameGame = box.game?.id && b.game_id === box.game.id
         
         if (aIsSameGame && !bIsSameGame) return -1
         if (!aIsSameGame && bIsSameGame) return 1
@@ -119,15 +124,31 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
     try {
       const modelIds = Array.from(selectedModels)
       
-      const { error } = await supabase
-        .from('models')
-        .update({ 
+      // For each model, determine what to update
+      const updates = modelIds.map(modelId => {
+        const model = models.find(m => m.id === modelId)
+        const updateData: any = {
           box_id: box.id,
           public: box.public
-        })
-        .in('id', modelIds)
+        }
+        
+        // If model doesn't have a purchase date but the box does, copy it
+        if (!model?.purchase_date && box.purchase_date) {
+          updateData.purchase_date = box.purchase_date
+        }
+        
+        return { id: modelId, updateData }
+      })
 
-      if (error) throw error
+      // Update models one by one to handle different update data
+      for (const { id, updateData } of updates) {
+        const { error } = await supabase
+          .from('models')
+          .update(updateData)
+          .eq('id', id)
+        
+        if (error) throw error
+      }
 
       onModelsAdded()
       onClose()
@@ -145,7 +166,7 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
       localStorage.setItem('mini-myths-temp-box-context', JSON.stringify({
         id: box.id,
         name: box.name,
-        game: box.game
+        game: box.game,
       }))
     } catch (error) {
       console.error('Error storing box context:', error)
@@ -187,11 +208,23 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
     }
     
     // Fallback to default image
-    return { src: 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg', isGameFallback: false }
+    return { src: '/bp-unkown.svg', isGameFallback: false }
   }
 
-  const sameGameModels = models.filter(model => model.game_id === box.game?.id)
-  const otherModels = models.filter(model => model.game_id !== box.game?.id)
+  // Filter models by search query (search by model name, game name, and custom game)
+  const filteredModels = models.filter(model => {
+    const searchLower = searchQuery.toLowerCase()
+    const modelNameMatch = model.name.toLowerCase().includes(searchLower)
+    const gameNameMatch = model.game?.name?.toLowerCase().includes(searchLower) || false
+    return modelNameMatch || gameNameMatch
+  })
+  
+  const sameGameModels = filteredModels.filter(model => 
+    box.game?.id && model.game_id === box.game.id
+  )
+  const otherModels = filteredModels.filter(model => 
+    !(box.game?.id && model.game_id === box.game.id)
+  )
 
   if (!isOpen) return null
 
@@ -206,8 +239,9 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]"
       onClick={handleBackdropClick}
     >
-      <div className="bg-modal-bg rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-modal-bg rounded-lg max-w-2xl w-full max-h-[90vh] flex flex-col">
+        {/* Fixed Header */}
+        <div className="flex items-center justify-between p-6 pb-4 border-b border-border-custom flex-shrink-0">
           <h2 className="text-lg font-bold text-title">Add Models to Collection: {box.name}</h2>
           <button
             onClick={onClose}
@@ -217,6 +251,9 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
           </button>
         </div>
 
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6 pt-4">
+
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <p className="text-red-600">{error}</p>
@@ -225,29 +262,41 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
 
         {loading ? (
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border---color-brand mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-brand)] mx-auto mb-4"></div>
             <p className="text-secondary-text">Loading models...</p>
           </div>
         ) : models.length === 0 ? (
           <div className="text-center py-8">
             <Package className="w-12 h-12 text-secondary-text mx-auto mb-4" />
             <p className="text-secondary-text mb-4">No unboxed models found in your collection.</p>
-            <p className="text-sm text-secondary-text mb-6">All your models are already assigned to collections.</p>
-            <Button
-              onClick={handleAddNewModel}
-              variant="primary"
-              width="full"
-              withIcon
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add new model to collection</span>
-            </Button>
+            <p className="text-sm text-secondary-text">All your models are already assigned to collections.</p>
           </div>
         ) : (
           <>
-            <p className="text-sm text-secondary-text mb-6">
+            <p className="text-sm text-secondary-text mb-4">
               Select models to add to this box. Models will be moved from their current unboxed state.
             </p>
+
+            {/* Search Input */}
+            <div className="relative mb-6">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-4 h-4" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by model name or game..."
+                className="w-full pl-10 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] text-sm bg-bg-primary text-text"
+              />
+            </div>
+
+            {/* No search results */}
+            {searchQuery && sameGameModels.length === 0 && otherModels.length === 0 && (
+              <div className="text-center py-8">
+                <Search className="w-12 h-12 text-secondary-text mx-auto mb-4" />
+                <p className="text-secondary-text mb-2">No models found matching "{searchQuery}"</p>
+                <p className="text-sm text-secondary-text">Try adjusting your search or clear the search to see all models.</p>
+              </div>
+            )}
 
             <div className="space-y-6 mb-6">
               {/* Same Game Models */}
@@ -283,7 +332,7 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
                                className={`w-12 h-12 object-cover rounded ${imageData.isGameFallback ? 'opacity-10' : ''}`}
                                onError={(e) => {
                                  const target = e.target as HTMLImageElement
-                                 target.src = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                                 target.src = '/bp-unkown.svg'
                                }}
                              />
                            )
@@ -341,7 +390,7 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
                                className={`w-12 h-12 object-cover rounded ${imageData.isGameFallback ? 'opacity-10' : ''}`}
                                onError={(e) => {
                                  const target = e.target as HTMLImageElement
-                                 target.src = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                                 target.src = '/bp-unkown.svg'
                                }}
                              />
                            )
@@ -374,21 +423,39 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
               )}
             </div>
 
-            {/* Add New Model Button - Always show when there are eligible models */}
-            <div className="pt-4 border-t border-border-custom">
-              <Button
-                onClick={handleAddNewModel}
-                variant="secondary"
-                width="full"
-                withIcon
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add new model to collection</span>
-              </Button>
-            </div>
+          </>
+        )}
+        </div>
 
-            {/* Action Buttons */}
-            <div className="flex space-x-3 pt-4 border-t border-border-custom">
+        {/* Fixed Footer */}
+        <div className="p-6 pt-4 border-t border-border-custom flex-shrink-0">
+          {/* New Model Button - Always show at top */}
+          <div className="mb-4">
+            <Button
+              onClick={handleAddNewModel}
+              variant="secondary"
+              width="full"
+              withIcon
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Model</span>
+            </Button>
+          </div>
+
+          {/* Action Buttons */}
+          {models.length === 0 ? (
+            /* Footer for no models case */
+            <div className="flex space-x-3">
+              <button
+                onClick={onClose}
+                className="btn-ghost btn-flex"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            /* Footer for normal case */
+            <div className="flex space-x-3">
               <button
                 onClick={onClose}
                 disabled={adding}
@@ -404,8 +471,8 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
                 {adding ? 'Adding...' : `Add ${selectedModels.size} Model${selectedModels.size !== 1 ? 's' : ''}`}
               </button>
             </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )

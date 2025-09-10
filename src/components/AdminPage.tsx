@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
-import { ChevronRight, Users, Gamepad2, MapPin, ArrowLeft, Share2, Upload, GitBranch } from 'lucide-react'
+import { ChevronRight, Users, Gamepad2, MapPin, ArrowLeft, GitBranch, Package, Palette } from 'lucide-react'
 import { ManageUsersPage } from './ManageUsersPage'
 import { ManageGamesPage } from './ManageGamesPage'
+import { ManageModelsPage } from './ManageModelsPage'
 import { ManageLocationsPage } from './ManageLocationsPage'
-import { SharePreviewPage } from './SharePreviewPage'
-import { CSVUploadPage } from './CSVUploadPage'
 import { ReleaseManagementPage } from './ReleaseManagementPage'
+import { ThemeEditor } from './ThemeEditor'
 import { Header } from './Header'
 import { TabBar } from './TabBar'
 import { useAuth } from '../hooks/useAuth'
@@ -17,7 +17,7 @@ interface AdminPageProps {
 
 export function AdminPage({ onBack, onLogoClick }: AdminPageProps) {
   console.log('=== AdminPage rendering ===')
-  const [currentView, setCurrentView] = useState<'main' | 'users' | 'games' | 'locations' | 'share-preview' | 'csv-upload' | 'release-management'>('main')
+  const [currentView, setCurrentView] = useState<'main' | 'users' | 'games' | 'models' | 'locations' | 'release-management' | 'theme-editor'>('main')
   const { user } = useAuth()
   
   console.log('AdminPage user:', user)
@@ -40,22 +40,42 @@ export function AdminPage({ onBack, onLogoClick }: AdminPageProps) {
     return <ManageGamesPage onBack={() => setCurrentView('main')} />
   }
 
+  if (currentView === 'models') {
+    return <ManageModelsPage onBack={() => setCurrentView('main')} />
+  }
+
   if (currentView === 'locations') {
     return <ManageLocationsPage onBack={() => setCurrentView('main')} isLocationAdmin={user?.is_location_admin || false} />
   }
 
-  if (currentView === 'share-preview') {
-    return <SharePreviewPage onBack={() => setCurrentView('main')} />
-  }
-
-  if (currentView === 'csv-upload') {
-    console.log('Rendering CSVUploadPage')
-    return <CSVUploadPage onBack={() => setCurrentView('main')} />
-  }
 
   if (currentView === 'release-management') {
     console.log('Rendering ReleaseManagementPage')
     return <ReleaseManagementPage onBack={() => setCurrentView('main')} onLogoClick={onLogoClick} />
+  }
+
+  if (currentView === 'theme-editor') {
+    return (
+      <div className="min-h-screen bg-bg-secondary">
+        <Header 
+          onAddModel={() => {}} 
+          onAdminClick={handleAdminClick}
+          onSettingsClick={() => {}}
+          activeTab="collection"
+          onTabChange={handleTabChange}
+          onLogoClick={onLogoClick}
+        />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+          <ThemeEditor onBack={() => setCurrentView('main')} />
+        </div>
+        <TabBar 
+          activeTab="collection" 
+          onTabChange={(_tab) => {
+            // This is a no-op since we're in admin mode
+          }} 
+        />
+      </div>
+    )
   }
 
   return (
@@ -108,6 +128,17 @@ export function AdminPage({ onBack, onLogoClick }: AdminPageProps) {
           )}
 
           <button
+            onClick={() => setCurrentView('models')}
+            className="w-full bg-bg-card border border-border-custom rounded-lg p-6 hover:bg-bg-secondary transition-colors flex items-center justify-between"
+          >
+            <div className="flex items-center space-x-4">
+              <Package className="w-6 h-6 text-secondary-text" />
+              <span className="text-lg font-semibold text-text">Manage Models</span>
+            </div>
+            <ChevronRight className="w-5 h-5 text-icon" />
+          </button>
+
+          <button
             onClick={() => setCurrentView('locations')}
             className="w-full bg-bg-card border border-border-custom rounded-lg p-6 hover:bg-bg-secondary transition-colors flex items-center justify-between"
           >
@@ -118,28 +149,14 @@ export function AdminPage({ onBack, onLogoClick }: AdminPageProps) {
             <ChevronRight className="w-5 h-5 text-icon" />
           </button>
 
-          <button
-            onClick={() => setCurrentView('share-preview')}
-            className="w-full bg-bg-card border border-border-custom rounded-lg p-6 hover:bg-bg-secondary transition-colors flex items-center justify-between"
-          >
-            <div className="flex items-center space-x-4">
-              <Share2 className="w-6 h-6 text-secondary-text" />
-              <span className="text-lg font-semibold text-text">Share Preview</span>
-            </div>
-            <ChevronRight className="w-5 h-5 text-icon" />
-          </button>
-
           {user?.is_admin && (
             <button
-              onClick={() => {
-                console.log('CSV Upload button clicked!')
-                setCurrentView('csv-upload')
-              }}
+              onClick={() => setCurrentView('theme-editor')}
               className="w-full bg-bg-card border border-border-custom rounded-lg p-6 hover:bg-bg-secondary transition-colors flex items-center justify-between"
             >
               <div className="flex items-center space-x-4">
-                <Upload className="w-6 h-6 text-secondary-text" />
-                <span className="text-lg font-semibold text-text">CSV Upload</span>
+                <Palette className="w-6 h-6 text-secondary-text" />
+                <span className="text-lg font-semibold text-text">Theme Editor</span>
               </div>
               <ChevronRight className="w-5 h-5 text-icon" />
             </button>

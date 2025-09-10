@@ -45,9 +45,10 @@ export function BoxFilters({
     const gameCounts = new Map<string, { name: string; count: number }>()
     
     boxes.forEach(box => {
-      if (box.game) {
-        const gameId = box.game.id
-        const gameName = box.game.name
+      const gameId = box.game?.id
+      const gameName = box.game?.name
+      
+      if (gameName && gameId) {
         const current = gameCounts.get(gameId) || { name: gameName, count: 0 }
         current.count++
         gameCounts.set(gameId, current)
@@ -61,15 +62,29 @@ export function BoxFilters({
 
   const availableGames = getAvailableGames()
 
+  // Find the 'Other' game from the database
+  const otherGame = games.find(game => game.name.toLowerCase() === 'other')
+
   // Convert to MultiSelectDropdown format
-  const gameOptions = availableGames.map(game => {
-    const gameData = games.find(g => g.id === game.id)
-    return {
-      id: game.id,
-      name: `${game.name} (${game.count})`,
-      icon: gameData?.icon || null
-    }
-  })
+  const gameOptions = [
+    // Add the real 'Other' game from database if it exists
+    ...(otherGame ? [{
+      id: otherGame.id,
+      name: (() => {
+        const otherGameData = availableGames.find(game => game.id === otherGame.id)
+        return otherGameData ? `Other (${otherGameData.count})` : 'Other'
+      })(),
+      icon: otherGame.icon || '/bp-unkown.svg'
+    }] : []),
+    ...availableGames.filter(game => game.id !== otherGame?.id).map(game => {
+      const gameData = games.find(g => g.id === game.id)
+      return {
+        id: game.id,
+        name: `${game.name} (${game.count})`,
+        icon: gameData?.icon || null
+      }
+    })
+  ]
 
   // Get filter display names
   const getSelectedGameNames = () => {

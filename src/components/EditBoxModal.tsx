@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { X, Package, Calendar, DollarSign, Image as ImageIcon, Trash2, Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useGames } from '../hooks/useGames'
+import { useRecentGames } from '../hooks/useRecentGames'
 import { GameDropdown } from './GameDropdown'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
@@ -35,7 +36,8 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
     purchase_date: '',
     image_url: ''
   })
-  const { games } = useGames()
+  const { games, createGame } = useGames()
+  const { addRecentGame } = useRecentGames()
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
   const [showImageCropper, setShowImageCropper] = useState(false)
   const [imageForCropping, setImageForCropping] = useState<File | null>(null)
@@ -55,7 +57,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
     if (box) {
       setFormData({
         name: box.name,
-        game_id: box.game_id || box.game?.id || '',
+        game_id: box.game_id || '',
         purchase_date: box.purchase_date || '',
         image_url: box.image_url || ''
       })
@@ -265,30 +267,55 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
       const selectedGameData = games.find(g => g.id === formData.game_id)
       const gameName = selectedGameData?.name || ''
       
-      // Create search query combining box name and game
-      const searchQuery = `${formData.name.trim()} ${gameName}`.trim()
+      // Create search queries - normal and with 'box' appended
+      const baseQuery = `${formData.name.trim()} ${gameName}`.trim()
+      const boxQuery = `${baseQuery} box`.trim()
       
-      // Call our edge function to search for images
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-images`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: searchQuery,
-          count: 6
+      // Make both API calls in parallel
+      const [normalResponse, boxResponse] = await Promise.all([
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-images`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: baseQuery,
+            count: 9
+          })
+        }),
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-images`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: boxQuery,
+            count: 9
+          })
         })
-      })
+      ])
 
-      if (!response.ok) {
+      if (!normalResponse.ok || !boxResponse.ok) {
         throw new Error('Failed to search for images')
       }
 
-      const data = await response.json()
-      const newImages = data.images || []
-      setSuggestedImages(newImages)
-      setPreviousSearchResults(newImages)
+      const [normalData, boxData] = await Promise.all([
+        normalResponse.json(),
+        boxResponse.json()
+      ])
+      
+      const normalImages = normalData.images || []
+      const boxImages = boxData.images || []
+      
+      // Combine results, removing duplicates
+      const allImages = [...normalImages]
+      const uniqueBoxImages = boxImages.filter((img: string) => !normalImages.includes(img))
+      allImages.push(...uniqueBoxImages)
+      
+      setSuggestedImages(allImages)
+      setPreviousSearchResults(allImages)
       setShowImageSearch(true)
     } catch (error) {
       console.error('Error searching for images:', error)
@@ -306,6 +333,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
   }
 
   const findMoreImages = async () => {
+    console.log('findMoreImages called with box name:', formData.name.trim())
     if (!formData.name.trim()) return
 
     setIsLoadingMore(true)
@@ -329,13 +357,15 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
         },
         body: JSON.stringify({
           query: searchQuery,
-          count: 6,
+          count: 9,
           exclude: previousSearchResults
         })
       })
 
       if (!response.ok) {
-        throw new Error('Failed to search for more images')
+        const errorText = await response.text()
+        console.error('Search images API error:', response.status, errorText)
+        throw new Error(`Failed to search for more images: ${response.status} ${response.statusText}`)
       }
 
       const data = await response.json()
@@ -350,8 +380,9 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
       
       console.log('Unique new images after filtering:', uniqueNewImages)
       
-      // Show only the new results, but keep track of all for future exclusions
-      setSuggestedImages(uniqueNewImages)
+      // Show all results (original + new), and keep track of all for future exclusions
+      const allImages = [...suggestedImages, ...uniqueNewImages]
+      setSuggestedImages(allImages)
       setPreviousSearchResults([...previousSearchResults, ...uniqueNewImages])
     } catch (error) {
       console.error('Error searching for more images:', error)
@@ -417,11 +448,21 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
         imageUrl = await uploadFile(compressedFile, 'model-images', 'boxes')
       }
 
+      // Handle new game creation
+      let gameIdToSave = formData.game_id || null
+      if (formData.game_id && formData.game_id.startsWith('new:')) {
+        const gameName = formData.game_id.replace('new:', '')
+        const newGame = await createGame(gameName)
+        gameIdToSave = newGame.id
+        // Add to recent games
+        addRecentGame(newGame)
+      }
+
       const { error } = await supabase
         .from('boxes')
         .update({
           name: formData.name,
-          game_id: formData.game_id || null,
+          game_id: gameIdToSave,
           purchase_date: formData.purchase_date || null,
           image_url: imageUrl
         })
@@ -514,6 +555,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
                 placeholder="Choose a Game"
               />
             </div>
+
 
             {/* Purchase Date */}
             <div>

@@ -43,7 +43,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
   const [selectedImages, setSelectedImages] = useState<FileList | null>(null)
   const [showImageCropper, setShowImageCropper] = useState(false)
   const [imageForCropping, setImageForCropping] = useState<File | null>(null)
-  const { games } = useGames()
+  const { games, createGame } = useGames()
   const [boxes, setBoxes] = useState<Box[]>([])
   const [loading, setLoading] = useState(false)
   const [compressing, setCompressing] = useState(false)
@@ -103,6 +103,15 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
     }
   }, [isOpen, user])
 
+  // Copy purchase date from selected box if model doesn't have one
+  useEffect(() => {
+    if (selectedBox && !purchaseDate) {
+      const box = boxes.find(b => b.id === selectedBox)
+      if (box?.purchase_date) {
+        setPurchaseDate(box.purchase_date)
+      }
+    }
+  }, [selectedBox, boxes, purchaseDate])
 
   const getFavoriteGames = () => {
     if (!user?.fav_games || user.fav_games.length === 0) return []
@@ -656,8 +665,15 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
         }
       }
 
-      // Determine the game_id for the model
+      // Handle new game creation
       let modelGameId = selectedGame || null
+      if (selectedGame && selectedGame.startsWith('new:')) {
+        const gameName = selectedGame.replace('new:', '')
+        const newGame = await createGame(gameName)
+        modelGameId = newGame.id
+        // Add to recent games
+        addRecentGame(newGame)
+      }
       
       // If a box is selected, use the box's game_id
       if (selectedBox || preselectedBoxId) {
@@ -819,18 +835,21 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
 
           {/* Game - Only show if no box is selected */}
           {!selectedBox && (
-            <div>
-              <label htmlFor="game" className="block text-sm font-medium text-input-label font-overpass mb-2">
-                Game
-              </label>
-              <GameDropdown
-                games={games}
-                selectedGame={selectedGame}
-                onGameSelect={handleGameSelect}
-                placeholder="Choose a Game"
-                favoriteGames={getFavoriteGames()}
-              />
-            </div>
+            <>
+              <div>
+                <label htmlFor="game" className="block text-sm font-medium text-input-label font-overpass mb-2">
+                  Game
+                </label>
+                <GameDropdown
+                  games={games}
+                  selectedGame={selectedGame}
+                  onGameSelect={handleGameSelect}
+                  placeholder="Choose a Game"
+                  favoriteGames={getFavoriteGames()}
+                />
+              </div>
+              
+            </>
           )}
 
           {/* Painted Status */}

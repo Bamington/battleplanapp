@@ -39,6 +39,10 @@ import { PublicModelView } from './components/PublicModelView'
 import { OnboardingModal } from './components/OnboardingModal'
 import { SettingsPage } from './components/SettingsPage'
 import { Footer } from './components/Footer'
+import { ModelStatisticsPage } from './components/ModelStatisticsPage'
+import { PaintingTablePage } from './components/PaintingTablePage'
+import { SelectModelForPaintingModal } from './components/SelectModelForPaintingModal'
+import { PaintingInspirationModal } from './components/PaintingInspirationModal'
 
 function App() {
   
@@ -93,9 +97,22 @@ function App() {
   }
 
   const [activeTab, setActiveTab] = useState('collection')
-  const [collectionView, setCollectionView] = useState<'recent' | 'models' | 'collections' | 'wishlist'>('recent')
+  const [collectionView, setCollectionView] = useState<'painting-table' | 'recent' | 'models' | 'collections' | 'wishlist' | 'statistics'>('recent')
+  const [battleView, setBattleView] = useState<'battles' | 'statistics'>('battles')
   const [currentPage, setCurrentPage] = useState(1)
   const [boxCurrentPage, setBoxCurrentPage] = useState(1)
+
+  // Handle navigation from the header menu
+  const handleTabChange = (tab: string, subView?: string) => {
+    setActiveTab(tab)
+    
+    // Set the appropriate sub-view based on the tab and sub-view
+    if (tab === 'collection' && subView) {
+      setCollectionView(subView as any)
+    } else if (tab === 'battles' && subView) {
+      setBattleView(subView as any)
+    }
+  }
   
   // Filter states
   const [modelFilters, setModelFilters] = useState({
@@ -125,13 +142,50 @@ function App() {
   }, [])
   const [showAddWishlistModal, setShowAddWishlistModal] = useState(false)
   const [showRecentViewSettingsModal, setShowRecentViewSettingsModal] = useState(false)
+  const [showSelectModelForPaintingModal, setShowSelectModelForPaintingModal] = useState(false)
+  const [paintingTableModels, setPaintingTableModels] = useState<any[]>(() => {
+    // Load from localStorage on app start
+    try {
+      const saved = localStorage.getItem('paintingTableModels')
+      return saved ? JSON.parse(saved) : []
+    } catch (error) {
+      console.error('Error loading painting table models from localStorage:', error)
+      return []
+    }
+  })
+  const [paintingInspirationModal, setPaintingInspirationModal] = useState<{
+    isOpen: boolean
+    modelName: string
+    gameName: string
+  }>({
+    isOpen: false,
+    modelName: '',
+    gameName: ''
+  })
+
+  // Save painting table models to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('paintingTableModels', JSON.stringify(paintingTableModels))
+    } catch (error) {
+      console.error('Error saving painting table models to localStorage:', error)
+    }
+  }, [paintingTableModels])
+
+  // Remove model from painting table
+  const removeModelFromPaintingTable = (modelId: string) => {
+    setPaintingTableModels(prev => prev.filter(model => model.id !== modelId))
+  }
+
   const [recentViewSettings, setRecentViewSettings] = useState<RecentViewSettings>({
     showPainted: true,
     showPartiallyPainted: true,
     showPrimed: true,
     showAssembled: true,
     showUnassembled: false,
-    sortOrder: 'mostRecentlyPainted'
+    showImagesOnly: false,
+    sortOrder: 'mostRecentlyPainted',
+    collectionSortOrder: 'mostRecentlyAdded'
   })
   const [showAdminPage, setShowAdminPage] = useState(false)
   const [showSettingsPage, setShowSettingsPage] = useState(false)
@@ -154,6 +208,13 @@ function App() {
   })
   
   const { user, loading: authLoading, needsPasswordReset, isBetaTester } = useAuth()
+  
+  // Redirect non-Beta Testers away from beta-only views
+  useEffect(() => {
+    if (!authLoading && !isBetaTester && collectionView === 'painting-table') {
+      setCollectionView('recent')
+    }
+  }, [authLoading, isBetaTester, collectionView])
   
   // Initialize game icons cache on app startup
   useGameIcons()
@@ -238,9 +299,11 @@ function App() {
     if (modelFilters.selectedBoxes.length > 0 && !modelFilters.selectedBoxes.includes(model.box?.id || '')) return false
     
     // Game filter
-    if (modelFilters.selectedGames.length > 0 && 
-        !modelFilters.selectedGames.includes(model.box?.game?.id || '') && 
-        !modelFilters.selectedGames.includes(model.game?.id || '')) return false
+    if (modelFilters.selectedGames.length > 0) {
+      const modelGameId = model.box?.game?.id || model.game?.id
+      
+      if (!modelFilters.selectedGames.includes(modelGameId || '')) return false
+    }
     
     // Status filter
     if (modelFilters.selectedStatuses.length > 0 && !modelFilters.selectedStatuses.includes(model.status)) return false
@@ -252,20 +315,29 @@ function App() {
   const recentModels = models
     .filter(model => {
       // Filter by painted status based on settings
-      switch (model.status) {
-        case 'Painted':
-          return recentViewSettings.showPainted
-        case 'Partially Painted':
-          return recentViewSettings.showPartiallyPainted
-        case 'Primed':
-          return recentViewSettings.showPrimed
-        case 'Assembled':
-          return recentViewSettings.showAssembled
-        case 'None':
-        case 'Unassembled':
-        default:
-          return recentViewSettings.showUnassembled
-      }
+      const statusMatch = (() => {
+        switch (model.status) {
+          case 'Painted':
+            return recentViewSettings.showPainted
+          case 'Partially Painted':
+            return recentViewSettings.showPartiallyPainted
+          case 'Primed':
+            return recentViewSettings.showPrimed
+          case 'Assembled':
+            return recentViewSettings.showAssembled
+          case 'None':
+          case 'Unassembled':
+          default:
+            return recentViewSettings.showUnassembled
+        }
+      })()
+
+      // Filter by image presence if showImagesOnly is enabled
+      const hasImages = model.images && model.images.length > 0
+      const hasLegacyImage = model.image_url && model.image_url.trim() !== ''
+      const imageMatch = recentViewSettings.showImagesOnly ? (hasImages || hasLegacyImage) : true
+
+      return statusMatch && imageMatch
     })
     .sort((a, b) => {
       if (recentViewSettings.sortOrder === 'mostRecentlyAdded') {
@@ -288,11 +360,46 @@ function App() {
       }
     })
 
-  // For Recent Collections view, just show all collections with basic sorting
+  // For Recent Collections view, sort based on user settings
   const recentCollections = boxes
     .sort((a, b) => {
-      // Sort by creation date (most recent first) 
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      if (recentViewSettings.collectionSortOrder === 'mostRecentlyAdded') {
+        // Sort by creation date (most recent first)
+        const aDate = a.created_at
+        const bDate = b.created_at
+        
+        if (aDate && bDate) {
+          return new Date(bDate).getTime() - new Date(aDate).getTime()
+        }
+        // If only one has a creation date, prioritize the one with creation date
+        if (aDate && !bDate) return -1
+        if (!aDate && bDate) return 1
+        // If neither has creation date, maintain original order
+        return 0
+      } else {
+        // Sort by purchase date (most recent first), fallback to creation date
+        const aDate = a.purchase_date
+        const bDate = b.purchase_date
+        
+        if (aDate && bDate) {
+          return new Date(bDate).getTime() - new Date(aDate).getTime()
+        }
+        // If only one has a purchase date, prioritize the one with purchase date
+        if (aDate && !bDate) return -1
+        if (!aDate && bDate) return 1
+        // If neither has purchase date, sort by creation date (most recent first)
+        const aCreatedDate = a.created_at
+        const bCreatedDate = b.created_at
+        
+        if (aCreatedDate && bCreatedDate) {
+          return new Date(bCreatedDate).getTime() - new Date(aCreatedDate).getTime()
+        }
+        // If only one has a creation date, prioritize the one with creation date
+        if (aCreatedDate && !bCreatedDate) return -1
+        if (!aCreatedDate && bCreatedDate) return 1
+        // If neither has creation date, maintain original order
+        return 0
+      }
     })
 
   const filteredBoxes = boxes.filter(box => {
@@ -302,7 +409,11 @@ function App() {
     }
     
     // Game filter
-    if (boxFilters.selectedGames.length > 0 && !boxFilters.selectedGames.includes(box.game?.id || '')) return false
+    if (boxFilters.selectedGames.length > 0) {
+      const boxGameId = box.game?.id
+      
+      if (!boxFilters.selectedGames.includes(boxGameId || '')) return false
+    }
     
     return true
   })
@@ -481,7 +592,9 @@ function App() {
           showPrimed: parsedSettings.showPrimed ?? true,
           showAssembled: parsedSettings.showAssembled ?? true,
           showUnassembled: parsedSettings.showUnassembled ?? false,
-          sortOrder: parsedSettings.sortOrder ?? 'mostRecentlyPainted'
+          showImagesOnly: parsedSettings.showImagesOnly ?? false,
+          sortOrder: parsedSettings.sortOrder ?? 'mostRecentlyPainted',
+          collectionSortOrder: parsedSettings.collectionSortOrder ?? 'mostRecentlyAdded'
         })
       } catch (error) {
         console.error('Error parsing saved recent view settings:', error)
@@ -585,14 +698,14 @@ function App() {
           onAdminClick={handleAdminClick}
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onLogoClick={handleLogoClick}
         />
         <AboutPage onBack={() => setActiveTab('collection')} />
         <Footer />
         <TabBar 
           activeTab={activeTab} 
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onAddModel={() => {
           setActiveTab('collection')
           setAddModelModal(true)
@@ -633,14 +746,14 @@ function App() {
           onAdminClick={handleAdminClick}
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onLogoClick={handleLogoClick}
         />
         <AllBookingsPage onBack={() => setActiveTab('collection')} />
         <Footer />
         <TabBar 
           activeTab={activeTab} 
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onAddModel={() => {
           setActiveTab('collection')
           setAddModelModal(true)
@@ -679,14 +792,14 @@ function App() {
           onAdminClick={handleAdminClick}
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onLogoClick={handleLogoClick}
         />
         <BlockedDatesPage onBack={() => setActiveTab('collection')} />
         <Footer />
         <TabBar 
           activeTab={activeTab} 
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onAddModel={() => {
           setActiveTab('collection')
           setAddModelModal(true)
@@ -725,7 +838,7 @@ function App() {
           onAdminClick={handleAdminClick}
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onLogoClick={handleLogoClick}
         />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
@@ -738,7 +851,7 @@ function App() {
         <Footer />
         <TabBar 
           activeTab={activeTab} 
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onAddModel={() => {
           setActiveTab('collection')
           setAddModelModal(true)
@@ -777,17 +890,18 @@ function App() {
           onAdminClick={handleAdminClick}
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onLogoClick={handleLogoClick}
         />
         <BattlesPage 
           onBack={() => setActiveTab('collection')} 
           onRefetchReady={handleBattlesRefetchReady}
+          initialView={battleView}
         />
         <Footer />
         <TabBar 
           activeTab={activeTab} 
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onAddModel={() => {
           setActiveTab('collection')
           setAddModelModal(true)
@@ -815,11 +929,11 @@ function App() {
         <NewBattleModal
           isOpen={showNewBattleModal}
           onClose={() => setShowNewBattleModal(false)}
-          onBattleCreated={() => {
+          onBattleCreated={async () => {
             setShowNewBattleModal(false)
             // Refetch battles to show the new battle immediately
             if (battlesRefetch) {
-              battlesRefetch()
+              await battlesRefetch()
             }
           }}
         />
@@ -840,7 +954,7 @@ function App() {
           onAdminClick={handleAdminClick}
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onLogoClick={handleLogoClick}
         />
         <BattleplanPage 
@@ -850,7 +964,7 @@ function App() {
         <Footer />
         <TabBar 
           activeTab={activeTab} 
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onAddModel={() => {
           setActiveTab('collection')
           setAddModelModal(true)
@@ -896,11 +1010,11 @@ function App() {
         <NewBattleModal
           isOpen={showNewBattleModal}
           onClose={() => setShowNewBattleModal(false)}
-          onBattleCreated={() => {
+          onBattleCreated={async () => {
             setShowNewBattleModal(false)
             // Refetch battles to show the new battle immediately
             if (battlesRefetch) {
-              battlesRefetch()
+              await battlesRefetch()
             }
           }}
         />
@@ -921,7 +1035,7 @@ function App() {
           onAdminClick={handleAdminClick}
           onSettingsClick={handleSettingsClick}
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onLogoClick={handleLogoClick}
         />
         <WishlistPage 
@@ -932,7 +1046,7 @@ function App() {
         <Footer />
         <TabBar 
           activeTab={activeTab} 
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           onAddModel={() => {
           setActiveTab('collection')
           setAddModelModal(true)
@@ -960,11 +1074,11 @@ function App() {
         <NewBattleModal
           isOpen={showNewBattleModal}
           onClose={() => setShowNewBattleModal(false)}
-          onBattleCreated={() => {
+          onBattleCreated={async () => {
             setShowNewBattleModal(false)
             // Refetch battles to show the new battle immediately
             if (battlesRefetch) {
-              battlesRefetch()
+              await battlesRefetch()
             }
           }}
         />
@@ -993,6 +1107,15 @@ function App() {
       )}
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+
+        {/* Painting Table View - Only visible to Beta Testers */}
+        {collectionView === 'painting-table' && isBetaTester && (
+          <PaintingTablePage 
+            onSelectModel={() => setShowSelectModelForPaintingModal(true)}
+            paintingTableModels={paintingTableModels}
+            onRemoveModel={removeModelFromPaintingTable}
+          />
+        )}
 
         {/* Recent View */}
         {collectionView === 'recent' && (
@@ -1188,13 +1311,13 @@ function App() {
                               return gameImage
                             }
                             
-                            return 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                            return '/bp-unkown.svg'
                           })()}
                           alt={box.name}
                           className="w-16 h-16 object-cover rounded"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement
-                            const fallbackUrl = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                            const fallbackUrl = '/bp-unkown.svg'
                             if (target.src !== fallbackUrl) {
                               target.src = fallbackUrl
                             }
@@ -1301,8 +1424,7 @@ function App() {
                               typeof model.image_url === 'string' &&
                               model.image_url.trim() !== '' && 
                               model.image_url !== 'undefined' && 
-                              model.image_url !== 'null' &&
-                              (model.image_url.startsWith('http') || model.image_url.startsWith('/'))) {
+                              model.image_url !== 'null') {
                             return model.image_url
                           }
                           
@@ -1316,13 +1438,13 @@ function App() {
                             return gameIcon
                           }
                           
-                          return 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                          return '/bp-unkown.svg'
                         })()}
                         alt={model.name}
                         className="w-16 h-16 object-cover rounded"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement
-                          const fallbackUrl = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                          const fallbackUrl = '/bp-unkown.svg'
                           if (target.src !== fallbackUrl) {
                             target.src = fallbackUrl
                           }
@@ -1391,6 +1513,11 @@ function App() {
             onCloseAddModal={() => setShowAddWishlistModal(false)}
             onAddItemSuccess={() => setShowAddWishlistModal(false)}
           />
+        )}
+
+        {/* Statistics View - Visible to all users */}
+        {collectionView === 'statistics' && (
+          <ModelStatisticsPage />
         )}
 
       </main>
@@ -1488,11 +1615,11 @@ function App() {
       <NewBattleModal
         isOpen={showNewBattleModal}
         onClose={() => setShowNewBattleModal(false)}
-        onBattleCreated={() => {
+        onBattleCreated={async () => {
           setShowNewBattleModal(false)
           // Refetch battles to show the new battle immediately
           if (battlesRefetch) {
-            battlesRefetch()
+            await battlesRefetch()
           }
         }}
       />
@@ -1510,6 +1637,41 @@ function App() {
         isOpen={showOnboardingModal}
         onClose={() => setShowOnboardingModal(false)}
         onComplete={handleOnboardingComplete}
+      />
+
+      {/* Select Model for Painting Modal */}
+      <SelectModelForPaintingModal
+        isOpen={showSelectModelForPaintingModal}
+        onClose={() => setShowSelectModelForPaintingModal(false)}
+        onModelSelected={(model, showInspiration = false) => {
+          // Add model to painting table
+          if (paintingTableModels.length < 3) {
+            setPaintingTableModels(prev => [...prev, model])
+            setShowSelectModelForPaintingModal(false)
+            
+            // Show inspiration modal if requested
+            if (showInspiration) {
+              setPaintingInspirationModal({
+                isOpen: true,
+                modelName: model.name,
+                gameName: model.game?.name || model.box?.game?.name || 'Unknown Game'
+              })
+            }
+          }
+        }}
+        excludeModelIds={paintingTableModels.map(m => m.id)}
+      />
+
+      {/* Painting Inspiration Modal */}
+      <PaintingInspirationModal
+        isOpen={paintingInspirationModal.isOpen}
+        onClose={() => setPaintingInspirationModal({
+          isOpen: false,
+          modelName: '',
+          gameName: ''
+        })}
+        modelName={paintingInspirationModal.modelName}
+        gameName={paintingInspirationModal.gameName}
       />
 
     </div>

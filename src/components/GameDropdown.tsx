@@ -14,20 +14,34 @@ interface GameDropdownProps {
   onGameSelect: (gameId: string) => void
   placeholder?: string
   favoriteGames?: Game[]
+  showAddNewButton?: boolean
+  onAddNewGame?: () => void
 }
 
-export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = "Choose a Game", favoriteGames = [] }: GameDropdownProps) {
+export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = "Choose a Game", favoriteGames = [], showAddNewButton = false, onAddNewGame }: GameDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const { recentGames } = useRecentGames()
 
-  const selectedGameData = games.find(game => game.id === selectedGame)
+  const selectedGameData = selectedGame.startsWith('new:')
+    ? { id: selectedGame, name: selectedGame.replace('new:', ''), icon: null }
+    : games.find(game => game.id === selectedGame)
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('GameDropdown - selectedGame prop:', selectedGame)
+    console.log('GameDropdown - selectedGameData:', selectedGameData)
+  }, [selectedGame, selectedGameData])
   
-  // Filter games based on search term
+  // Find the 'Other' game to exclude it from regular sections
+  const otherGame = games.find(game => game.name.toLowerCase() === 'other')
+  
+  // Filter games based on search term, excluding 'Other' from regular sections
   const filteredGames = games.filter(game =>
-    game.name.toLowerCase().includes(searchTerm.toLowerCase())
+    game.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    game.id !== otherGame?.id
   )
   
   // Get the most recent non-favorite game
@@ -49,6 +63,9 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
     game.id !== mostRecentNonFavorite?.id && 
     !favoriteGameIds.has(game.id)
   )
+  
+  // Show Other option if it exists and matches search
+  const showOtherOption = otherGame && (!searchTerm || 'other'.includes(searchTerm.toLowerCase()))
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -69,6 +86,7 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
   }, [isOpen])
 
   const handleSelect = (gameId: string) => {
+    console.log('GameDropdown - handleSelect called with gameId:', gameId)
     onGameSelect(gameId)
     setSearchTerm('')
     setIsOpen(false)
@@ -86,7 +104,8 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
   }
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="space-y-2">
+      <div className="relative" ref={dropdownRef}>
       <button
         type="button"
         onClick={handleToggleOpen}
@@ -97,14 +116,24 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
             <img
               src={selectedGameData.icon}
               alt=""
-              className="w-6 h-6 object-contain flex-shrink-0"
+              className={`w-6 h-6 object-contain flex-shrink-0 ${selectedGame === otherGame?.id ? 'opacity-50' : ''}`}
               onError={(e) => {
                 const target = e.target as HTMLImageElement
                 target.style.display = 'none'
+                const fallback = target.nextElementSibling as HTMLElement
+                if (fallback && fallback.classList.contains('fallback-icon')) {
+                  fallback.style.display = 'block'
+                }
               }}
             />
-          ) : (
-            <div className="w-6 h-6 bg-gray-200 rounded-full flex-shrink-0" />
+          ) : null}
+          {(!selectedGameData?.icon || selectedGame === otherGame?.id) && (
+            <img
+              src="/bp-unkown.svg"
+              alt=""
+              className={`w-6 h-6 object-contain flex-shrink-0 fallback-icon ${selectedGame === otherGame?.id ? 'opacity-50' : ''} dark:invert-0 invert`}
+              style={{ display: selectedGameData?.icon && selectedGame !== otherGame?.id ? 'none' : 'block' }}
+            />
           )}
           <span className={selectedGameData ? 'text-text' : 'text-secondary-text'}>
             {selectedGameData ? selectedGameData.name : placeholder}
@@ -132,7 +161,7 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
           
           {/* Games List */}
           <div className="max-h-48 overflow-y-auto">
-            {filteredRecentGame.length === 0 && filteredFavoriteGames.length === 0 && filteredOtherGames.length === 0 ? (
+            {filteredRecentGame.length === 0 && filteredFavoriteGames.length === 0 && filteredOtherGames.length === 0 && (!otherGame || !showOtherOption) ? (
               <div className="px-4 py-3 text-secondary-text text-sm">
                 No games found matching "{searchTerm}"
               </div>
@@ -161,10 +190,20 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
                             onError={(e) => {
                               const target = e.target as HTMLImageElement
                               target.style.display = 'none'
+                              const fallback = target.nextElementSibling as HTMLElement
+                              if (fallback && fallback.classList.contains('fallback-icon')) {
+                                fallback.style.display = 'block'
+                              }
                             }}
                           />
-                        ) : (
-                          <div className="w-6 h-6 bg-gray-200 rounded-full flex-shrink-0" />
+                        ) : null}
+                        {!game.icon && (
+                          <img
+                            src="/bp-unkown.svg"
+                            alt=""
+                            className="w-6 h-6 object-contain flex-shrink-0 fallback-icon dark:invert-0 invert"
+                            style={{ display: game.icon ? 'none' : 'block' }}
+                          />
                         )}
                         <span className="text-text">{game.name}</span>
                       </button>
@@ -197,10 +236,20 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
                             onError={(e) => {
                               const target = e.target as HTMLImageElement
                               target.style.display = 'none'
+                              const fallback = target.nextElementSibling as HTMLElement
+                              if (fallback && fallback.classList.contains('fallback-icon')) {
+                                fallback.style.display = 'block'
+                              }
                             }}
                           />
-                        ) : (
-                          <div className="w-6 h-6 bg-gray-200 rounded-full flex-shrink-0" />
+                        ) : null}
+                        {!game.icon && (
+                          <img
+                            src="/bp-unkown.svg"
+                            alt=""
+                            className="w-6 h-6 object-contain flex-shrink-0 fallback-icon dark:invert-0 invert"
+                            style={{ display: game.icon ? 'none' : 'block' }}
+                          />
                         )}
                         <span className="text-text">{game.name}</span>
                       </button>
@@ -233,20 +282,84 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
                             onError={(e) => {
                               const target = e.target as HTMLImageElement
                               target.style.display = 'none'
+                              const fallback = target.nextElementSibling as HTMLElement
+                              if (fallback && fallback.classList.contains('fallback-icon')) {
+                                fallback.style.display = 'block'
+                              }
                             }}
                           />
-                        ) : (
-                          <div className="w-6 h-6 bg-gray-200 rounded-full flex-shrink-0" />
+                        ) : null}
+                        {!game.icon && (
+                          <img
+                            src="/bp-unkown.svg"
+                            alt=""
+                            className="w-6 h-6 object-contain flex-shrink-0 fallback-icon dark:invert-0 invert"
+                            style={{ display: game.icon ? 'none' : 'block' }}
+                          />
                         )}
                         <span className="text-text">{game.name}</span>
                       </button>
                     ))}
                   </>
                 )}
+                
+                {/* Other Option - Show real 'Other' game from database */}
+                {showOtherOption && otherGame && (
+                  <>
+                    {(filteredRecentGame.length > 0 || filteredFavoriteGames.length > 0 || filteredOtherGames.length > 0) && (
+                      <div className="px-4 py-2 bg-bg-secondary border-b border-border-custom">
+                        <span className="text-xs font-semibold text-secondary-text uppercase tracking-wide">
+                          Other
+                        </span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(otherGame.id)}
+                      className="w-full px-4 py-3 text-left hover:bg-bg-secondary flex items-center space-x-3 transition-colors"
+                    >
+                      {otherGame.icon ? (
+                        <img
+                          src={otherGame.icon}
+                          alt=""
+                          className="w-6 h-6 object-contain flex-shrink-0"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.style.display = 'none'
+                            const fallback = target.nextElementSibling as HTMLElement
+                            if (fallback && fallback.classList.contains('fallback-icon')) {
+                              fallback.style.display = 'block'
+                            }
+                          }}
+                        />
+                      ) : null}
+                      {!otherGame.icon && (
+                        <img
+                          src="/bp-unkown.svg"
+                          alt=""
+                          className="w-6 h-6 object-contain flex-shrink-0 fallback-icon dark:invert-0 invert"
+                        />
+                      )}
+                      <span className="text-text">{otherGame.name}</span>
+                    </button>
+                  </>
+                )}
               </>
             )}
           </div>
         </div>
+      )}
+      </div>
+      
+      {/* Add New Game Button - Only show when Other is selected */}
+      {showAddNewButton && otherGame && selectedGame === otherGame.id && (
+        <button
+          type="button"
+          onClick={onAddNewGame}
+          className="w-full btn-secondary btn-with-icon"
+        >
+          <span>Add New Game</span>
+        </button>
       )}
     </div>
   )

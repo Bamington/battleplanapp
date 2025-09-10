@@ -13,8 +13,16 @@ interface Battle {
   game_icon: string | null
   image_url: string | null
   location: string | null
-  opp_name: string | null
+  opp_name: string | null // Keep for backward compatibility
   opp_id: string[] | null
+  opponent_id: number | null
+  opponent?: {
+    id: number
+    opp_name: string | null
+    opp_rel_uuid: string | null
+    created_by: string | null
+    created_at: string
+  } | null
   result: string | null
   user_id: string | null
   created_at: string
@@ -177,10 +185,10 @@ export function BattleCard({ battle, onViewBattle, onDeleteBattle, onEditBattle 
           </div>
 
           {/* Opponent */}
-          {battle.opp_name && (
+          {(battle.opponent?.opp_name || battle.opp_name) && (
             <div className="flex items-center space-x-2">
               <User className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate">vs {battle.opp_name}</span>
+              <span className="truncate">vs {battle.opponent?.opp_name || battle.opp_name}</span>
             </div>
           )}
         </div>

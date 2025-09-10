@@ -332,7 +332,7 @@ export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagement
                          </span>
                          <span className="text-text">{version.ver_title}</span>
                          <span className="text-secondary-text text-sm">
-                           {new Date(version.created_at).toLocaleDateString()}
+                           {new Date(version.created_at).toLocaleDateString('en-AU')}
                          </span>
                        </div>
                        {version.ver_notes && (

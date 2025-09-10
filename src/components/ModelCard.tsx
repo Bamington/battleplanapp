@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { formatLocalDate } from '../utils/timezone'
 
 interface ModelCardProps {
@@ -16,15 +16,7 @@ interface ModelCardProps {
 }
 
 export function ModelCard({ model, name, boxName, gameName, gameIcon, status, count, imageUrl, paintedDate, onViewModel, onViewBox }: ModelCardProps) {
-  // Debug logging to see what gameIcon value we're getting
-  console.log('ModelCard Debug:', {
-    name,
-    gameName,
-    gameIcon,
-    hasGameIcon: !!gameIcon,
-    gameIconType: typeof gameIcon,
-    gameIconTrimmed: gameIcon?.trim()
-  })
+  const [imageErrorFallback, setImageErrorFallback] = useState(false)
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -48,16 +40,39 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
   }
 
   const getImageSrc = () => {
-    // Check if we have a valid image URL
+    // First, try to get the primary image from the images array
+    const primaryImage = model?.images?.find((img: any) => img.is_primary)
+    if (primaryImage?.image_url && 
+        typeof primaryImage.image_url === 'string' &&
+        primaryImage.image_url.trim() !== '' && 
+        primaryImage.image_url !== 'undefined' && 
+        primaryImage.image_url !== 'null' &&
+        !primaryImage.image_url.includes('undefined') &&
+        !primaryImage.image_url.includes('null')) {
+      return { src: primaryImage.image_url, isGameFallback: false, isBpUnknownFallback: false }
+    }
+    
+    // Fallback to first image in the array if no primary image
+    const firstImage = model?.images?.[0]
+    if (firstImage?.image_url && 
+        typeof firstImage.image_url === 'string' &&
+        firstImage.image_url.trim() !== '' && 
+        firstImage.image_url !== 'undefined' && 
+        firstImage.image_url !== 'null' &&
+        !firstImage.image_url.includes('undefined') &&
+        !firstImage.image_url.includes('null')) {
+      return { src: firstImage.image_url, isGameFallback: false, isBpUnknownFallback: false }
+    }
+    
+    // Fallback to legacy image_url for backward compatibility
     if (imageUrl && 
         typeof imageUrl === 'string' &&
         imageUrl.trim() !== '' && 
         imageUrl !== 'undefined' && 
         imageUrl !== 'null' &&
         !imageUrl.includes('undefined') &&
-        !imageUrl.includes('null') &&
-        (imageUrl.startsWith('http') || imageUrl.startsWith('/'))) {
-      return { src: imageUrl, isGameFallback: false }
+        !imageUrl.includes('null')) {
+      return { src: imageUrl, isGameFallback: false, isBpUnknownFallback: false }
     }
     
     // Try to use the game's icon as fallback
@@ -68,11 +83,11 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
         gameIcon !== 'undefined' && 
         gameIcon !== 'null' &&
         gameIcon.startsWith('http')) {
-      return { src: gameIcon, isGameFallback: true }
+      return { src: gameIcon, isGameFallback: true, isBpUnknownFallback: false }
     }
     
     // Fallback to default image
-    return { src: 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg', isGameFallback: false }
+    return { src: '/bp-unkown.svg', isGameFallback: false, isBpUnknownFallback: true }
   }
 
   const isValidGameIcon = (iconUrl: string | null | undefined): boolean => {
@@ -97,14 +112,15 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
                          <img
                src={imageData.src}
                alt={name}
-               className={`w-full h-48 min-h-[400px] object-cover ${imageData.isGameFallback ? 'opacity-10' : ''}`}
+               className={`w-full h-48 min-h-[400px] object-cover ${imageData.isGameFallback ? 'opacity-10' : ''} ${(imageData.isBpUnknownFallback || imageErrorFallback) ? 'opacity-50' : ''}`}
                loading="lazy"
               onError={(e) => {
                 const target = e.target as HTMLImageElement
-                const fallbackUrl = 'https://images.pexels.com/photos/8088212/pexels-photo-8088212.jpeg'
+                const fallbackUrl = '/bp-unkown.svg'
                 if (target.src !== fallbackUrl) {
                   console.log('Image failed to load:', target.src, 'Falling back to default')
                   target.src = fallbackUrl
+                  setImageErrorFallback(true)
                 }
               }}
             />

@@ -91,7 +91,7 @@ export function WishlistPage({ showAddModal = false, onCloseAddModal, onAddItemS
                       {item.item_name || 'Untitled Item'}
                     </h3>
                     <p className="text-sm text-secondary-text">
-                      Added {new Date(item.created_at).toLocaleDateString()}
+                      Added {new Date(item.created_at).toLocaleDateString('en-AU')}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">

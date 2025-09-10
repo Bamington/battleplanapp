@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useWishlist } from '../hooks/useWishlist'
 import { ModalWrapper, ModalActions } from './ModalWrapper'
 import { Button } from './Button'
+import { WishlistImageSuggestionModal } from './WishlistImageSuggestionModal'
 
 interface AddWishlistItemModalProps {
   isOpen: boolean
@@ -13,6 +14,8 @@ export function AddWishlistItemModal({ isOpen, onClose, onSuccess }: AddWishlist
   const [itemName, setItemName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showImageSuggestionModal, setShowImageSuggestionModal] = useState(false)
+  const [newWishlistItemId, setNewWishlistItemId] = useState<number | null>(null)
   const { addWishlistItem } = useWishlist()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,7 +30,7 @@ export function AddWishlistItemModal({ isOpen, onClose, onSuccess }: AddWishlist
     setError('')
 
     try {
-      const { error } = await addWishlistItem(itemName.trim())
+      const { data, error } = await addWishlistItem(itemName.trim())
       
       if (error) {
         setError('Failed to add item to wishlist')
@@ -35,10 +38,17 @@ export function AddWishlistItemModal({ isOpen, onClose, onSuccess }: AddWishlist
         return
       }
 
-      // Success - close modal and refresh
-      setItemName('')
-      onSuccess()
-      onClose()
+      // Success - store the new item ID and show image suggestion modal
+      if (data?.id) {
+        setNewWishlistItemId(data.id)
+        setShowImageSuggestionModal(true)
+        // Keep the item name for the image search
+      } else {
+        // Fallback if no ID returned
+        setItemName('')
+        onSuccess()
+        onClose()
+      }
     } catch (error) {
       console.error('Error adding wishlist item:', error)
       setError('Failed to add item to wishlist')
@@ -51,10 +61,30 @@ export function AddWishlistItemModal({ isOpen, onClose, onSuccess }: AddWishlist
     if (loading) return // Prevent closing while loading
     setItemName('')
     setError('')
+    setNewWishlistItemId(null)
+    onClose()
+  }
+
+  const handleImageSuggestionClose = () => {
+    setShowImageSuggestionModal(false)
+    // Reset form and close main modal
+    setItemName('')
+    setNewWishlistItemId(null)
+    onSuccess()
+    onClose()
+  }
+
+  const handleImageSuggestionSuccess = () => {
+    setShowImageSuggestionModal(false)
+    // Reset form and close main modal
+    setItemName('')
+    setNewWishlistItemId(null)
+    onSuccess()
     onClose()
   }
 
   return (
+    <>
     <ModalWrapper isOpen={isOpen} onClose={handleClose} title="Add Wishlist Item" maxWidth="md">
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
@@ -108,5 +138,17 @@ export function AddWishlistItemModal({ isOpen, onClose, onSuccess }: AddWishlist
         </Button>
       </ModalActions>
     </ModalWrapper>
+    
+    {/* Image Suggestion Modal */}
+    {newWishlistItemId && (
+      <WishlistImageSuggestionModal
+        isOpen={showImageSuggestionModal}
+        onClose={handleImageSuggestionClose}
+        itemName={itemName}
+        wishlistItemId={newWishlistItemId}
+        onSuccess={handleImageSuggestionSuccess}
+      />
+    )}
+    </>
   )
 }
