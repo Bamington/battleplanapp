@@ -12,6 +12,7 @@ import {
   type CSVRow,
   type UploadType
 } from '../utils/csvUtils'
+import { addModelsToBox } from '../utils/modelBoxUtils'
 
 interface CSVUploadPageProps {
   onBack: () => void
@@ -452,24 +453,31 @@ export function CSVUploadPage({ onBack }: CSVUploadPageProps) {
 
     // Create model
     console.log('Creating model in database...')
-    const { error } = await supabase
+    const { data: modelData, error } = await supabase
       .from('models')
       .insert({
         name,
         status,
         count,
         game_id: gameId,
-        box_id: boxId,
         user_id: userId,
         notes: notes || null,
         purchase_date: purchaseDate,
         painted_date: paintedDate,
         public: isPublic
       })
+      .select()
+      .single()
 
     if (error) {
       console.error('Database error:', error)
       throw new Error(`Database error: ${error.message}`)
+    }
+
+    // If a box was specified, add the model to it using the junction table
+    if (boxId && modelData) {
+      console.log('Adding model to box via junction table...')
+      await addModelsToBox([modelData.id], boxId)
     }
     
     console.log('Model created successfully')

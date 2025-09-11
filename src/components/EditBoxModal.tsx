@@ -57,7 +57,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
     if (box) {
       setFormData({
         name: box.name,
-        game_id: box.game_id || '',
+        game_id: box.game_id || box.game?.id || '',
         purchase_date: box.purchase_date || '',
         image_url: box.image_url || ''
       })

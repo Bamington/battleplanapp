@@ -489,7 +489,7 @@
 
   /* Ghost Button */
   .btn-ghost {
-    @apply border border-border-custom text-text rounded-lg hover:bg-bg-secondary transition-colors font-overpass font-medium flex justify-center items-center;
+    @apply border border-border-custom text-text px-4 py-2 rounded-lg hover:bg-bg-secondary transition-colors font-overpass font-medium flex justify-center items-center;
   }
 
   /* Ghost Button Small */

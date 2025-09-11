@@ -10,6 +10,7 @@ import { RichTextEditor } from './RichTextEditor'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { formatLocalDate } from '../utils/timezone'
+import { getModelBoxes } from '../utils/modelBoxUtils'
 
 
 interface ViewModelModalProps {
@@ -72,6 +73,8 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
   const [originalPaintingData, setOriginalPaintingData] = React.useState({
     painting_notes: ''
   })
+  const [modelCollections, setModelCollections] = React.useState<Array<{ id: string; name: string; added_at: string; purchase_date: string | null }>>([])
+  const [collectionsLoading, setCollectionsLoading] = React.useState(false)
 
   // Define tabs configuration
   const tabs = [
@@ -92,6 +95,22 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
     }
   ]
 
+  // Fetch model collections
+  const fetchModelCollections = async () => {
+    if (!model?.id) return
+
+    setCollectionsLoading(true)
+    try {
+      const collections = await getModelBoxes(model.id)
+      setModelCollections(collections)
+    } catch (error) {
+      console.error('Error fetching model collections:', error)
+      setModelCollections([])
+    } finally {
+      setCollectionsLoading(false)
+    }
+  }
+
   // Update current model when prop changes
   React.useEffect(() => {
     setCurrentModel(model)
@@ -107,13 +126,34 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
       setOriginalLoreData(newLoreData)
       setPaintingData(newPaintingData)
       setOriginalPaintingData(newPaintingData)
+      
+      // Fetch collections when model changes and modal is open
+      if (isOpen) {
+        fetchModelCollections()
+      }
     }
-  }, [model])
+  }, [model, isOpen])
 
   // Handle model updates by refreshing the model data
   const handleModelUpdated = async () => {
     // Notify parent component to refresh data
     onModelUpdated?.()
+  }
+
+  // Handle clicking on a collection to view it
+  const handleViewCollection = (collection: { id: string; name: string; purchase_date: string | null }) => {
+    // Close this modal and open the collection view
+    onClose()
+    // Create a box object in the format expected by onViewBox
+    const boxForView = {
+      id: collection.id,
+      name: collection.name,
+      purchase_date: collection.purchase_date,
+      image_url: null,
+      public: false, // We don't have this info, but it's not critical for viewing
+      game: null // We don't have this info either
+    }
+    onViewBox?.(boxForView)
   }
 
   // Prevent body scroll when modal is open
@@ -424,12 +464,12 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
                   </span>
                 </div>
 
-                {/* Purchase Date - show model's purchase date if it exists, otherwise show collection's */}
-                {(model.purchase_date || model.box?.purchase_date) && (
+                {/* Purchase Date */}
+                {model.purchase_date && (
                 <div className="bg-bg-secondary rounded-lg p-4 flex items-center space-x-3">
                   <Calendar className="w-5 h-5 text-secondary-text" />
                   <span className="text-base text-text font-medium">
-                    Purchased {formatDate(model.purchase_date || model.box.purchase_date)}
+                    Purchased {formatDate(model.purchase_date)}
                   </span>
                 </div>
                 )}
@@ -443,6 +483,41 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
                     </span>
                   </div>
                 )}
+
+                {/* Collections */}
+                <div className="bg-bg-secondary rounded-lg p-4">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <Package className="w-5 h-5 text-secondary-text" />
+                    <span className="text-base text-text font-medium">Collections</span>
+                  </div>
+                  
+                  {collectionsLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[var(--color-brand)]"></div>
+                      <span className="ml-2 text-sm text-secondary-text">Loading collections...</span>
+                    </div>
+                  ) : modelCollections.length > 0 ? (
+                    <div className="space-y-2">
+                      {modelCollections.map((collection) => (
+                        <button 
+                          key={collection.id} 
+                          onClick={() => handleViewCollection(collection)}
+                          className="w-full flex items-center justify-between py-2 px-3 bg-bg-primary rounded-md hover:bg-bg-secondary transition-colors text-left"
+                        >
+                          <span className="text-sm text-text font-medium">{collection.name}</span>
+                          <span className="text-xs text-secondary-text">
+                            {collection.purchase_date ? `Purchased ${formatLocalDate(collection.purchase_date)}` : 'No purchase date'}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-4 text-center">
+                      <Package className="w-8 h-8 text-secondary-text mx-auto mb-2" />
+                      <p className="text-sm text-secondary-text">Not in any collections</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

@@ -7,6 +7,7 @@ import { RemoveModelFromBoxModal } from './RemoveModelFromBoxModal'
 import { ShareCollectionModal } from './ShareCollectionModal'
 import { supabase } from '../lib/supabase'
 import { formatLocalDate, formatAustralianDate } from '../utils/timezone'
+import { getBoxWithModels, removeModelFromBox } from '../utils/modelBoxUtils'
 
 interface ViewBoxModalProps {
   isOpen: boolean
@@ -75,43 +76,10 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
     setModelsError(null)
 
     try {
-      const { data, error } = await supabase
-        .from('models')
-        .select(`
-          id,
-          name,
-          status,
-          count,
-          image_url,
-          game_id,
-          notes,
-          painted_date,
-          purchase_date,
-          lore_name,
-          lore_description,
-          painting_notes,
-          game:games(
-            id,
-            name,
-            icon
-          ),
-          box:boxes(
-            id,
-            name,
-            purchase_date,
-            game:games(
-              id,
-              name,
-              icon,
-              image
-            )
-          )
-        `)
-        .eq('box_id', box.id)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setBoxModels(data || [])
+      const boxWithModels = await getBoxWithModels(box.id)
+      if (boxWithModels) {
+        setBoxModels(boxWithModels.models || [])
+      }
     } catch (err) {
       setModelsError(err instanceof Error ? err.message : 'Failed to fetch models')
     } finally {
@@ -151,14 +119,18 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
   }
 
   const handleConfirmRemoveModel = async () => {
-    if (!removeModelModal.model) return
+    if (!removeModelModal.model || !box) return
 
     setRemovingModel(true)
     try {
+      // Remove model from this specific box using many-to-many relationship
+      await removeModelFromBox(removeModelModal.model.id, box.id)
+
+      // Optionally update model visibility if it's no longer in any public boxes
+      // This logic can be expanded based on your business requirements
       const { error } = await supabase
         .from('models')
         .update({ 
-          box_id: null,
           public: false
         })
         .eq('id', removeModelModal.model.id)

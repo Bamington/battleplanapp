@@ -116,9 +116,9 @@ export function useModels() {
 
       // Sort by purchase date (most recent first), then by created_at for models without purchase dates
       const sortedData = transformedData.sort((a, b) => {
-        // Get the effective purchase date for each model (model's own or from box)
-        const aDate = a.purchase_date || a.box?.purchase_date
-        const bDate = b.purchase_date || b.box?.purchase_date
+        // Use the model's purchase date (now always set to earliest from collections)
+        const aDate = a.purchase_date
+        const bDate = b.purchase_date
         
         // If both have purchase dates, sort by purchase date (most recent first)
         if (aDate && bDate) {

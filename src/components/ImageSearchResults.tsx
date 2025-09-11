@@ -64,12 +64,12 @@ export function ImageSearchResults({
               <p className="text-sm text-secondary-text">Search results for: "{searchQuery}"</p>
             </div>
           </div>
-          <Button
+          <button
             onClick={onClose}
-            variant="ghost"
-            icon={X}
-            className="!p-2"
-          />
+            className="text-secondary-text hover:text-text transition-colors p-2 rounded-full hover:bg-bg-secondary"
+          >
+            <X className="w-6 h-6" />
+          </button>
         </div>
 
         {images.length === 0 ? (
@@ -100,10 +100,11 @@ export function ImageSearchResults({
             {/* 2x2 Grid */}
             <div className="grid grid-cols-2 gap-4 mb-6 max-w-lg mx-auto">
               {currentImages.map((imageUrl, index) => (
-                <button
+                <Button
                   key={startIndex + index}
                   onClick={() => onImageSelect(imageUrl)}
-                  className="group relative aspect-square overflow-hidden rounded-lg border-2 border-transparent hover:border-[var(--color-brand)] transition-all duration-200"
+                  variant="ghost"
+                  className="group relative aspect-square overflow-hidden rounded-lg border-2 border-transparent hover:border-[var(--color-brand)] transition-all duration-200 !p-0 !h-auto"
                 >
                   <img
                     src={imageUrl}
@@ -116,43 +117,42 @@ export function ImageSearchResults({
                       Select Image
                     </span>
                   </div>
-                </button>
+                </Button>
               ))}
             </div>
             
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="flex justify-center items-center space-x-4 mb-6">
-                <Button
+              <div className="flex items-center justify-center space-x-1 mb-6">
+                <button
                   onClick={goToPreviousPage}
                   disabled={currentPage === 0}
-                  variant="ghost"
-                  icon={ChevronLeft}
+                  className="p-2 rounded-lg hover:bg-bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-text"
                 >
-                  Previous
-                </Button>
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
                 
-                <div className="flex space-x-1">
-                  {Array.from({ length: totalPages }, (_, i) => (
-                    <Button
-                      key={i}
-                      onClick={() => setCurrentPage(i)}
-                      variant={i === currentPage ? "primary" : "ghost"}
-                      className="!w-8 !h-8 !min-w-8 !rounded-full !text-sm"
-                    >
-                      {i + 1}
-                    </Button>
-                  ))}
-                </div>
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPage(i)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                      i === currentPage
+                        ? 'bg-title text-bg-primary'
+                        : 'hover:bg-bg-secondary text-text'
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
                 
-                <Button
+                <button
                   onClick={goToNextPage}
                   disabled={currentPage === totalPages - 1}
-                  variant="ghost"
-                  icon={ChevronRight}
+                  className="p-2 rounded-lg hover:bg-bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-text"
                 >
-                  Next
-                </Button>
+                  <ChevronRight className="w-5 h-5" />
+                </button>
               </div>
             )}
             

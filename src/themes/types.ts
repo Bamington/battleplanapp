@@ -22,6 +22,25 @@ export interface ThemeRenderContext {
   showCollectionName: boolean
   showGameDetails: boolean
   isDarkText: boolean
+  showVisualOverlays?: boolean
+  overlayOpacity?: number
+}
+
+export interface ThemeVisualOverlay {
+  id: string
+  type: 'shape' | 'pattern' | 'texture' | 'frame' | 'decoration' | 'symbol'
+  position: {
+    x: number | 'center' | 'left' | 'right'
+    y: number | 'center' | 'top' | 'bottom'
+  }
+  size: {
+    width: number | string  // pixels or percentage
+    height: number | string
+  }
+  opacity: number
+  blendMode?: GlobalCompositeOperation
+  enabled: boolean
+  render: (context: ThemeRenderContext, overlay: ThemeVisualOverlay) => void
 }
 
 export interface ThemeRenderOptions {
@@ -36,6 +55,9 @@ export interface ThemeRenderOptions {
   
   // Font loading logic
   loadFonts?: () => Promise<void>
+  
+  // Visual overlays system
+  visualOverlays?: ThemeVisualOverlay[]
   
   // Future extensibility
   customComponents?: Array<{

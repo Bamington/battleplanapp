@@ -41,7 +41,7 @@ export function useBoxes() {
         return
       }
 
-      // Fetch boxes with aggregated model counts in a single query
+      // Fetch boxes with aggregated model counts using the new junction table
       const { data: boxesData, error: boxesError } = await supabase
         .from('boxes')
         .select(`
@@ -52,7 +52,9 @@ export function useBoxes() {
           public,
           created_at,
           game:games(id, name, icon, image),
-          models(count)
+          model_boxes(
+            model:models(count)
+          )
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -60,10 +62,13 @@ export function useBoxes() {
 
       if (boxesError) throw boxesError
 
-      // Transform the boxes data and calculate model counts
+      // Transform the boxes data and calculate model counts from junction table
       const transformedBoxes = (boxesData || []).map(box => {
-        const models = Array.isArray(box.models) ? box.models : []
-        const totalCount = models.reduce((sum, model) => sum + (model.count || 0), 0)
+        const modelBoxes = Array.isArray(box.model_boxes) ? box.model_boxes : []
+        const totalCount = modelBoxes.reduce((sum, modelBox) => {
+          const modelCount = modelBox.model?.count || 0
+          return sum + modelCount
+        }, 0)
         
         return {
           id: box.id,

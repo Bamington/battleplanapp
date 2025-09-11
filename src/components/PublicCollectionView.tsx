@@ -130,27 +130,33 @@ export function PublicCollectionView({ collectionId, onBack }: PublicCollectionV
 
       setCollection(collectionData)
 
-      // Fetch models in this collection
-      const { data: modelsData, error: modelsError } = await supabase
-        .from('models')
+      // Fetch models in this collection using junction table
+      const { data: modelBoxData, error: modelsError } = await supabase
+        .from('model_boxes')
         .select(`
-          id,
-          name,
-          status,
-          count,
-          image_url,
-          notes,
-          game:games(
+          added_at,
+          model:models(
             id,
             name,
-            icon
+            status,
+            count,
+            image_url,
+            notes,
+            game:games(
+              id,
+              name,
+              icon
+            )
           )
         `)
         .eq('box_id', collectionId)
-        .order('created_at', { ascending: false })
+        .order('added_at', { ascending: false })
 
       if (modelsError) throw modelsError
-      setModels(modelsData || [])
+      
+      // Transform the data to get the models array
+      const modelsData = modelBoxData?.map(item => item.model) || []
+      setModels(modelsData)
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load collection')

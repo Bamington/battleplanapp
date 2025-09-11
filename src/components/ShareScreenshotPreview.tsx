@@ -46,6 +46,8 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
   const [userPublicName, setUserPublicName] = useState<string | null>(null)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  const [showVisualOverlays, setShowVisualOverlays] = useState(true)
+  const [overlayOpacity, setOverlayOpacity] = useState(0.3)
   const { user, isBetaTester } = useAuth()
 
   // Helper function to get the appropriate theme based on the model's game
@@ -114,7 +116,7 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
     if (isOpen && model) {
       generateScreenshot()
     }
-  }, [isOpen, model, isDarkText, showPaintedDate, showCollectionName, showGameDetails, shadowOpacity, textPosition, selectedTheme, userPublicName])
+  }, [isOpen, model, isDarkText, showPaintedDate, showCollectionName, showGameDetails, shadowOpacity, textPosition, selectedTheme, userPublicName, showVisualOverlays, overlayOpacity])
 
   const generateScreenshot = async () => {
     if (!model || !canvasRef.current) return
@@ -260,7 +262,7 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
         console.warn('Error loading logo:', error)
       }
 
-      // Use new theme system for text rendering
+      // Use new theme system for rendering
       const renderContext = {
         ctx,
         canvas,
@@ -272,7 +274,28 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
         showPaintedDate,
         showCollectionName,
         showGameDetails,
-        isDarkText
+        isDarkText,
+        showVisualOverlays,
+        overlayOpacity
+      }
+
+      // Render visual overlays if enabled and theme supports them
+      if (showVisualOverlays && currentTheme.renderOptions.visualOverlays) {
+        for (const overlay of currentTheme.renderOptions.visualOverlays) {
+          if (overlay.enabled) {
+            // Save current context state
+            ctx.save()
+            
+            try {
+              overlay.render(renderContext, overlay)
+            } catch (error) {
+              console.warn('Error rendering visual overlay:', overlay.id, error)
+            }
+            
+            // Restore context state
+            ctx.restore()
+          }
+        }
       }
 
       // Check if theme has custom rendering logic
@@ -491,6 +514,54 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                   ))}
               </select>
             </div>
+
+            {/* Visual Overlays Controls */}
+            {currentTheme.renderOptions.visualOverlays && currentTheme.renderOptions.visualOverlays.length > 0 && (
+              <>
+                {/* Visual Overlays Toggle */}
+                <div className="flex items-center justify-center space-x-4">
+                  <span className="text-sm text-secondary-text">Visual Overlays:</span>
+                  <button
+                    onClick={() => setShowVisualOverlays(!showVisualOverlays)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
+                      showVisualOverlays ? 'bg-brand' : 'bg-secondary-text'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        showVisualOverlays ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <span className={`text-sm ${showVisualOverlays ? 'text-text font-medium' : 'text-secondary-text'}`}>
+                    {showVisualOverlays ? 'Show' : 'Hide'}
+                  </span>
+                </div>
+
+                {/* Overlay Opacity Slider */}
+                {showVisualOverlays && (
+                  <div className="flex items-center justify-center space-x-4">
+                    <span className="text-sm text-secondary-text">Overlay Intensity:</span>
+                    <div className="flex items-center space-x-3 w-48">
+                      <span className="text-xs text-secondary-text">Subtle</span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={overlayOpacity}
+                        onChange={(e) => setOverlayOpacity(parseFloat(e.target.value))}
+                        className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                        style={{
+                          background: `linear-gradient(to right, var(--color-brand) 0%, var(--color-brand) ${overlayOpacity * 100}%, #e5e7eb ${overlayOpacity * 100}%, #e5e7eb 100%)`
+                        }}
+                      />
+                      <span className="text-xs text-secondary-text">Bold</span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
             {/* Show/Hide Controls */}
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-8">

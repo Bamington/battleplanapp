@@ -3,6 +3,7 @@ import { X, Package, Check, Plus, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from './Button'
+import { addModelsToBox, getModelsNotInBoxes } from '../utils/modelBoxUtils'
 
 interface Model {
   id: string
@@ -58,32 +59,20 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
   const fetchModels = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('models')
-        .select(`
-          id,
-          name,
-          status,
-          count,
-          image_url,
-          game_id,
-          box_id,
-          purchase_date,
-          game:games(
-            id,
-            name,
-            icon,
-            image
-          )
-        `)
-        .eq('user_id', user?.id)
-        .is('box_id', null) // Only show models not already in a box
-        .order('created_at', { ascending: false })
+      if (!user?.id) return
 
-      if (error) throw error
+      // Get models that are available to add to boxes (either not in any box, or can be in multiple boxes)
+      const availableModels = await getModelsNotInBoxes(user.id)
+      
+      // Convert to the expected format and add box_id for backward compatibility
+      const modelsWithBoxId = availableModels.map(model => ({
+        ...model,
+        box_id: null, // These models are not in any box
+        game: model.game
+      }))
 
       // Sort models: same game first, then others
-      const sortedModels = (data || []).sort((a, b) => {
+      const sortedModels = modelsWithBoxId.sort((a, b) => {
         // Check if model matches the box's game
         const aIsSameGame = box.game?.id && a.game_id === box.game.id
         const bIsSameGame = box.game?.id && b.game_id === box.game.id
@@ -124,17 +113,14 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
     try {
       const modelIds = Array.from(selectedModels)
       
-      // For each model, determine what to update
+      // Add models to box using many-to-many relationship
+      // This will automatically update purchase dates to earliest collection date
+      await addModelsToBox(modelIds, box.id)
+
+      // Update model properties if needed
       const updates = modelIds.map(modelId => {
-        const model = models.find(m => m.id === modelId)
         const updateData: any = {
-          box_id: box.id,
           public: box.public
-        }
-        
-        // If model doesn't have a purchase date but the box does, copy it
-        if (!model?.purchase_date && box.purchase_date) {
-          updateData.purchase_date = box.purchase_date
         }
         
         return { id: modelId, updateData }

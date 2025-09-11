@@ -1,5 +1,6 @@
 import { Theme, ThemeRenderContext } from './types'
 import { renderStandardTextLayout, renderStandardModelName } from './utils'
+import { createPatternOverlay, createCornerDecorationOverlay } from './overlayUtils'
 
 // Standard layout rendering - uses default behavior
 const renderStandardLayout = async (context: ThemeRenderContext): Promise<void> => {
@@ -41,7 +42,26 @@ export const battleplan: Theme = {
   
   renderOptions: {
     renderStandardLayout,
-    loadFonts
+    loadFonts,
+    visualOverlays: [
+      createPatternOverlay(
+        'battleplan-subtle-dots',
+        'dots',
+        80,
+        'rgba(114, 77, 221, 0.8)',
+        0.1,
+        true
+      ),
+      createCornerDecorationOverlay(
+        'battleplan-corner-flourish',
+        'bottom-left',
+        'geometric',
+        60,
+        'rgba(114, 77, 221, 0.6)',
+        0.3,
+        true
+      )
+    ]
   },
   
   isDefault: true,

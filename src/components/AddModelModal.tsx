@@ -8,6 +8,7 @@ import { useRecentGames } from '../hooks/useRecentGames'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
 import { DatePicker } from './DatePicker'
+import { addModelsToBox } from '../utils/modelBoxUtils'
 
 
 interface Box {
@@ -103,15 +104,8 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
     }
   }, [isOpen, user])
 
-  // Copy purchase date from selected box if model doesn't have one
-  useEffect(() => {
-    if (selectedBox && !purchaseDate) {
-      const box = boxes.find(b => b.id === selectedBox)
-      if (box?.purchase_date) {
-        setPurchaseDate(box.purchase_date)
-      }
-    }
-  }, [selectedBox, boxes, purchaseDate])
+  // Note: Purchase date inheritance is now handled automatically when adding models to collections
+  // No need to pre-populate the purchase date field based on selected box
 
   const getFavoriteGames = () => {
     if (!user?.fav_games || user.fav_games.length === 0) return []
@@ -695,11 +689,10 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
       }
 
       // Create the model
-      const { error: modelError } = await supabase
+      const { data: modelData, error: modelError } = await supabase
         .from('models')
         .insert({
           name: modelName.trim(),
-          box_id: selectedBox || preselectedBoxId || null,
           game_id: modelGameId,
           status: paintedStatus || 'None',
           count: parseInt(numberOfModels) || 1,
@@ -709,8 +702,17 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
           painted_date: paintedDate || null,
           public: modelPublicStatus
         })
+        .select()
+        .single()
 
       if (modelError) throw modelError
+
+      // If a box was selected, add the model to it using the junction table
+      // This will automatically update the model's purchase date to the earliest from all collections
+      const selectedBoxId = selectedBox || preselectedBoxId
+      if (selectedBoxId && modelData) {
+        await addModelsToBox([modelData.id], selectedBoxId)
+      }
 
       // Reset form
       setModelName('')

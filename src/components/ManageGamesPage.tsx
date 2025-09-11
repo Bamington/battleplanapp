@@ -61,7 +61,11 @@ export function ManageGamesPage({ onBack }: ManageGamesPageProps) {
           *,
           manufacturer:manufacturers(name),
           direct_models:models(count),
-          box_models:boxes(models(count))
+          box_models:boxes(
+            model_boxes(
+              model:models(count)
+            )
+          )
         `)
         .order('name')
 
@@ -72,9 +76,13 @@ export function ManageGamesPage({ onBack }: ManageGamesPageProps) {
         // Count models directly assigned to this game
         const directModelsCount = game.direct_models?.reduce((sum: number, model: any) => sum + (model.count || 1), 0) || 0
         
-        // Count models in boxes assigned to this game
+        // Count models in boxes assigned to this game (using junction table)
         const boxModelsCount = game.box_models?.reduce((sum: number, box: any) => {
-          const boxModelCount = box.models?.reduce((boxSum: number, model: any) => boxSum + (model.count || 1), 0) || 0
+          const modelBoxes = box.model_boxes || []
+          const boxModelCount = modelBoxes.reduce((boxSum: number, modelBox: any) => {
+            const modelCount = modelBox.model?.count || 1
+            return boxSum + modelCount
+          }, 0)
           return sum + boxModelCount
         }, 0) || 0
         
