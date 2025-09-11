@@ -29,6 +29,7 @@ export function PaintingInspirationModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
+  const [usedSearchQueries, setUsedSearchQueries] = useState<string[]>([])
 
   useEffect(() => {
     if (isOpen && modelName && gameName) {
@@ -42,22 +43,160 @@ export function PaintingInspirationModal({
     setImages([])
 
     try {
-      const params = new URLSearchParams({
-        modelName,
-        gameName
-      })
+      // Create search queries for inspiration images
+      const searchQueries = [
+        `${modelName} ${gameName} painted miniature`,
+        `${modelName} ${gameName} painting guide`,
+        `${modelName} color scheme painting`,
+        `${gameName} miniature painting inspiration`
+      ]
 
-      const response = await fetch(`/api/painting-inspiration?${params}`)
-      const data = await response.json()
+      console.log('🔍 Starting inspiration search with queries:', searchQueries)
+      console.log('🌐 Supabase URL:', import.meta.env.VITE_SUPABASE_URL)
+      
+      // Store the search queries for display
+      setUsedSearchQueries(searchQueries)
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch inspiration images')
+      // Use the same Supabase Edge Function as other image searches
+      const responses = await Promise.all(
+        searchQueries.map(async (query, index) => {
+          console.log(`📡 Making request ${index + 1}/4 for query: "${query}"`)
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-images`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              query,
+              count: 5 // Get fewer per query to get variety
+            })
+          })
+          console.log(`📨 Response ${index + 1} status:`, response.status, response.statusText)
+          return response
+        })
+      )
+
+      // Collect all images from all search queries
+      const allImages: InspirationImage[] = []
+      
+      for (let i = 0; i < responses.length; i++) {
+        const response = responses[i]
+        console.log(`🔍 Processing response ${i + 1}:`, response.ok ? '✅ OK' : '❌ Failed')
+        
+        if (response.ok) {
+          const data = await response.json()
+          console.log(`📋 Response ${i + 1} data:`, data)
+          
+          if (data.images && Array.isArray(data.images)) {
+            console.log(`📸 Found ${data.images.length} raw images in response ${i + 1}`)
+            console.log(`🔍 Sample image data:`, data.images[0])
+            
+            // Convert to InspirationImage format, filtering out invalid entries
+            const convertedImages = data.images
+              .filter((img: any) => {
+                const hasUrl = !!(img.url || img.link)
+                if (!hasUrl) console.log('❌ Filtered out image with no URL:', img)
+                return hasUrl
+              })
+              .map((img: any) => {
+                const converted = {
+                  url: String(img.url || img.link || ''),
+                  title: String(img.title || `${modelName} inspiration`),
+                  source: 'google' as const,
+                  thumbnail: String(img.thumbnailUrl || img.url || img.link || ''),
+                  snippet: String(img.snippet || '')
+                }
+                console.log('🔄 Converted image:', { original: img, converted })
+                return converted
+              })
+              .filter(img => {
+                const isValid = img.url && typeof img.url === 'string' && img.url.trim() !== ''
+                if (!isValid) console.log('❌ Filtered out invalid URL:', img.url)
+                return isValid
+              })
+            
+            console.log(`✅ Response ${i + 1} yielded ${convertedImages.length} valid images`)
+            allImages.push(...convertedImages)
+          } else {
+            console.log(`⚠️ Response ${i + 1} has no images array:`, data)
+          }
+        } else {
+          const errorText = await response.text()
+          console.log(`❌ Response ${i + 1} failed:`, response.status, errorText)
+        }
       }
 
-      setImages(data.images || [])
+      // Remove duplicates and limit results
+      console.log(`🔄 Total images collected: ${allImages.length}`)
+      const uniqueImages = allImages.filter((img, index, arr) => 
+        arr.findIndex(other => other.url === img.url) === index
+      ).slice(0, 20) // Limit to 20 images
+
+      console.log(`✅ Final unique images: ${uniqueImages.length}`)
+      console.log('📋 Final image URLs:', uniqueImages.map(img => img.url))
+      
+      setImages(uniqueImages)
+      
+      // If no images found, try a simpler search
+      if (uniqueImages.length === 0) {
+        console.log('🔄 No images found with detailed searches, trying simpler fallback query...')
+        const fallbackQuery = `${gameName} miniature painting`
+        console.log('🔍 Fallback query:', fallbackQuery)
+        
+        const simpleResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-images`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: fallbackQuery,
+            count: 10
+          })
+        })
+
+        console.log('📨 Fallback response status:', simpleResponse.status, simpleResponse.statusText)
+
+        if (simpleResponse.ok) {
+          const simpleData = await simpleResponse.json()
+          console.log('📋 Fallback response data:', simpleData)
+          
+          if (simpleData.images && Array.isArray(simpleData.images)) {
+            console.log(`📸 Fallback found ${simpleData.images.length} raw images`)
+            
+            const fallbackImages = simpleData.images
+              .filter((img: any) => {
+                const hasUrl = !!(img.url || img.link)
+                if (!hasUrl) console.log('❌ Fallback filtered out image with no URL:', img)
+                return hasUrl
+              })
+              .map((img: any) => ({
+                url: String(img.url || img.link || ''),
+                title: String(img.title || `${gameName} painting inspiration`),
+                source: 'google' as const,
+                thumbnail: String(img.thumbnailUrl || img.url || img.link || ''),
+                snippet: String(img.snippet || '')
+              }))
+              .filter(img => {
+                const isValid = img.url && typeof img.url === 'string' && img.url.trim() !== ''
+                if (!isValid) console.log('❌ Fallback filtered out invalid URL:', img.url)
+                return isValid
+              })
+              
+            console.log(`✅ Fallback yielded ${fallbackImages.length} valid images`)
+            setImages(fallbackImages)
+          } else {
+            console.log('⚠️ Fallback response has no images array:', simpleData)
+          }
+        } else {
+          const fallbackErrorText = await simpleResponse.text()
+          console.log('❌ Fallback search failed:', simpleResponse.status, fallbackErrorText)
+        }
+      }
     } catch (err) {
       console.error('Error fetching inspiration:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load inspiration images')
+      setError(err instanceof Error ? err.message : 'Failed to load inspiration images. Please check your internet connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -129,7 +268,7 @@ export function PaintingInspirationModal({
                 <div>
                   <p className="text-title font-medium">Finding painting inspiration...</p>
                   <p className="text-sm text-secondary-text mt-1">
-                    Searching Reddit and other sources for {modelName} images
+                    Searching for {modelName} painting guides and color schemes
                   </p>
                 </div>
               </div>
@@ -160,10 +299,28 @@ export function PaintingInspirationModal({
             <div className="text-center py-12">
               <Search className="w-12 h-12 text-secondary-text mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-title mb-2">No Images Found</h3>
-              <p className="text-secondary-text max-w-md mx-auto">
+              <p className="text-secondary-text max-w-md mx-auto mb-6">
                 We couldn't find any painting inspiration for "{modelName}" from {gameName}. 
-                Try searching manually on Reddit or Cool Mini or Not.
+                Try searching manually on Reddit, Cool Mini or Not, or Pinterest.
               </p>
+              <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
+                <button
+                  onClick={fetchInspirationImages}
+                  className="btn-secondary btn-with-icon"
+                >
+                  <Search className="w-4 h-4" />
+                  <span>Try Again</span>
+                </button>
+                <a
+                  href={`https://www.reddit.com/search/?q=${encodeURIComponent(modelName + ' ' + gameName + ' painted')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary btn-with-icon"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Search Reddit</span>
+                </a>
+              </div>
             </div>
           )}
 
@@ -173,6 +330,21 @@ export function PaintingInspirationModal({
                 <h3 className="text-sm font-semibold text-title mb-2">
                   Found {images.length} inspiration image{images.length !== 1 ? 's' : ''}
                 </h3>
+                
+                {/* Search queries used */}
+                {usedSearchQueries.length > 0 && (
+                  <div className="mb-3 p-3 bg-bg-secondary rounded-lg border border-border-custom">
+                    <p className="text-xs font-medium text-secondary-text mb-2">Search queries used:</p>
+                    <div className="space-y-1">
+                      {usedSearchQueries.map((query, index) => (
+                        <div key={index} className="text-xs text-text font-mono bg-bg-primary px-2 py-1 rounded border">
+                          "{query}"
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
                 <p className="text-xs text-secondary-text">
                   Click images to view full size • Heart to save favorites • External link to view source
                 </p>
@@ -186,34 +358,47 @@ export function PaintingInspirationModal({
                   >
                     {/* Image */}
                     <div className="relative aspect-square bg-bg-secondary">
-                      <img
-                        src={image.thumbnail || image.url}
-                        alt={image.title}
-                        className="w-full h-full object-cover cursor-pointer"
-                        onClick={() => openImageInNewTab(image.url)}
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          if (target.src !== image.url) {
-                            target.src = image.url
-                          } else {
-                            target.style.display = 'none'
-                            const parent = target.parentElement
-                            if (parent) {
-                              parent.innerHTML = `
-                                <div class="w-full h-full flex items-center justify-center">
-                                  <div class="text-center">
-                                    <div class="w-12 h-12 bg-gray-200 rounded-lg mx-auto mb-2 flex items-center justify-center">
-                                      <Palette class="w-6 h-6 text-gray-400" />
+                      {(image.url || image.thumbnail) ? (
+                        <img
+                          src={image.url || image.thumbnail}
+                          alt={image.title || 'Painting inspiration'}
+                          className="w-full h-full object-cover cursor-pointer"
+                          onClick={() => openImageInNewTab(image.url)}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            if (target.src !== image.thumbnail && image.thumbnail) {
+                              target.src = image.thumbnail
+                            } else {
+                              target.style.display = 'none'
+                              const parent = target.parentElement
+                              if (parent) {
+                                parent.innerHTML = `
+                                  <div class="w-full h-full flex items-center justify-center">
+                                    <div class="text-center">
+                                      <div class="w-12 h-12 bg-gray-200 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                                          <path d="M9.5 3A6.5 6.5 0 003 9.5v5A6.5 6.5 0 009.5 21h5a6.5 6.5 0 006.5-6.5v-5A6.5 6.5 0 0014.5 3h-5zM11 5h2a2 2 0 012 2v.5a.5.5 0 00.5.5 2.5 2.5 0 010 5 .5.5 0 00-.5.5v.5a2 2 0 01-2 2h-2a2 2 0 01-2-2v-.5a.5.5 0 00-.5-.5 2.5 2.5 0 010-5 .5.5 0 00.5-.5V7a2 2 0 012-2z"/>
+                                        </svg>
+                                      </div>
+                                      <p class="text-xs text-gray-500">Image unavailable</p>
                                     </div>
-                                    <p class="text-xs text-gray-500">Image unavailable</p>
                                   </div>
-                                </div>
-                              `
+                                `
+                              }
                             }
-                          }
-                        }}
-                        loading="lazy"
-                      />
+                          }}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                              <Palette className="w-6 h-6 text-gray-400" />
+                            </div>
+                            <p className="text-xs text-gray-500">No image available</p>
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Overlay controls */}
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">

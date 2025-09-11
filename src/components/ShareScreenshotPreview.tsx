@@ -114,17 +114,33 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
   // Generate the screenshot when modal opens or any setting changes
   useEffect(() => {
     if (isOpen && model) {
-      generateScreenshot()
+      // Debounce the screenshot generation to prevent multiple simultaneous renders
+      const timeoutId = setTimeout(() => {
+        generateScreenshot()
+      }, 100)
+      
+      return () => clearTimeout(timeoutId)
     }
   }, [isOpen, model, isDarkText, showPaintedDate, showCollectionName, showGameDetails, shadowOpacity, textPosition, selectedTheme, userPublicName, showVisualOverlays, overlayOpacity])
 
   const generateScreenshot = async () => {
-    if (!model || !canvasRef.current) return
+    if (!model || !canvasRef.current || generating) return
+
+    console.log('Share Screenshot Debug - Generating screenshot with:', {
+      userPublicName,
+      userEmail: user?.email,
+      userDisplayName: user?.user_metadata?.display_name,
+      modelName: model.name,
+      selectedTheme
+    })
 
     setGenerating(true)
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    
+    // Clear the entire canvas to prevent overlapping from previous renders
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
 
     try {
       // Load fonts for current theme

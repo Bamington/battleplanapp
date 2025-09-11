@@ -306,8 +306,8 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
         boxResponse.json()
       ])
       
-      const normalImages = normalData.images || []
-      const boxImages = boxData.images || []
+      const normalImages = (normalData.images || []).map((img: any) => typeof img === 'string' ? img : img.url)
+      const boxImages = (boxData.images || []).map((img: any) => typeof img === 'string' ? img : img.url)
       
       // Combine results, removing duplicates
       const allImages = [...normalImages]
@@ -369,7 +369,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
       }
 
       const data = await response.json()
-      const additionalImages = data.images || []
+      const additionalImages = (data.images || []).map((img: any) => typeof img === 'string' ? img : img.url)
       
       console.log('Received additional images:', additionalImages)
       console.log('Previous results count:', previousSearchResults.length)

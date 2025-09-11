@@ -75,7 +75,7 @@ export function WishlistImageSuggestionModal({
       }
 
       const data = await response.json()
-      const images = data.images || []
+      const images = (data.images || []).map((img: any) => typeof img === 'string' ? img : img.url)
       
       setSuggestedImages(images)
     } catch (error) {

@@ -43,6 +43,7 @@ import { ModelStatisticsPage } from './components/ModelStatisticsPage'
 import { PaintingTablePage } from './components/PaintingTablePage'
 import { SelectModelForPaintingModal } from './components/SelectModelForPaintingModal'
 import { PaintingInspirationModal } from './components/PaintingInspirationModal'
+import { CustomGamesPage } from './components/CustomGamesPage'
 
 function App() {
   
@@ -758,6 +759,54 @@ function App() {
           setActiveTab('collection')
           setAddModelModal(true)
         }}
+          onAddCollection={() => {
+            setActiveTab('collection')
+            setAddBoxModal(true)
+          }}
+          onAddBooking={() => {
+            setActiveTab('battleplan')
+            setShowNewBookingModal(true)
+          }}
+          onAddWishlist={() => {
+            setActiveTab('wishlist')
+            setShowAddWishlistModal(true)
+          }}
+          onAddBattle={() => {
+            setActiveTab('battles')
+            setShowNewBattleModal(true)
+          }}
+          isBetaTester={isBetaTester}
+        />
+      </div>
+    )
+  }
+
+  // Render Custom Games page
+  if (activeTab === 'custom-games') {
+    return (
+      <div className="min-h-screen bg-bg-secondary">
+        <Header 
+          onAddModel={() => {
+            setActiveTab('collection')
+            setAddModelModal(true)
+          }} 
+          onAdminClick={handleAdminClick}
+          onSettingsClick={handleSettingsClick}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          onLogoClick={handleLogoClick}
+        />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+          <CustomGamesPage />
+        </main>
+        <Footer />
+        <TabBar 
+          activeTab={activeTab} 
+          onTabChange={handleTabChange}
+          onAddModel={() => {
+            setActiveTab('collection')
+            setAddModelModal(true)
+          }}
           onAddCollection={() => {
             setActiveTab('collection')
             setAddBoxModal(true)
@@ -1514,6 +1563,7 @@ function App() {
             onAddItemSuccess={() => setShowAddWishlistModal(false)}
           />
         )}
+
 
         {/* Statistics View - Visible to all users */}
         {collectionView === 'statistics' && (

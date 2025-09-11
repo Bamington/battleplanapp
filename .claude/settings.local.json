@@ -10,7 +10,11 @@
       "WebFetch(domain:serpapi.com)",
       "Bash(npx tsc:*)",
       "Bash(npx supabase db reset:*)",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(supabase:*)",
+      "Bash(npx supabase functions deploy:*)",
+      "Bash(npx supabase secrets:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

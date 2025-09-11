@@ -34,9 +34,28 @@ export const renderStandardTextLayout = (context: ThemeRenderContext, fonts?: {
   let currentY = canvas.height - padding
 
   // User's public name (bottom) - with drop shadow
-  if (userPublicName || user?.user_metadata?.display_name || user?.email) {
-    const displayName = userPublicName || user.user_metadata?.display_name || user.email?.split('@')[0] || 'Unknown User'
+  // Only show username if we have a userPublicName or display_name (no email fallback)
+  if (userPublicName || user?.user_metadata?.display_name) {
+    // Prioritize userPublicName (which should be the user's chosen public name)
+    let displayName = 'Unknown User'
+    
+    if (userPublicName && userPublicName.trim()) {
+      // Use the user's public name if available and not empty
+      displayName = userPublicName.trim()
+    } else if (user?.user_metadata?.display_name && user.user_metadata.display_name.trim()) {
+      // Fallback to display name from user metadata
+      displayName = user.user_metadata.display_name.trim()
+    }
+    
     const displayText = `by ${displayName}`
+    
+    console.log('Share screenshot username debug:', {
+      userPublicName,
+      displayName: user?.user_metadata?.display_name,
+      email: user?.email,
+      finalDisplayName: displayName,
+      finalDisplayText: displayText
+    })
     
     // Set font for user name (use tiny font)
     ctx.font = fonts?.tinyFont || '24px Overpass, sans-serif'

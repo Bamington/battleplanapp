@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Menu, X, User, Plus, Settings, Moon, Sun, Shield, Package, Calendar, Ban, Sword, ChevronDown, ChevronRight, Clock, Layers, BarChart3, Brush, Heart } from 'lucide-react'
+import { Menu, X, User, Plus, Settings, Moon, Sun, Shield, Package, Calendar, Ban, Sword, ChevronDown, ChevronRight, Clock, Layers, BarChart3, Brush, Heart, Gamepad2 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useDarkMode } from '../hooks/useDarkMode'
+import { useHasCustomGames } from '../hooks/useHasCustomGames'
 import { Toast } from './Toast'
 
 interface HeaderProps {
@@ -22,6 +23,7 @@ export function Header({ onAddModel, onAdminClick, onSettingsClick, activeTab, o
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const { isDarkMode, toggleDarkMode } = useDarkMode()
   const { user, signOut, isBetaTester } = useAuth()
+  const { hasCustomGames } = useHasCustomGames()
   const profileButtonRef = useRef<HTMLButtonElement>(null)
   const profileMenuRef = useRef<HTMLDivElement>(null)
 
@@ -117,6 +119,12 @@ export function Header({ onAddModel, onAdminClick, onSettingsClick, activeTab, o
         ] : [])
       ]
     },
+    ...(hasCustomGames ? [{
+      id: 'custom-games',
+      name: 'Custom Games',
+      icon: Gamepad2,
+      hasSubItems: false
+    }] : []),
     {
       id: 'battles',
       name: 'Battles',

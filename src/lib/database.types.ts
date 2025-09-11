@@ -196,27 +196,33 @@ export type Database = {
       games: {
         Row: {
           created_at: string | null
+          created_by: string | null
           icon: string | null
           id: string
           image: string | null
           manufacturer_id: string | null
           name: string
+          supported: boolean | null
         }
         Insert: {
           created_at?: string | null
+          created_by?: string | null
           icon?: string | null
           id?: string
           image?: string | null
           manufacturer_id?: string | null
           name: string
+          supported?: boolean | null
         }
         Update: {
           created_at?: string | null
+          created_by?: string | null
           icon?: string | null
           id?: string
           image?: string | null
           manufacturer_id?: string | null
           name?: string
+          supported?: boolean | null
         }
         Relationships: [
           {
