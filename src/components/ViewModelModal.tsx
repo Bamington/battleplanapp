@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { X, Share2, Edit, Trash2, Calendar, Hash, Palette, FileText, Package, Gamepad2, Info, BookOpen, Brush } from 'lucide-react'
+import { X, Share2, Edit, Trash2, Calendar, Hash, Palette, FileText, Package, Gamepad2, Info, BookOpen, Brush, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { DeleteModelModal } from './DeleteModelModal'
 import { EditModelModal } from './EditModelModal'
@@ -33,6 +33,15 @@ interface ViewModelModalProps {
     lore_name?: string | null
     lore_description?: string | null
     painting_notes?: string | null
+    images?: {
+      id: string
+      model_id: string
+      image_url: string
+      display_order: number
+      is_primary: boolean
+      created_at: string
+      user_id: string
+    }[]
     box: {
       id: string
       name: string
@@ -75,6 +84,17 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
   })
   const [modelCollections, setModelCollections] = React.useState<Array<{ id: string; name: string; added_at: string; purchase_date: string | null }>>([])
   const [collectionsLoading, setCollectionsLoading] = React.useState(false)
+  const [modelImages, setModelImages] = React.useState<{
+    id: string
+    model_id: string
+    image_url: string
+    display_order: number
+    is_primary: boolean
+    created_at: string
+    user_id: string
+  }[]>([])
+  const [imagesLoading, setImagesLoading] = React.useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = React.useState(0)
 
   // Define tabs configuration
   const tabs = [
@@ -94,6 +114,63 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
       icon: Brush
     }
   ]
+
+  // Fetch model images
+  const fetchModelImages = async () => {
+    if (!model?.id) return
+    
+    setImagesLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('model_images')
+        .select('*')
+        .eq('model_id', model.id)
+        .order('created_at', { ascending: true })
+      
+      if (error) {
+        console.error('Error fetching model images:', error)
+        setModelImages([])
+      } else {
+        const images = data || []
+        
+        // Reorder images: primary first, then rest by creation date
+        const primaryImage = images.find(img => img.is_primary)
+        const nonPrimaryImages = images.filter(img => !img.is_primary).sort((a, b) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        )
+        
+        const orderedImages = primaryImage ? [primaryImage, ...nonPrimaryImages] : nonPrimaryImages
+        
+        setModelImages(orderedImages)
+        
+        // Always start at index 0 since primary is now always first
+        setCurrentImageIndex(0)
+      }
+    } catch (error) {
+      console.error('Error fetching model images:', error)
+      setModelImages([])
+      setCurrentImageIndex(0)
+    } finally {
+      setImagesLoading(false)
+    }
+  }
+
+  // Carousel navigation functions
+  const goToPreviousImage = () => {
+    setCurrentImageIndex(prev => 
+      prev === 0 ? modelImages.length - 1 : prev - 1
+    )
+  }
+
+  const goToNextImage = () => {
+    setCurrentImageIndex(prev => 
+      prev === modelImages.length - 1 ? 0 : prev + 1
+    )
+  }
+
+  const goToImage = (index: number) => {
+    setCurrentImageIndex(index)
+  }
 
   // Fetch model collections
   const fetchModelCollections = async () => {
@@ -127,9 +204,13 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
       setPaintingData(newPaintingData)
       setOriginalPaintingData(newPaintingData)
       
-      // Fetch collections when model changes and modal is open
+      // Reset to primary image when model changes
+      setCurrentImageIndex(0)
+      
+      // Fetch collections and images when model changes and modal is open
       if (isOpen) {
         fetchModelCollections()
+        fetchModelImages()
       }
     }
   }, [model, isOpen])
@@ -168,6 +249,26 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
       document.body.style.overflow = 'unset'
     }
   }, [isOpen])
+
+  // Keyboard navigation for carousel
+  React.useEffect(() => {
+    if (!isOpen || modelImages.length <= 1) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        goToPreviousImage()
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        goToNextImage()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen, modelImages.length])
 
   if (!isOpen || !model) return null
 
@@ -342,48 +443,136 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
 
           {/* Content - Scrollable area */}
           <div className="flex-1 overflow-y-auto">
-            {/* Header Image - Now scrolls with content */}
-            <img
-              src={(() => {
-                // Check if we have a valid model image URL
-                if (model.image_url && 
-                   typeof model.image_url === 'string' &&
-                   model.image_url.trim() !== '' && 
-                   model.image_url !== 'undefined' && 
-                   model.image_url !== 'null') {
-                  return model.image_url
-                }
-                
-                // Try to use the game's icon as fallback
-                const gameIcon = model.box?.game?.icon || model.game?.icon
-                if (gameIcon && 
-                    typeof gameIcon === 'string' &&
-                    gameIcon.trim() !== '' && 
-                    gameIcon !== 'undefined' && 
-                    gameIcon !== 'null' &&
-                    gameIcon.startsWith('http')) {
-                  return gameIcon
-                }
-                
-                // Final fallback to default image
-                return '/bp-unkown.svg'
-              })()}
-              alt={model.name}
-              className="w-full object-cover rounded-none sm:rounded-t-lg"
-              style={{ 
-                marginTop: 'calc(-1 * max(1rem, env(safe-area-inset-top)))', 
-                paddingTop: 'max(1rem, env(safe-area-inset-top))'
-              }}
-              loading="lazy"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement
-                const fallbackUrl = '/bp-unkown.svg'
-                if (target.src !== fallbackUrl) {
-                  console.log('Modal image failed to load:', target.src, 'Falling back to default')
-                  target.src = fallbackUrl
-                }
-              }}
-            />
+            {/* Image Carousel */}
+            <div className="relative">
+              {modelImages.length > 0 ? (
+                <>
+                  {/* Current Image */}
+                  <img
+                    src={(() => {
+                      const currentImage = modelImages[currentImageIndex]
+                      if (currentImage?.image_url) {
+                        return currentImage.image_url
+                      }
+                      
+                      // Fallback to model.image_url if no images in model_images
+                      if (model.image_url && 
+                         typeof model.image_url === 'string' &&
+                         model.image_url.trim() !== '' && 
+                         model.image_url !== 'undefined' && 
+                         model.image_url !== 'null') {
+                        return model.image_url
+                      }
+                      
+                      // Final fallback
+                      return '/bp-unkown.svg'
+                    })()}
+                    alt={`${model.name} - Image ${currentImageIndex + 1}`}
+                    className="w-full object-cover rounded-none sm:rounded-t-lg"
+                    style={{ 
+                      marginTop: 'calc(-1 * max(1rem, env(safe-area-inset-top)))', 
+                      paddingTop: 'max(1rem, env(safe-area-inset-top))'
+                    }}
+                    loading="lazy"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      const fallbackUrl = '/bp-unkown.svg'
+                      if (target.src !== fallbackUrl) {
+                        console.log('Modal image failed to load:', target.src, 'Falling back to default')
+                        target.src = fallbackUrl
+                      }
+                    }}
+                  />
+                  
+                  {/* Carousel Controls - Only show if multiple images */}
+                  {modelImages.length > 1 && (
+                    <>
+                      {/* Previous Button */}
+                      <button
+                        onClick={goToPreviousImage}
+                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-2 transition-opacity z-10"
+                        aria-label="Previous image"
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+                      
+                      {/* Next Button */}
+                      <button
+                        onClick={goToNextImage}
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-2 transition-opacity z-10"
+                        aria-label="Next image"
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+                      
+                      {/* Image Indicators */}
+                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-10">
+                        {modelImages.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => goToImage(index)}
+                            className={`w-2 h-2 rounded-full transition-colors ${
+                              index === currentImageIndex 
+                                ? 'bg-white' 
+                                : 'bg-white bg-opacity-50 hover:bg-opacity-75'
+                            }`}
+                            aria-label={`Go to image ${index + 1}`}
+                          />
+                        ))}
+                      </div>
+                      
+                      {/* Image Counter */}
+                      <div className="absolute top-6 right-6 bg-black bg-opacity-25 text-white text-sm px-2 py-1 rounded z-10">
+                        {currentImageIndex + 1} / {modelImages.length}
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                /* Fallback for when no images are found in model_images table */
+                <img
+                  src={(() => {
+                    // Check if we have a valid model image URL
+                    if (model.image_url && 
+                       typeof model.image_url === 'string' &&
+                       model.image_url.trim() !== '' && 
+                       model.image_url !== 'undefined' && 
+                       model.image_url !== 'null') {
+                      return model.image_url
+                    }
+                    
+                    // Try to use the game's icon as fallback
+                    const gameIcon = model.box?.game?.icon || model.game?.icon
+                    if (gameIcon && 
+                        typeof gameIcon === 'string' &&
+                        gameIcon.trim() !== '' && 
+                        gameIcon !== 'undefined' && 
+                        gameIcon !== 'null' &&
+                        gameIcon.startsWith('http')) {
+                      return gameIcon
+                    }
+                    
+                    // Final fallback to default image
+                    return '/bp-unkown.svg'
+                  })()}
+                  alt={model.name}
+                  className="w-full object-cover rounded-none sm:rounded-t-lg"
+                  style={{ 
+                    marginTop: 'calc(-1 * max(1rem, env(safe-area-inset-top)))', 
+                    paddingTop: 'max(1rem, env(safe-area-inset-top))'
+                  }}
+                  loading="lazy"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    const fallbackUrl = '/bp-unkown.svg'
+                    if (target.src !== fallbackUrl) {
+                      console.log('Modal image failed to load:', target.src, 'Falling back to default')
+                      target.src = fallbackUrl
+                    }
+                  }}
+                />
+              )}
+            </div>
             
             <div className="p-6">
             {/* Title Section */}

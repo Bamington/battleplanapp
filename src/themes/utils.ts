@@ -130,19 +130,72 @@ export const renderStandardTextLayout = (context: ThemeRenderContext, fonts?: {
       ctx.font = fonts?.smallFont || '28px Overpass, sans-serif'
       ctx.textAlign = textAlign as CanvasTextAlign
       
+      // Handle game icon and text positioning
+      const gameIcon = model.box?.game?.icon || model.game?.icon
+      let gameTextX = textX
+      
+      // If we have a game icon, render it first and adjust text position
+      if (gameIcon) {
+        const iconSize = 24 // 24px icon size
+        const iconPadding = 8 // 8px space between icon and text
+        
+        try {
+          const iconImg = new Image()
+          iconImg.crossOrigin = 'anonymous'
+          
+          iconImg.onload = () => {
+            // Calculate icon position
+            let iconX, iconY
+            
+            if (textAlign === 'right') {
+              // For right-aligned text, icon goes to the right of the text
+              // First measure the text width
+              ctx.font = fonts?.smallFont || '28px Overpass, sans-serif'
+              const textWidth = ctx.measureText(gameName).width
+              iconX = textX - textWidth - iconPadding - iconSize
+              gameTextX = textX - iconSize - iconPadding // Adjust text position
+            } else {
+              // For left-aligned text, icon goes to the left
+              iconX = textX
+              gameTextX = textX + iconSize + iconPadding // Adjust text position
+            }
+            
+            iconY = currentY - iconSize + 4 // Vertically center with text baseline
+            
+            // Draw the icon
+            ctx.drawImage(iconImg, iconX, iconY, iconSize, iconSize)
+          }
+          iconImg.onerror = () => {
+            // If icon fails to load, just continue without it
+            console.warn('Game icon failed to load:', gameIcon)
+          }
+          iconImg.src = gameIcon
+          
+          // Adjust text position for icon (even if it hasn't loaded yet)
+          if (textAlign === 'right') {
+            ctx.font = fonts?.smallFont || '28px Overpass, sans-serif'
+            const textWidth = ctx.measureText(gameName).width
+            gameTextX = textX - iconSize - iconPadding
+          } else {
+            gameTextX = textX + iconSize + iconPadding
+          }
+        } catch (error) {
+          console.warn('Error loading game icon:', error)
+        }
+      }
+
       // Draw game name with drop shadow
-      const gameText = gameName
+      ctx.font = fonts?.smallFont || '28px Overpass, sans-serif'
+      ctx.textAlign = textAlign as CanvasTextAlign
       ctx.shadowColor = `rgba(0, 0, 0, ${shadowOpacity})`
       ctx.shadowBlur = 8
       ctx.shadowOffsetX = 2
       ctx.shadowOffsetY = 2
       ctx.fillStyle = tertiaryColor
-      ctx.fillText(gameText, textX, currentY)
+      ctx.fillText(gameName, gameTextX, currentY)
       
       // Reset shadow for next elements
       ctx.shadowColor = 'transparent'
-      
-      // TODO: Add game icon rendering logic here if needed
       
       currentY -= 35
     } catch (error) {

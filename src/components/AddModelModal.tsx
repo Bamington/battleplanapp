@@ -41,9 +41,10 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
   const [purchasePrice, setPurchasePrice] = useState('')
   const [displayPrice, setDisplayPrice] = useState('')
   const [numberOfModels, setNumberOfModels] = useState('1')
-  const [selectedImages, setSelectedImages] = useState<FileList | null>(null)
+  const [selectedImages, setSelectedImages] = useState<File[]>([])
   const [showImageCropper, setShowImageCropper] = useState(false)
   const [imageForCropping, setImageForCropping] = useState<File | null>(null)
+  const [dragActive, setDragActive] = useState(false)
   const { games, createGame } = useGames()
   const [boxes, setBoxes] = useState<Box[]>([])
   const [loading, setLoading] = useState(false)
@@ -168,44 +169,75 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
+    const files = Array.from(e.target.files || [])
+    processFiles(files)
+    e.target.value = '' // Clear input to allow re-selecting same files
+  }
+
+  const processFiles = (files: File[]) => {
     setFileSizeError('')
     setCompressionInfo('')
     
-    if (files && files.length > 0) {
-      const file = files[0] // Check first selected file
-      
+    if (files.length === 0) return
+    
+    const maxSize = 50 * 1024 * 1024 // 50MB in bytes
+    const validFiles: File[] = []
+    
+    for (const file of files) {
       // Validate file type
       if (!isValidImageFile(file)) {
-        setFileSizeError('Please select a valid image file (JPEG, PNG, or WebP)')
-        setSelectedImages(null)
-        e.target.value = ''
+        setFileSizeError(`Invalid file: ${file.name}. Please select valid image files (JPEG, PNG, or WebP)`)
         return
       }
-
-      const maxSize = 50 * 1024 * 1024 // 50MB in bytes
       
       if (file.size > maxSize) {
-        setFileSizeError(`Your image must be 50MB or less. Current size: ${formatFileSize(file.size)}`)
-        setSelectedImages(null)
-        e.target.value = ''
-      } else {
-        setSelectedImages(files)
-        
-        // Show image cropper for the selected image
-        if (files && files.length > 0) {
-          setImageForCropping(files[0])
-          setShowImageCropper(true)
-        }
-        
-        // Show compression info for larger files
-        if (file.size > 1024 * 1024) { // Files larger than 1MB
-          setCompressionInfo(`Original size: ${formatFileSize(file.size)}. Image will be automatically compressed before upload.`)
-        }
+        setFileSizeError(`File too large: ${file.name} (${formatFileSize(file.size)}). Maximum size is 50MB`)
+        return
       }
-    } else {
-      setSelectedImages(files)
+      
+      validFiles.push(file)
     }
+    
+    if (validFiles.length > 0) {
+      setSelectedImages(validFiles)
+      
+      // Show image cropper for the first selected image
+      setImageForCropping(validFiles[0])
+      setShowImageCropper(true)
+      
+      // Show compression info for larger files
+      const largeFiles = validFiles.filter(file => file.size > 1024 * 1024)
+      if (largeFiles.length > 0) {
+        setCompressionInfo(`${largeFiles.length} large file(s) will be automatically compressed before upload.`)
+      }
+    }
+  }
+
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    
+    const files = Array.from(e.dataTransfer.files)
+    processFiles(files)
   }
 
   const handleCameraCapture = async () => {
@@ -393,10 +425,8 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
               if (file.size > maxSize) {
                 setFileSizeError(`Your image must be 50MB or less. Current size: ${formatFileSize(file.size)}`)
               } else {
-                // Create FileList-like object
-                const dataTransfer = new DataTransfer()
-                dataTransfer.items.add(file)
-                setSelectedImages(dataTransfer.files)
+                // Add to selected images array
+                setSelectedImages([file])
                 setFileSizeError('')
                 setCompressionInfo('')
                 
@@ -487,10 +517,12 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
   }
 
   const handleCroppedImage = (croppedFile: File) => {
-    // Create a new FileList-like object with the cropped file
-    const dataTransfer = new DataTransfer()
-    dataTransfer.items.add(croppedFile)
-    setSelectedImages(dataTransfer.files)
+    // Replace the first image with the cropped version, keep other images unchanged
+    setSelectedImages(prev => {
+      const newImages = [...prev]
+      newImages[0] = croppedFile // Replace first image with cropped version
+      return newImages
+    })
     setShowImageCropper(false)
     setImageForCropping(null)
     
@@ -506,7 +538,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
     if (fileInput) {
       fileInput.value = ''
     }
-    setSelectedImages(null)
+    setSelectedImages([])
   }
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -707,6 +739,80 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
 
       if (modelError) throw modelError
 
+      // Upload all images to model_images table for consistency
+      if (selectedImages.length > 0 && modelData) {
+        // First, add the main image to model_images table as primary
+        if (imageUrl) {
+          try {
+            await supabase
+              .from('model_images')
+              .insert({
+                model_id: modelData.id,
+                image_url: imageUrl,
+                display_order: 0,
+                is_primary: true,
+                user_id: user.id
+              })
+            console.log('Added main image to model_images table')
+          } catch (error) {
+            console.error('Error adding main image to model_images table:', error)
+          }
+        }
+        
+        // Then upload additional images
+        if (selectedImages.length > 1) {
+          for (let i = 1; i < selectedImages.length; i++) {
+            const additionalFile = selectedImages[i]
+          
+            try {
+              // Compress additional image
+              const compressedFile = await compressImage(additionalFile, 1200, 1200, 0.8)
+              
+              const fileExt = compressedFile.name.split('.').pop() || additionalFile.name.split('.').pop() || 'jpg'
+              const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+              
+              // Upload to storage
+              const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('model-images')
+                .upload(fileName, compressedFile)
+                
+              if (uploadError) {
+                console.error('Additional image upload error:', uploadError)
+                // Continue with next image instead of failing completely
+                continue
+              }
+              
+              const { data } = supabase.storage
+                .from('model-images')
+                .getPublicUrl(uploadData.path)
+              
+              // Insert into model_images table
+              const { error: imageError } = await supabase
+                .from('model_images')
+                .insert({
+                  model_id: modelData.id,
+                  image_url: data.publicUrl,
+                  display_order: i,
+                  is_primary: false,
+                  user_id: user.id
+                })
+              
+              if (imageError) {
+                console.error('Error inserting additional image record:', imageError)
+                // Continue with next image instead of failing completely
+                continue
+              }
+              
+              console.log(`Uploaded additional image ${i}:`, data.publicUrl)
+            } catch (error) {
+              console.error(`Error processing additional image ${i}:`, error)
+              // Continue with next image
+              continue
+            }
+          }
+        }
+      }
+
       // If a box was selected, add the model to it using the junction table
       // This will automatically update the model's purchase date to the earliest from all collections
       const selectedBoxId = selectedBox || preselectedBoxId
@@ -724,7 +830,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
       setPurchasePrice('')
       setDisplayPrice('')
       setNumberOfModels('1')
-      setSelectedImages(null)
+      setSelectedImages([])
       setCompressionInfo('')
       
       onSuccess()
@@ -952,19 +1058,30 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
             </div>
             
             {/* Image Upload Area */}
-            <div className="border-2 border-dashed border-border-custom rounded-lg p-6 text-center hover:border-[var(--color-brand)] transition-colors">
-              {selectedImages && selectedImages.length > 0 ? (
+            <div 
+              className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                dragActive 
+                  ? 'border-[var(--color-brand)] bg-[var(--color-brand)]/5' 
+                  : 'border-border-custom hover:border-[var(--color-brand)]'
+              }`}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
+              {selectedImages.length > 0 ? (
                 <div className="space-y-4">
+                  {/* Show first image as main */}
                   <div className="relative mx-auto w-32 h-32">
                     <img
                       src={URL.createObjectURL(selectedImages[0])}
-                      alt="Selected model image"
+                      alt="Main model image"
                       className="w-full h-full object-cover rounded-lg"
                     />
                     <button
                       type="button"
                       onClick={() => {
-                        setSelectedImages(null)
+                        setSelectedImages([])
                         setFileSizeError('')
                         setCompressionInfo('')
                       }}
@@ -972,23 +1089,61 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
                     >
                       <X className="w-4 h-4" />
                     </button>
+                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-[var(--color-brand)] text-white text-xs px-2 py-1 rounded">
+                      Main Image
+                    </div>
                   </div>
-                  <p className="text-sm text-secondary-text">{selectedImages[0].name}</p>
+                  
+                  {/* Show additional images if any */}
+                  {selectedImages.length > 1 && (
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {selectedImages.slice(1).map((file, index) => (
+                        <div key={index + 1} className="relative w-16 h-16">
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Additional image ${index + 2}`}
+                            className="w-full h-full object-cover rounded border-2 border-border-custom"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedImages(prev => prev.filter((_, i) => i !== index + 1))
+                            }}
+                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center hover:bg-red-600 transition-colors text-xs"
+                          >
+                            <X className="w-2 h-2" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className="text-sm text-secondary-text">
+                    <p className="font-medium">{selectedImages[0].name} {selectedImages.length > 1 && `+ ${selectedImages.length - 1} more`}</p>
+                    <p className="text-xs mt-1">The first image will be used as the main model image</p>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
+                  {dragActive && (
+                    <div className="mb-4">
+                      <p className="text-lg font-medium text-[var(--color-brand)]">Drop images here</p>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-center space-x-4">
                     <label className="cursor-pointer">
                       <input
                         type="file"
                         accept="image/*"
+                        multiple
                         onChange={handleImageChange}
                         className="hidden"
                         disabled={loading}
                       />
                       <div className="flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-bg-secondary transition-colors">
                         <Image className="w-8 h-8 text-icon" />
-                        <span className="text-sm font-medium text-text">Upload Image</span>
+                        <span className="text-sm font-medium text-text">Upload Images</span>
                       </div>
                     </label>
                     
@@ -1003,7 +1158,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
                     </button>
                   </div>
                   <p className="text-xs text-secondary-text">
-                    JPEG, PNG, or WebP up to 50MB
+                    {dragActive ? 'Drop multiple images here' : 'JPEG, PNG, or WebP up to 50MB each. Drag & drop or click to select multiple images.'}
                   </p>
                 </div>
               )}

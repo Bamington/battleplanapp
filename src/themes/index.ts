@@ -12,6 +12,7 @@ import { redFog } from './red-fog'
 import { dragonslayer } from './dragonslayer'
 import { eightpoints } from './eightpoints'
 import { shatterpoint } from './shatterpoint'
+import { killteam } from './killteam'
 
 
 // Export all themes
@@ -26,7 +27,8 @@ export const themes: Record<ThemeId, Theme> = {
   dragonslayer,
   ringbearer,
   eightpoints,
-  shatterpoint
+  shatterpoint,
+  killteam
 }
 
 // Export individual themes for direct import
@@ -41,7 +43,8 @@ export {
   dragonslayer,
   ringbearer,
   eightpoints,
-  shatterpoint
+  shatterpoint,
+  killteam
 }
 
 // Helper functions

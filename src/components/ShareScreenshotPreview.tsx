@@ -48,6 +48,17 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
   const [toastMessage, setToastMessage] = useState('')
   const [showVisualOverlays, setShowVisualOverlays] = useState(true)
   const [overlayOpacity, setOverlayOpacity] = useState(0.3)
+  const [activeTab, setActiveTab] = useState<'Photo' | 'Theme' | 'Content'>('Photo')
+  const [brightness, setBrightness] = useState(1)
+  const [saturation, setSaturation] = useState(1)
+  const [customModelName, setCustomModelName] = useState('')
+  const [customCollectionName, setCustomCollectionName] = useState('')
+  const [customGameName, setCustomGameName] = useState('')
+  const [customPaintedDate, setCustomPaintedDate] = useState('')
+  const [customUserName, setCustomUserName] = useState('')
+  const [customGradientColor, setCustomGradientColor] = useState('')
+  const [customBorderColor, setCustomBorderColor] = useState('')
+  const [gradientOpacity, setGradientOpacity] = useState(0.4)
   const { user, isBetaTester } = useAuth()
 
   // Helper function to get the appropriate theme based on the model's game
@@ -81,6 +92,52 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
       setSelectedTheme(gameTheme)
     }
   }, [model])
+
+  // Initialize custom colors when theme changes
+  useEffect(() => {
+    const theme = getTheme(selectedTheme)
+    // Convert RGB string "255, 128, 0" to hex color
+    const rgbToHex = (rgbString: string) => {
+      const [r, g, b] = rgbString.split(',').map(s => parseInt(s.trim()))
+      return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`
+    }
+    
+    try {
+      setCustomGradientColor(rgbToHex(theme.colors.gradientColor))
+      setCustomBorderColor(theme.colors.borderColor)
+    } catch (error) {
+      console.warn('Error converting theme colors:', error)
+      // Fallback colors
+      setCustomGradientColor('#8B5CF6') // Purple
+      setCustomBorderColor('#8B5CF6')
+    }
+  }, [selectedTheme])
+
+  // Initialize custom text fields when modal opens
+  useEffect(() => {
+    if (isOpen && model) {
+      setCustomModelName(model.name || '')
+      setCustomCollectionName(model.box?.name || '')
+      setCustomGameName(model.box?.game?.name || model.game?.name || '')
+      setCustomPaintedDate(model.painted_date ? formatLocalDate(model.painted_date, {
+        month: 'long',
+        day: 'numeric', 
+        year: 'numeric'
+      }) : '')
+      
+      // Set custom user name
+      if (userPublicName && userPublicName.trim()) {
+        setCustomUserName(userPublicName.trim())
+      } else if (user?.user_metadata?.display_name && user.user_metadata.display_name.trim()) {
+        setCustomUserName(user.user_metadata.display_name.trim())
+      } else {
+        setCustomUserName('')
+      }
+      
+      // Preload fonts when modal opens
+      ensureFontsLoaded().catch(console.warn)
+    }
+  }, [isOpen, model, userPublicName, user?.user_metadata?.display_name])
 
   // Fetch user's public name when modal opens
   useEffect(() => {
@@ -121,7 +178,58 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
       
       return () => clearTimeout(timeoutId)
     }
-  }, [isOpen, model, isDarkText, showPaintedDate, showCollectionName, showGameDetails, shadowOpacity, textPosition, selectedTheme, userPublicName, showVisualOverlays, overlayOpacity])
+  }, [isOpen, model, isDarkText, showPaintedDate, showCollectionName, showGameDetails, shadowOpacity, textPosition, selectedTheme, userPublicName, showVisualOverlays, overlayOpacity, brightness, saturation, customModelName, customCollectionName, customGameName, customPaintedDate, customUserName, customGradientColor, customBorderColor, gradientOpacity])
+
+  const ensureFontsLoaded = async () => {
+    // Check if document.fonts is available (modern browsers)
+    if ('fonts' in document) {
+      try {
+        // Wait for all fonts to be loaded
+        await document.fonts.ready
+        
+        // Additionally check for specific fonts that might be used
+        const fontFaces = [
+          new FontFace('Overpass', 'url(/fonts/overpass-regular.woff2)'),
+          new FontFace('Overpass', 'url(/fonts/overpass-semibold.woff2)', { weight: '600' }),
+          new FontFace('Overpass', 'url(/fonts/overpass-bold.woff2)', { weight: 'bold' })
+        ]
+        
+        // Load common font weights that might be used
+        const fontPromises = fontFaces.map(async (font) => {
+          try {
+            await font.load()
+            document.fonts.add(font)
+          } catch (error) {
+            // Font might not exist or already be loaded, continue
+            console.warn('Font loading warning (this is usually not an issue):', error)
+          }
+        })
+        
+        await Promise.allSettled(fontPromises)
+        
+        // Additional check - force browser to render fonts by creating a test element
+        const testDiv = document.createElement('div')
+        testDiv.style.fontFamily = 'Overpass, sans-serif'
+        testDiv.style.fontSize = '1px'
+        testDiv.style.position = 'absolute'
+        testDiv.style.left = '-9999px'
+        testDiv.textContent = 'Test'
+        document.body.appendChild(testDiv)
+        
+        // Force layout
+        testDiv.offsetHeight
+        
+        // Clean up
+        document.body.removeChild(testDiv)
+        
+      } catch (error) {
+        console.warn('Font loading check failed, proceeding anyway:', error)
+      }
+    } else {
+      // Fallback for older browsers - just wait a bit
+      await new Promise(resolve => setTimeout(resolve, 200))
+    }
+  }
 
   const generateScreenshot = async () => {
     if (!model || !canvasRef.current || generating) return
@@ -143,10 +251,16 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
     try {
+      // Ensure fonts are loaded before proceeding
+      await ensureFontsLoaded()
+      
       // Load fonts for current theme
       if (currentTheme.renderOptions.loadFonts) {
         await currentTheme.renderOptions.loadFonts()
       }
+      
+      // Wait a bit more to ensure fonts are fully rendered
+      await new Promise(resolve => setTimeout(resolve, 100))
       // Load the model image first to get its aspect ratio
       if (model.image_url) {
         const img = new Image()
@@ -166,62 +280,54 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
               canvas.height = maxSize
             }
             
-            // Create rounded clipping path for the image
-            const imageCornerRadius = 20
-            ctx.save()
-            ctx.beginPath()
-            ctx.roundRect(0, 0, canvas.width, canvas.height, imageCornerRadius)
-            ctx.clip()
+            // Apply brightness and saturation filters
+            ctx.filter = `brightness(${brightness}) saturate(${saturation})`
             
-            // Draw the image to fill the entire canvas (now clipped to rounded corners)
+            // Draw the image to fill the entire canvas (no rounded corners)
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
             
-            // Restore context to remove clipping for subsequent draws
-            ctx.restore()
+            // Reset filter for subsequent draws
+            ctx.filter = 'none'
             
-            // Add gradient at the top using theme colors
-            const gradientHeight = canvas.height * 0.2 // 20% of image height
-            const gradient = ctx.createLinearGradient(0, 0, 0, gradientHeight)
-            const gradientColor = currentTheme.colors.gradientColor
-            gradient.addColorStop(0, `rgba(${gradientColor}, 0.4)`) // Theme color at 40% opacity
-            gradient.addColorStop(1, `rgba(${gradientColor}, 0)`)   // Fully transparent
-            
-            ctx.fillStyle = gradient
-            ctx.fillRect(0, 0, canvas.width, gradientHeight)
-            
-            // Add radial gradient to bottom-right corner
-            const cornerRadius = Math.min(canvas.width, canvas.height) * 0.3 // 30% of smallest dimension
-            const cornerCenterX = canvas.width
-            const cornerCenterY = canvas.height
-            
-            const radialGradient = ctx.createRadialGradient(
-              cornerCenterX, cornerCenterY, 0, // Inner circle (center point, no radius)
-              cornerCenterX, cornerCenterY, cornerRadius // Outer circle
-            )
-            radialGradient.addColorStop(0, `rgba(${gradientColor}, 0.4)`) // Theme color at 40% opacity at center
-            radialGradient.addColorStop(1, `rgba(${gradientColor}, 0)`)   // Fully transparent at edge
-            
-            ctx.fillStyle = radialGradient
-            ctx.fillRect(0, 0, canvas.width, canvas.height)
-            
-            // Add 3px thick rounded border using theme color
-            const borderColor = currentTheme.colors.borderColor
-            const borderWidth = 3
-            const borderCornerRadius = 20 // Match the corner radius used in createRoundedImage
-            ctx.strokeStyle = borderColor
-            ctx.lineWidth = borderWidth
-            
-            // Draw rounded border inside the canvas bounds
-            const borderOffset = borderWidth / 2
-            const borderX = borderOffset
-            const borderY = borderOffset
-            const borderW = canvas.width - borderWidth
-            const borderH = canvas.height - borderWidth
-            const innerBorderRadius = borderCornerRadius - borderOffset // Adjust radius for inner border
-            
-            ctx.beginPath()
-            ctx.roundRect(borderX, borderY, borderW, borderH, innerBorderRadius)
-            ctx.stroke()
+            // Add gradients if visual overlays are enabled
+            if (showVisualOverlays) {
+              // Convert hex color to RGB
+              const hexToRgb = (hex: string) => {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+                return result ? {
+                  r: parseInt(result[1], 16),
+                  g: parseInt(result[2], 16),
+                  b: parseInt(result[3], 16)
+                } : { r: 139, g: 92, b: 246 } // Fallback to purple
+              }
+
+              const gradientRgb = hexToRgb(customGradientColor)
+              const gradientRgbString = `${gradientRgb.r}, ${gradientRgb.g}, ${gradientRgb.b}`
+
+              // Add gradient at the top using custom colors and opacity
+              const gradientHeight = canvas.height * 0.2 // 20% of image height
+              const gradient = ctx.createLinearGradient(0, 0, 0, gradientHeight)
+              gradient.addColorStop(0, `rgba(${gradientRgbString}, ${gradientOpacity})`) // Custom color at custom opacity
+              gradient.addColorStop(1, `rgba(${gradientRgbString}, 0)`)   // Fully transparent
+              
+              ctx.fillStyle = gradient
+              ctx.fillRect(0, 0, canvas.width, gradientHeight)
+              
+              // Add radial gradient to bottom-right corner
+              const cornerRadius = Math.min(canvas.width, canvas.height) * 0.3 // 30% of smallest dimension
+              const cornerCenterX = canvas.width
+              const cornerCenterY = canvas.height
+              
+              const radialGradient = ctx.createRadialGradient(
+                cornerCenterX, cornerCenterY, 0, // Inner circle (center point, no radius)
+                cornerCenterX, cornerCenterY, cornerRadius // Outer circle
+              )
+              radialGradient.addColorStop(0, `rgba(${gradientRgbString}, ${gradientOpacity})`) // Custom color at custom opacity at center
+              radialGradient.addColorStop(1, `rgba(${gradientRgbString}, 0)`)   // Fully transparent at edge
+              
+              ctx.fillStyle = radialGradient
+              ctx.fillRect(0, 0, canvas.width, canvas.height)
+            }
             
             resolve()
           }
@@ -282,9 +388,25 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
       const renderContext = {
         ctx,
         canvas,
-        model,
+        model: {
+          ...model,
+          name: customModelName || model.name,
+          painted_date: customPaintedDate || model.painted_date,
+          box: model.box ? {
+            ...model.box,
+            name: customCollectionName || model.box.name,
+            game: model.box.game ? {
+              ...model.box.game,
+              name: customGameName || model.box.game.name
+            } : model.box.game
+          } : model.box,
+          game: model.game ? {
+            ...model.game,
+            name: customGameName || model.game.name
+          } : model.game
+        },
         user,
-        userPublicName,
+        userPublicName: customUserName || userPublicName,
         shadowOpacity,
         textPosition,
         showPaintedDate,
@@ -325,6 +447,26 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
         await currentTheme.renderOptions.renderStandardLayout(renderContext)
       }
 
+      // Draw border on top of everything (last step) - with rounded corners to match container
+      ctx.save()
+      const borderWidth = 3
+      const borderCornerRadius = 8 // matches Tailwind rounded-lg (0.5rem = 8px)
+      ctx.strokeStyle = customBorderColor
+      ctx.lineWidth = borderWidth
+      
+      // Draw rounded border inside the canvas bounds
+      const borderOffset = borderWidth / 2
+      const borderX = borderOffset
+      const borderY = borderOffset
+      const borderW = canvas.width - borderWidth
+      const borderH = canvas.height - borderWidth
+      const innerBorderRadius = borderCornerRadius - borderOffset
+      
+      ctx.beginPath()
+      ctx.roundRect(borderX, borderY, borderW, borderH, innerBorderRadius)
+      ctx.stroke()
+      ctx.restore()
+
     } catch (error) {
       console.error('Error generating screenshot:', error)
     } finally {
@@ -332,28 +474,11 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
     }
   }
 
-  const createRoundedImage = () => {
+  const createImageForExport = () => {
     if (!canvasRef.current) return null
 
-    const originalCanvas = canvasRef.current
-    const roundedCanvas = document.createElement('canvas')
-    const roundedCtx = roundedCanvas.getContext('2d')
-    
-    if (!roundedCtx) return null
-
-    roundedCanvas.width = originalCanvas.width
-    roundedCanvas.height = originalCanvas.height
-
-    // Create rounded rectangle clipping path
-    const cornerRadius = 20
-    roundedCtx.beginPath()
-    roundedCtx.roundRect(0, 0, roundedCanvas.width, roundedCanvas.height, cornerRadius)
-    roundedCtx.clip()
-
-    // Draw the original image into the clipped area
-    roundedCtx.drawImage(originalCanvas, 0, 0)
-
-    return roundedCanvas
+    // Since we removed rounded corners from the canvas, just return the original canvas
+    return canvasRef.current
   }
 
   const copyToClipboard = async () => {
@@ -361,10 +486,10 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
 
     setCopying(true)
     try {
-      const roundedCanvas = createRoundedImage()
-      if (roundedCanvas) {
+      const canvas = createImageForExport()
+      if (canvas) {
         await new Promise<void>((resolve, reject) => {
-          roundedCanvas.toBlob(async (blob) => {
+          canvas.toBlob(async (blob) => {
             try {
               if (blob) {
                 await navigator.clipboard.write([
@@ -395,11 +520,11 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
 
     setSaving(true)
     try {
-      const roundedCanvas = createRoundedImage()
-      if (roundedCanvas) {
+      const canvas = createImageForExport()
+      if (canvas) {
         const link = document.createElement('a')
         link.download = `${model.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_share.png`
-        link.href = roundedCanvas.toDataURL('image/png')
+        link.href = canvas.toDataURL('image/png')
         link.click()
       }
     } catch (error) {
@@ -436,11 +561,13 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
         <div className="flex-1 flex flex-col space-y-6">
           {/* Canvas Preview - Maintain aspect ratio on all devices */}
           <div className="flex justify-center bg-transparent">
-            <canvas
-              ref={canvasRef}
-              className="max-w-full h-auto shadow-lg"
-              style={{ maxHeight: '70vh' }}
-            />
+            <div className="rounded-lg overflow-hidden shadow-lg">
+              <canvas
+                ref={canvasRef}
+                className="max-w-full h-auto"
+                style={{ maxHeight: '70vh' }}
+              />
+            </div>
           </div>
 
           {/* Loading State */}
@@ -450,204 +577,433 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
             </div>
           )}
 
-          {/* Controls - Moved below image */}
-          <div className="space-y-4">
-            {/* Text Color Switch */}
-            <div className="flex items-center justify-center space-x-4">
-              <span className="text-sm text-secondary-text">Text Color:</span>
-              <div className="flex items-center space-x-3">
-                <span className={`text-sm ${!isDarkText ? 'text-text font-medium' : 'text-secondary-text'}`}>
-                  Light
-                </span>
+          {/* Tab Navigation */}
+          <div className="flex justify-center">
+            <div className="flex bg-bg-secondary rounded-lg p-1">
+              {(['Photo', 'Theme', 'Content'] as const).map((tab) => (
                 <button
-                  onClick={() => setIsDarkText(!isDarkText)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
-                    isDarkText ? 'bg-brand' : 'bg-secondary-text'
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeTab === tab
+                      ? 'bg-brand text-white'
+                      : 'text-secondary-text hover:text-text'
                   }`}
                 >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      isDarkText ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
+                  {tab}
                 </button>
-                <span className={`text-sm ${isDarkText ? 'text-text font-medium' : 'text-secondary-text'}`}>
-                  Dark
-                </span>
-              </div>
+              ))}
             </div>
+          </div>
 
-            {/* Shadow Opacity Slider */}
-            <div className="flex items-center justify-center space-x-4">
-              <span className="text-sm text-secondary-text">Text Shadow:</span>
-              <div className="flex items-center space-x-3 w-48">
-                <span className="text-xs text-secondary-text">None</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={shadowOpacity}
-                  onChange={(e) => setShadowOpacity(parseFloat(e.target.value))}
-                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                  style={{
-                    background: `linear-gradient(to right, var(--color-brand) 0%, var(--color-brand) ${shadowOpacity * 100}%, #e5e7eb ${shadowOpacity * 100}%, #e5e7eb 100%)`
-                  }}
-                />
-                <span className="text-xs text-secondary-text">Strong</span>
-              </div>
-            </div>
+          {/* Tab Content */}
+          <div className="space-y-6">
+            {activeTab === 'Photo' && (
+              <div className="space-y-6">
+                {/* Image Adjustments Section */}
+                <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
+                  <h3 className="text-sm font-semibold text-text mb-3">Image Adjustments</h3>
+                  
+                  {/* Brightness & Saturation - Stacked on Mobile, Side by Side on Desktop */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Brightness Slider */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-secondary-text">Brightness</label>
+                        <span className="text-xs text-secondary-text bg-bg-primary px-2 py-1 rounded-md">{Math.round(brightness * 100)}%</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <span className="text-xs text-secondary-text w-8 text-center">Dark</span>
+                        <input
+                          type="range"
+                          min="0.5"
+                          max="1.5"
+                          step="0.1"
+                          value={brightness}
+                          onChange={(e) => setBrightness(parseFloat(e.target.value))}
+                          className="flex-1 h-2 bg-bg-primary rounded-lg appearance-none cursor-pointer slider focus:outline-none focus:ring-2 focus:ring-brand/50"
+                          style={{
+                            background: `linear-gradient(to right, var(--color-brand) 0%, var(--color-brand) ${((brightness - 0.5) / 1.0) * 100}%, var(--color-bg-primary) ${((brightness - 0.5) / 1.0) * 100}%, var(--color-bg-primary) 100%)`
+                          }}
+                        />
+                        <span className="text-xs text-secondary-text w-8 text-center">Bright</span>
+                      </div>
+                    </div>
 
-            {/* Text Position Dropdown - Hidden for Marathon theme */}
-            {selectedTheme !== 'marathon' && (
-              <div className="flex items-center justify-center space-x-4">
-                <span className="text-sm text-secondary-text">Text Position:</span>
-                <select
-                  value={textPosition}
-                  onChange={(e) => setTextPosition(e.target.value as 'bottom-right' | 'bottom-left')}
-                  className="px-3 py-1 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand focus:border-brand bg-bg-primary text-text text-sm"
-                >
-                  <option value="bottom-right">Bottom Right</option>
-                  <option value="bottom-left">Bottom Left</option>
-                </select>
-              </div>
-            )}
-
-            {/* Theme Selector - Available for All Users */}
-            <div className="flex items-center justify-center space-x-4">
-              <span className="text-sm text-secondary-text">Theme:</span>
-              <select
-                value={selectedTheme}
-                onChange={(e) => setSelectedTheme(e.target.value as ThemeId)}
-                className="px-3 py-1 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand focus:border-brand bg-bg-primary text-text text-sm"
-              >
-                {Object.entries(themes)
-                  .sort(([, a], [, b]) => a.name.localeCompare(b.name))
-                  .map(([key, theme]) => (
-                    <option key={key} value={key}>
-                      {theme.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            {/* Visual Overlays Controls */}
-            {currentTheme.renderOptions.visualOverlays && currentTheme.renderOptions.visualOverlays.length > 0 && (
-              <>
-                {/* Visual Overlays Toggle */}
-                <div className="flex items-center justify-center space-x-4">
-                  <span className="text-sm text-secondary-text">Visual Overlays:</span>
-                  <button
-                    onClick={() => setShowVisualOverlays(!showVisualOverlays)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
-                      showVisualOverlays ? 'bg-brand' : 'bg-secondary-text'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        showVisualOverlays ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span className={`text-sm ${showVisualOverlays ? 'text-text font-medium' : 'text-secondary-text'}`}>
-                    {showVisualOverlays ? 'Show' : 'Hide'}
-                  </span>
+                    {/* Saturation Slider */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-secondary-text">Saturation</label>
+                        <span className="text-xs text-secondary-text bg-bg-primary px-2 py-1 rounded-md">{Math.round(saturation * 100)}%</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <span className="text-xs text-secondary-text w-8 text-center">Gray</span>
+                        <input
+                          type="range"
+                          min="0"
+                          max="2"
+                          step="0.1"
+                          value={saturation}
+                          onChange={(e) => setSaturation(parseFloat(e.target.value))}
+                          className="flex-1 h-2 bg-bg-primary rounded-lg appearance-none cursor-pointer slider focus:outline-none focus:ring-2 focus:ring-brand/50"
+                          style={{
+                            background: `linear-gradient(to right, var(--color-brand) 0%, var(--color-brand) ${(saturation / 2.0) * 100}%, var(--color-bg-primary) ${(saturation / 2.0) * 100}%, var(--color-bg-primary) 100%)`
+                          }}
+                        />
+                        <span className="text-xs text-secondary-text w-8 text-center">Vivid</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Overlay Opacity Slider */}
-                {showVisualOverlays && (
-                  <div className="flex items-center justify-center space-x-4">
-                    <span className="text-sm text-secondary-text">Overlay Intensity:</span>
-                    <div className="flex items-center space-x-3 w-48">
-                      <span className="text-xs text-secondary-text">Subtle</span>
+                {/* Text Styling Section */}
+                <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
+                  <h3 className="text-sm font-semibold text-text mb-3">Text Styling</h3>
+                  
+                  {/* Text Color & Position Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Text Color Toggle */}
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-secondary-text">Text Color</label>
+                      <div className="flex items-center justify-between bg-bg-primary rounded-lg p-3">
+                        <span className={`text-sm transition-colors ${!isDarkText ? 'text-text font-medium' : 'text-secondary-text'}`}>
+                          Light
+                        </span>
+                        <button
+                          onClick={() => setIsDarkText(!isDarkText)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand/50 focus:ring-offset-2 focus:ring-offset-bg-secondary ${
+                            isDarkText ? 'bg-brand' : 'bg-border-custom'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${
+                              isDarkText ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                        <span className={`text-sm transition-colors ${isDarkText ? 'text-text font-medium' : 'text-secondary-text'}`}>
+                          Dark
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Text Position - Hidden for themes with custom text positioning */}
+                    {!currentTheme.renderOptions.customTextPosition && (
+                      <div className="space-y-3">
+                        <label className="text-sm font-medium text-secondary-text">Text Position</label>
+                        <select
+                          value={textPosition}
+                          onChange={(e) => setTextPosition(e.target.value as 'bottom-right' | 'bottom-left')}
+                          className="w-full px-3 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand/50 focus:border-brand bg-bg-primary text-text text-sm transition-colors"
+                        >
+                          <option value="bottom-right">Bottom Right</option>
+                          <option value="bottom-left">Bottom Left</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Text Shadow Slider */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-secondary-text">Text Shadow</label>
+                      <span className="text-xs text-secondary-text bg-bg-primary px-2 py-1 rounded-md">{Math.round(shadowOpacity * 100)}%</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xs text-secondary-text w-8 text-center">None</span>
                       <input
                         type="range"
                         min="0"
                         max="1"
                         step="0.1"
-                        value={overlayOpacity}
-                        onChange={(e) => setOverlayOpacity(parseFloat(e.target.value))}
-                        className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                        value={shadowOpacity}
+                        onChange={(e) => setShadowOpacity(parseFloat(e.target.value))}
+                        className="flex-1 h-2 bg-bg-primary rounded-lg appearance-none cursor-pointer slider focus:outline-none focus:ring-2 focus:ring-brand/50"
                         style={{
-                          background: `linear-gradient(to right, var(--color-brand) 0%, var(--color-brand) ${overlayOpacity * 100}%, #e5e7eb ${overlayOpacity * 100}%, #e5e7eb 100%)`
+                          background: `linear-gradient(to right, var(--color-brand) 0%, var(--color-brand) ${shadowOpacity * 100}%, var(--color-bg-primary) ${shadowOpacity * 100}%, var(--color-bg-primary) 100%)`
                         }}
                       />
-                      <span className="text-xs text-secondary-text">Bold</span>
+                      <span className="text-xs text-secondary-text w-8 text-center">Strong</span>
                     </div>
                   </div>
-                )}
-              </>
+                </div>
+              </div>
             )}
 
-            {/* Show/Hide Controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-8">
-              {/* Show Painted Date */}
-              {model.painted_date && (
-                <div className="flex items-center space-x-3">
-                  <span className="text-sm text-secondary-text">Painted Date:</span>
-                  <button
-                    onClick={() => setShowPaintedDate(!showPaintedDate)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
-                      showPaintedDate ? 'bg-brand' : 'bg-secondary-text'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        showPaintedDate ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span className={`text-sm ${showPaintedDate ? 'text-text font-medium' : 'text-secondary-text'}`}>
-                    {showPaintedDate ? 'Show' : 'Hide'}
-                  </span>
+            {activeTab === 'Theme' && (
+              <div className="space-y-6">
+                {/* Theme Selection Section */}
+                <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
+                  <h3 className="text-sm font-semibold text-text mb-3">Theme Selection</h3>
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-secondary-text">Theme</label>
+                    <select
+                      value={selectedTheme}
+                      onChange={(e) => setSelectedTheme(e.target.value as ThemeId)}
+                      className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand/50 focus:border-brand bg-bg-primary text-text text-sm transition-colors"
+                    >
+                      {Object.entries(themes)
+                        .sort(([, a], [, b]) => a.name.localeCompare(b.name))
+                        .map(([key, theme]) => (
+                          <option key={key} value={key}>
+                            {theme.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
                 </div>
-              )}
 
-              {/* Show Collection Name */}
-              {model.box?.name && (
-                <div className="flex items-center space-x-3">
-                  <span className="text-sm text-secondary-text">Collection:</span>
-                  <button
-                    onClick={() => setShowCollectionName(!showCollectionName)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
-                      showCollectionName ? 'bg-brand' : 'bg-secondary-text'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        showCollectionName ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span className={`text-sm ${showCollectionName ? 'text-text font-medium' : 'text-secondary-text'}`}>
-                    {showCollectionName ? 'Show' : 'Hide'}
-                  </span>
-                </div>
-              )}
+                {/* Visual Effects Section */}
+                <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
+                  <h3 className="text-sm font-semibold text-text mb-3">Visual Effects</h3>
+                  
+                  {/* Gradients Toggle */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-secondary-text">Gradients</label>
+                    <div className="flex items-center justify-between bg-bg-primary rounded-lg p-3">
+                      <span className={`text-sm transition-colors ${!showVisualOverlays ? 'text-secondary-text' : 'text-text font-medium'}`}>
+                        {showVisualOverlays ? 'Enabled' : 'Disabled'}
+                      </span>
+                      <button
+                        onClick={() => setShowVisualOverlays(!showVisualOverlays)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand/50 focus:ring-offset-2 focus:ring-offset-bg-secondary ${
+                          showVisualOverlays ? 'bg-brand' : 'bg-border-custom'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${
+                            showVisualOverlays ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
 
-              {/* Show Game Details */}
-              {(model.box?.game?.name || model.game?.name) && (
-                <div className="flex items-center space-x-3">
-                  <span className="text-sm text-secondary-text">Game:</span>
-                  <button
-                    onClick={() => setShowGameDetails(!showGameDetails)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${
-                      showGameDetails ? 'bg-brand' : 'bg-secondary-text'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        showGameDetails ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span className={`text-sm ${showGameDetails ? 'text-text font-medium' : 'text-secondary-text'}`}>
-                    {showGameDetails ? 'Show' : 'Hide'}
-                  </span>
+                  {/* Gradient Controls - Only show when gradients are enabled */}
+                  {showVisualOverlays && (
+                    <>
+                      {/* Color Pickers Row */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Gradient Color */}
+                        <div className="space-y-3">
+                          <label className="text-sm font-medium text-secondary-text">Gradient Color</label>
+                          <div className="flex items-center space-x-3 bg-bg-primary rounded-lg p-3">
+                            <input
+                              type="color"
+                              value={customGradientColor}
+                              onChange={(e) => setCustomGradientColor(e.target.value)}
+                              className="w-10 h-10 border-2 border-border-custom rounded-lg cursor-pointer focus:ring-2 focus:ring-brand/50 focus:outline-none"
+                              title="Choose gradient color"
+                            />
+                            <div className="flex-1">
+                              <span className="text-xs text-secondary-text font-mono bg-bg-secondary px-2 py-1 rounded">{customGradientColor.toUpperCase()}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Border Color */}
+                        <div className="space-y-3">
+                          <label className="text-sm font-medium text-secondary-text">Border Color</label>
+                          <div className="flex items-center space-x-3 bg-bg-primary rounded-lg p-3">
+                            <input
+                              type="color"
+                              value={customBorderColor}
+                              onChange={(e) => setCustomBorderColor(e.target.value)}
+                              className="w-10 h-10 border-2 border-border-custom rounded-lg cursor-pointer focus:ring-2 focus:ring-brand/50 focus:outline-none"
+                              title="Choose border color"
+                            />
+                            <div className="flex-1">
+                              <span className="text-xs text-secondary-text font-mono bg-bg-secondary px-2 py-1 rounded">{customBorderColor.toUpperCase()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Gradient Opacity Slider */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm font-medium text-secondary-text">Gradient Opacity</label>
+                          <span className="text-xs text-secondary-text bg-bg-primary px-2 py-1 rounded-md">{Math.round(gradientOpacity * 100)}%</span>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <span className="text-xs text-secondary-text w-12 text-center">Subtle</span>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.1"
+                            value={gradientOpacity}
+                            onChange={(e) => setGradientOpacity(parseFloat(e.target.value))}
+                            className="flex-1 h-2 bg-bg-primary rounded-lg appearance-none cursor-pointer slider focus:outline-none focus:ring-2 focus:ring-brand/50"
+                            style={{
+                              background: `linear-gradient(to right, var(--color-brand) 0%, var(--color-brand) ${gradientOpacity * 100}%, var(--color-bg-primary) ${gradientOpacity * 100}%, var(--color-bg-primary) 100%)`
+                            }}
+                          />
+                          <span className="text-xs text-secondary-text w-12 text-center">Strong</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Theme Overlay Intensity - Only show if theme has overlays and gradients are enabled */}
+                  {showVisualOverlays && currentTheme.renderOptions.visualOverlays && currentTheme.renderOptions.visualOverlays.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-border-custom">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-secondary-text">Theme Overlay Intensity</label>
+                        <span className="text-xs text-secondary-text bg-bg-primary px-2 py-1 rounded-md">{Math.round(overlayOpacity * 100)}%</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <span className="text-xs text-secondary-text w-12 text-center">Subtle</span>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={overlayOpacity}
+                          onChange={(e) => setOverlayOpacity(parseFloat(e.target.value))}
+                          className="flex-1 h-2 bg-bg-primary rounded-lg appearance-none cursor-pointer slider focus:outline-none focus:ring-2 focus:ring-brand/50"
+                          style={{
+                            background: `linear-gradient(to right, var(--color-brand) 0%, var(--color-brand) ${overlayOpacity * 100}%, var(--color-bg-primary) ${overlayOpacity * 100}%, var(--color-bg-primary) 100%)`
+                          }}
+                        />
+                        <span className="text-xs text-secondary-text w-12 text-center">Bold</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {activeTab === 'Content' && (
+              <div className="space-y-6">
+                {/* Model Information Section */}
+                <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
+                  <h3 className="text-sm font-semibold text-text mb-3">Model Information</h3>
+                  
+                  {/* Model Name - Always shown */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-secondary-text">Model Name</label>
+                    <input
+                      type="text"
+                      value={customModelName}
+                      onChange={(e) => setCustomModelName(e.target.value)}
+                      className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand/50 focus:border-brand bg-bg-primary text-text text-sm transition-colors placeholder:text-secondary-text"
+                      placeholder="Enter model name"
+                    />
+                  </div>
+
+                  {/* Artist Name */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-secondary-text">Artist Name</label>
+                    <input
+                      type="text"
+                      value={customUserName}
+                      onChange={(e) => setCustomUserName(e.target.value)}
+                      className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand/50 focus:border-brand bg-bg-primary text-text text-sm transition-colors placeholder:text-secondary-text"
+                      placeholder="Enter your name or leave blank to hide"
+                    />
+                    <p className="text-xs text-secondary-text">Leave blank to hide artist credit from the screenshot</p>
+                  </div>
+                </div>
+
+                {/* Optional Details Section */}
+                <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
+                  <h3 className="text-sm font-semibold text-text mb-3">Optional Details</h3>
+
+                  {/* Collection Name */}
+                  {model.box?.name && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-secondary-text">Collection</label>
+                        <button
+                          onClick={() => setShowCollectionName(!showCollectionName)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand/50 focus:ring-offset-2 focus:ring-offset-bg-secondary ${
+                            showCollectionName ? 'bg-brand' : 'bg-border-custom'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${
+                              showCollectionName ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      {showCollectionName && (
+                        <input
+                          type="text"
+                          value={customCollectionName}
+                          onChange={(e) => setCustomCollectionName(e.target.value)}
+                          className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand/50 focus:border-brand bg-bg-primary text-text text-sm transition-colors placeholder:text-secondary-text"
+                          placeholder="Enter collection name"
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Game Name */}
+                  {(model.box?.game?.name || model.game?.name) && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-secondary-text">Game</label>
+                        <button
+                          onClick={() => setShowGameDetails(!showGameDetails)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand/50 focus:ring-offset-2 focus:ring-offset-bg-secondary ${
+                            showGameDetails ? 'bg-brand' : 'bg-border-custom'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${
+                              showGameDetails ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      {showGameDetails && (
+                        <input
+                          type="text"
+                          value={customGameName}
+                          onChange={(e) => setCustomGameName(e.target.value)}
+                          className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand/50 focus:border-brand bg-bg-primary text-text text-sm transition-colors placeholder:text-secondary-text"
+                          placeholder="Enter game name"
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Painted Date */}
+                  {model.painted_date && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-secondary-text">Painted Date</label>
+                        <button
+                          onClick={() => setShowPaintedDate(!showPaintedDate)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand/50 focus:ring-offset-2 focus:ring-offset-bg-secondary ${
+                            showPaintedDate ? 'bg-brand' : 'bg-border-custom'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${
+                              showPaintedDate ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      {showPaintedDate && (
+                        <input
+                          type="text"
+                          value={customPaintedDate}
+                          onChange={(e) => setCustomPaintedDate(e.target.value)}
+                          className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand/50 focus:border-brand bg-bg-primary text-text text-sm transition-colors placeholder:text-secondary-text"
+                          placeholder="Enter painted date (e.g., January 15, 2024)"
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
+
 
           {/* Action Buttons - Both primary now */}
           <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">

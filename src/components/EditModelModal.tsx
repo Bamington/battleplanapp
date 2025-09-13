@@ -83,6 +83,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
     blob: Blob;
     display_order: number;
   }[]>([]);
+  const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => {
     if (model) {
@@ -106,20 +107,94 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    processFiles(files);
+    e.target.value = ''; // Clear input to allow re-selecting same files
+  };
+
+  const processFiles = (files: File[]) => {
     if (files.length === 0) return;
     
-    // Validate all files are images
-    const invalidFiles = files.filter(file => !file.type.startsWith('image/'));
-    if (invalidFiles.length > 0) {
-      alert('Please select only image files');
-      return;
+    const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+    const validFiles: File[] = [];
+    
+    for (const file of files) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert(`Invalid file: ${file.name}. Please select only image files.`);
+        return;
+      }
+      
+      if (file.size > maxSize) {
+        alert(`File too large: ${file.name}. Maximum size is 50MB.`);
+        return;
+      }
+      
+      validFiles.push(file);
     }
     
-    // For now, handle single file (we'll add multiple file support later)
-    const file = files[0];
-    setSelectedFile(file);
-    setImageForCropping(file);
-    setShowImageCropper(true);
+    if (validFiles.length > 0) {
+      // Check if model already has a primary image
+      const hasPrimaryImage = modelImages.some(img => img.is_primary) || model.image_url;
+      
+      if (hasPrimaryImage) {
+        // Skip cropping for all files if model already has a primary image
+        validFiles.forEach(file => {
+          // Compress and add all files directly without cropping
+          compressImage(file, 1200, 1200, 0.8).then(compressedFile => {
+            addNewImage(file, compressedFile);
+          }).catch(() => {
+            // If compression fails, use original file
+            addNewImage(file, file);
+          });
+        });
+      } else {
+        // Show image cropper for the first selected image if no primary exists
+        setSelectedFile(validFiles[0]);
+        setImageForCropping(validFiles[0]);
+        setShowImageCropper(true);
+        
+        // If there are additional files, add them directly to newImagesToUpload
+        if (validFiles.length > 1) {
+          const additionalFiles = validFiles.slice(1);
+          additionalFiles.forEach(file => {
+            // For additional files, we'll compress them without cropping
+            compressImage(file, 1200, 1200, 0.8).then(compressedFile => {
+              addNewImage(file, compressedFile);
+            }).catch(() => {
+              // If compression fails, use original file
+              addNewImage(file, file);
+            });
+          });
+        }
+      }
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    processFiles(files);
   };
 
   const handleCameraCapture = async () => {
@@ -213,9 +288,23 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                 lastModified: Date.now()
               });
 
-              setSelectedFile(file);
-              setImageForCropping(file);
-              setShowImageCropper(true);
+              // Check if model already has a primary image
+              const hasPrimaryImage = modelImages.some(img => img.is_primary) || model.image_url;
+              
+              if (hasPrimaryImage) {
+                // Skip cropping and compress directly
+                compressImage(file, 1200, 1200, 0.8).then(compressedFile => {
+                  addNewImage(file, compressedFile);
+                }).catch(() => {
+                  // If compression fails, use original file
+                  addNewImage(file, file);
+                });
+              } else {
+                // Show cropper for primary image
+                setSelectedFile(file);
+                setImageForCropping(file);
+                setShowImageCropper(true);
+              }
             }
             
             // Clean up
@@ -776,19 +865,36 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                 )}
 
                 {/* Upload Controls */}
-                <div className="border-2 border-dashed border-border-custom rounded-lg p-6 text-center hover:border-[var(--color-brand)] transition-colors">
+                <div 
+                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                    dragActive 
+                      ? 'border-[var(--color-brand)] bg-[var(--color-brand)]/5' 
+                      : 'border-border-custom hover:border-[var(--color-brand)]'
+                  }`}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                >
+                  {dragActive && (
+                    <div className="mb-4">
+                      <p className="text-lg font-medium text-[var(--color-brand)]">Drop images here</p>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-center space-x-4">
                     <label className="cursor-pointer">
                       <input
                         type="file"
                         accept="image/*"
+                        multiple
                         onChange={handleFileSelect}
                         className="hidden"
                         disabled={uploading}
                       />
                       <div className="flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-bg-secondary transition-colors">
                         <ImageIcon className="w-8 h-8 text-icon" />
-                        <span className="text-sm font-medium text-text">Add Image</span>
+                        <span className="text-sm font-medium text-text">Add Images</span>
                       </div>
                     </label>
                     
@@ -803,7 +909,7 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                     </button>
                   </div>
                   <p className="text-xs text-secondary-text mt-2">
-                    JPEG, PNG, or WebP up to 50MB
+                    {dragActive ? 'Drop multiple images here' : 'JPEG, PNG, or WebP up to 50MB each. Drag & drop or click to select multiple images.'}
                   </p>
                 </div>
               </div>

@@ -58,7 +58,6 @@ export function useBoxes() {
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(10)
 
       if (boxesError) throw boxesError
 

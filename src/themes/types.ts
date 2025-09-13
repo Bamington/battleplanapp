@@ -102,3 +102,4 @@ export type ThemeId =
   | 'ringbearer' 
   | 'eightpoints' 
   | 'shatterpoint'
+  | 'killteam'
