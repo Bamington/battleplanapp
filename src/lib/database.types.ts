@@ -20,6 +20,7 @@ export type Database = {
           battle_notes: string | null
           created_at: string
           date_played: string | null
+          event_id: string | null
           game_name: string | null
           game_uid: string | null
           id: number
@@ -35,6 +36,7 @@ export type Database = {
           battle_notes?: string | null
           created_at?: string
           date_played?: string | null
+          event_id?: string | null
           game_name?: string | null
           game_uid?: string | null
           id?: number
@@ -50,6 +52,7 @@ export type Database = {
           battle_notes?: string | null
           created_at?: string
           date_played?: string | null
+          event_id?: string | null
           game_name?: string | null
           game_uid?: string | null
           id?: number
@@ -60,7 +63,15 @@ export type Database = {
           result?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "battles_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       blocked_dates: {
         Row: {
@@ -151,6 +162,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          location: string | null
+          name: string
+          start_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          start_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          start_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       boxes: {
         Row: {
@@ -298,6 +345,8 @@ export type Database = {
           painting_notes: string | null
           public: boolean | null
           purchase_date: string | null
+          share_artist: string | null
+          share_name: string | null
           status: string | null
           user_id: string | null
         }
@@ -316,6 +365,8 @@ export type Database = {
           painting_notes?: string | null
           public?: boolean | null
           purchase_date?: string | null
+          share_artist?: string | null
+          share_name?: string | null
           status?: string | null
           user_id?: string | null
         }
@@ -334,6 +385,8 @@ export type Database = {
           painting_notes?: string | null
           public?: boolean | null
           purchase_date?: string | null
+          share_artist?: string | null
+          share_name?: string | null
           status?: string | null
           user_id?: string | null
         }

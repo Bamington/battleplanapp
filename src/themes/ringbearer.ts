@@ -20,7 +20,12 @@ const renderStandardLayout = async (context: ThemeRenderContext): Promise<void> 
 
 // Font loading for Ringbearer theme
 const loadFonts = async (): Promise<void> => {
-  await document.fonts.load('48px Beaufort')
+  await Promise.all([
+    document.fonts.load('bold 48px "Beaufort"'),
+    document.fonts.load('32px "Beaufort"'),
+    document.fonts.load('28px "Beaufort"'),
+    document.fonts.load('24px "Beaufort"')
+  ])
 }
 
 export const ringbearer: Theme = {
@@ -45,7 +50,8 @@ export const ringbearer: Theme = {
   },
   
   isDefault: true,
-  
+  isVisible: false,
+
   metadata: {
     description: 'Fantasy theme with elegant Beaufort font for all text',
     tags: ['fantasy', 'elegant', 'custom-font']

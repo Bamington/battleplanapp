@@ -20,7 +20,7 @@ const renderStandardLayout = async (context: ThemeRenderContext): Promise<void> 
 
 // Font loading for SerifGothic
 const loadFonts = async (): Promise<void> => {
-  await document.fonts.load('48px "SerifGothic"')
+  await document.fonts.load('bold 48px "SerifGothic"')
 }
 
 export const dragonslayer: Theme = {
@@ -45,7 +45,8 @@ export const dragonslayer: Theme = {
   },
   
   isDefault: true,
-  
+  isVisible: false,
+
   metadata: {
     description: 'Dragonslayer theme with bold SerifGothic title font',
     tags: ['fantasy', 'adventure', 'custom-font']

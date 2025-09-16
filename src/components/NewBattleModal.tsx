@@ -40,7 +40,7 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
   const [compressionInfo, setCompressionInfo] = useState('')
   const { user } = useAuth()
   const { addRecentGame } = useRecentGames()
-  const { createOpponent } = useOpponents()
+  const { opponents, loading: opponentsLoading, createOpponent, findOrCreateOpponent } = useOpponents()
 
   // Debug logging for game selection
   React.useEffect(() => {
@@ -425,19 +425,6 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
       }
     }
 
-    if (!selectedGame) {
-      console.log('Game validation failed - selectedGame:', selectedGame)
-      console.log('Available games:', games.map(g => ({ id: g.id, name: g.name })))
-      console.log('Current form state at game validation:', {
-        datePlayed,
-        selectedOpponentId,
-        selectedOpponentName,
-        selectedGame,
-        result
-      })
-      setError('Game is required')
-      return
-    }
 
     if (!result) {
       setError('Result is required')
@@ -515,9 +502,8 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
 
       if (error) throw error
 
-      // Close modal and trigger refresh
+      // Trigger refresh (this will also close the modal)
       await onBattleCreated()
-      onClose()
     } catch (error) {
       console.error('Error creating battle:', error)
       setError('Failed to create battle. Please try again.')
@@ -591,39 +577,10 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
               }}
               disabled={loading || creatingOpponent}
               placeholder="Select or create opponent..."
-              className={!selectedOpponentId ? "border-red-500" : ""}
+              opponents={opponents}
+              loading={opponentsLoading}
+              findOrCreateOpponent={findOrCreateOpponent}
             />
-            
-            {/* Debug info */}
-            <div className="text-xs text-gray-500 mt-1">
-              Debug: selectedOpponentId={selectedOpponentId ? selectedOpponentId.toString() : 'null'}, 
-              selectedOpponentName={selectedOpponentName || 'null'}
-            </div>
-            
-            {/* Test button */}
-            <button
-              type="button"
-              onClick={async () => {
-                console.log('Testing opponent creation...')
-                try {
-                  const { data, error } = await supabase
-                    .from('opponents')
-                    .insert({
-                      opp_name: 'Test Opponent',
-                      created_by: user?.id
-                    })
-                    .select()
-                    .single()
-                  
-                  console.log('Test opponent creation result:', { data, error })
-                } catch (err) {
-                  console.error('Test opponent creation error:', err)
-                }
-              }}
-              className="mt-2 px-2 py-1 text-xs bg-blue-500 text-white rounded"
-            >
-              Test Create Opponent
-            </button>
           </div>
 
           {/* Result */}
@@ -712,11 +669,6 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
               placeholder="Choose a Game"
               favoriteGames={getFavoriteGames()}
             />
-            
-            {/* Debug info for game */}
-            <div className="text-xs text-gray-500 mt-1">
-              Debug: selectedGame={selectedGame || 'null'}
-            </div>
           </div>
 
           {/* Battle Notes */}
@@ -829,7 +781,7 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
               type="submit"
               form="battle-form"
               className="flex-1 btn-primary"
-              disabled={loading || compressing || creatingOpponent || !datePlayed || !selectedOpponentId || !selectedGame || !result}
+              disabled={loading || compressing || creatingOpponent || !datePlayed || !selectedOpponentId || !result}
             >
               {compressing ? 'Compressing...' : creatingOpponent ? 'Creating Opponent...' : loading ? 'Creating...' : 'Log Battle'}
             </button>

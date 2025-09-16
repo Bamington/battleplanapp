@@ -61,8 +61,13 @@ export function useOpponents() {
       const remainingTime = Math.max(0, minLoadingTime - elapsedTime)
       
       setTimeout(() => {
-        // Only change loading state if this is not a refetch or if loading was true
-        if (!isRefetch) {
+        // For refetches, ensure loading is turned off if it was on
+        // For initial loads, always set loading to false
+        if (isRefetch) {
+          if (loading) {
+            setLoading(false)
+          }
+        } else {
           setLoading(false)
         }
         setHasInitialized(true)

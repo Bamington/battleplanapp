@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Filter, X, Check, ChevronDown, ChevronRight } from 'lucide-react'
 import { MultiSelectDropdown } from './MultiSelectDropdown'
+import { SingleSelectDropdown } from './SingleSelectDropdown'
 
 interface Game {
   id: string
@@ -23,8 +24,10 @@ interface BoxFiltersProps {
   boxes: Box[]
   selectedGames: string[]
   searchQuery: string
+  sortOrder: string
   onGamesChange: (gameIds: string[]) => void
   onSearchChange: (query: string) => void
+  onSortChange: (sortOrder: string) => void
   onClearFilters: () => void
 }
 
@@ -33,8 +36,10 @@ export function BoxFilters({
   boxes,
   selectedGames,
   searchQuery,
+  sortOrder,
   onGamesChange,
   onSearchChange,
+  onSortChange,
   onClearFilters
 }: BoxFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -148,7 +153,7 @@ export function BoxFilters({
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Game Filter */}
             <div>
               <label className="block text-sm font-medium text-input-label font-overpass mb-2">
@@ -162,6 +167,22 @@ export function BoxFilters({
                 maxSelections={10}
                 searchable={true}
                 type="game"
+              />
+            </div>
+
+            {/* Sort Filter */}
+            <div>
+              <label className="block text-sm font-medium text-input-label font-overpass mb-2">
+                Sort By
+              </label>
+              <SingleSelectDropdown
+                options={[
+                  { id: 'dateAdded', name: 'Date Added to Battleplan' },
+                  { id: 'purchasedDate', name: 'Purchased Date' }
+                ]}
+                selectedOption={sortOrder}
+                onSelectionChange={onSortChange}
+                placeholder="Select sort order..."
               />
             </div>
           </div>

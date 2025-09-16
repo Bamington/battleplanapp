@@ -65,7 +65,8 @@ export const battleplan: Theme = {
   },
   
   isDefault: true,
-  
+  isVisible: true,
+
   metadata: {
     description: 'The classic Battleplan theme with brand colors',
     tags: ['default', 'classic']

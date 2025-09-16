@@ -24,6 +24,9 @@ export interface ThemeRenderContext {
   isDarkText: boolean
   showVisualOverlays?: boolean
   overlayOpacity?: number
+  customGradientColor?: string
+  customBorderColor?: string
+  gradientOpacity?: number
 }
 
 export interface ThemeVisualOverlay {
@@ -70,17 +73,18 @@ export interface Theme {
   // Basic metadata
   id: string
   name: string
-  
+
   // Visual properties
   colors: ThemeColors
   fonts: ThemeFonts
-  
+
   // Rendering behavior
   renderOptions: ThemeRenderOptions
-  
+
   // Theme editor properties
   isDefault: boolean
-  
+  isVisible: boolean
+
   // Future extensibility
   metadata?: {
     description?: string

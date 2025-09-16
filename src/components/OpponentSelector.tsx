@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { User, Plus, ChevronDown } from 'lucide-react'
-import { useOpponents, Opponent } from '../hooks/useOpponents'
+import { Opponent } from '../hooks/useOpponents'
 
 interface OpponentSelectorProps {
   selectedOpponentId: number | null
@@ -8,6 +8,9 @@ interface OpponentSelectorProps {
   disabled?: boolean
   placeholder?: string
   className?: string
+  opponents: Opponent[]
+  loading: boolean
+  findOrCreateOpponent: (name: string) => Promise<Opponent | null>
 }
 
 export function OpponentSelector({ 
@@ -15,12 +18,14 @@ export function OpponentSelector({
   onOpponentChange, 
   disabled = false,
   placeholder = "Select or create opponent...",
-  className = ""
+  className = "",
+  opponents,
+  loading,
+  findOrCreateOpponent
 }: OpponentSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [showCreateOption, setShowCreateOption] = useState(false)
-  const { opponents, loading, findOrCreateOpponent } = useOpponents()
 
   // Debug logging
   React.useEffect(() => {

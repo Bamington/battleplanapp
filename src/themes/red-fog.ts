@@ -20,7 +20,7 @@ const renderStandardLayout = async (context: ThemeRenderContext): Promise<void> 
 
 // Font loading for WoodenBridge
 const loadFonts = async (): Promise<void> => {
-  await document.fonts.load('48px "WoodenBridge"')
+  await document.fonts.load('bold 56px "WoodenBridge"')
 }
 
 export const redFog: Theme = {
@@ -45,7 +45,8 @@ export const redFog: Theme = {
   },
   
   isDefault: true,
-  
+  isVisible: false,
+
   metadata: {
     description: 'Red Fog theme with atmospheric WoodenBridge title font',
     tags: ['atmospheric', 'dark', 'custom-font']

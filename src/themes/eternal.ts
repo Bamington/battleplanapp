@@ -20,7 +20,12 @@ const renderStandardLayout = async (context: ThemeRenderContext): Promise<void> 
 
 // Font loading for Minion Pro
 const loadFonts = async (): Promise<void> => {
-  await document.fonts.load('48px "Minion Pro"')
+  await Promise.all([
+    document.fonts.load('bold 48px "Minion Pro"'),
+    document.fonts.load('32px "Minion Pro"'),
+    document.fonts.load('28px "Minion Pro"'),
+    document.fonts.load('24px "Minion Pro"')
+  ])
 }
 
 export const eternal: Theme = {
@@ -45,7 +50,8 @@ export const eternal: Theme = {
   },
   
   isDefault: true,
-  
+  isVisible: false,
+
   metadata: {
     description: 'Eternal theme with elegant Minion Pro typography',
     tags: ['eternal', 'elegant', 'custom-font']

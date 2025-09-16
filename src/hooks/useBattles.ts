@@ -34,14 +34,18 @@ export function useBattles() {
   const { user, loading: authLoading } = useAuth()
 
   const fetchBattles = async (isRefetch = false) => {
+    console.log('fetchBattles called:', { isRefetch, authLoading, user: !!user })
+    
     // Show loading while auth is loading
     if (authLoading) {
+      console.log('Auth still loading, setting loading=true and returning')
       setLoading(true)
       setHasInitialized(false)
       return
     }
 
     if (!user) {
+      console.log('No user, clearing battles and returning')
       setBattles([])
       setLoading(false)
       setHasInitialized(true)
@@ -72,6 +76,7 @@ export function useBattles() {
         console.error('Error fetching battles:', error)
         setBattles([])
       } else {
+        console.log('Battles fetched successfully:', { count: data?.length || 0, isRefetch })
         setBattles(data || [])
       }
     } catch (error) {
@@ -83,8 +88,13 @@ export function useBattles() {
       const remainingTime = Math.max(0, minLoadingTime - elapsedTime)
       
       setTimeout(() => {
-        // Only change loading state if this is not a refetch or if loading was true
-        if (!isRefetch) {
+        // For refetches, ensure loading is turned off if it was on
+        // For initial loads, always set loading to false
+        if (isRefetch) {
+          if (loading) {
+            setLoading(false)
+          }
+        } else {
           setLoading(false)
         }
         setHasInitialized(true)
@@ -97,7 +107,9 @@ export function useBattles() {
   }, [user, authLoading])
 
   const refetch = async () => {
+    console.log('useBattles refetch called')
     await fetchBattles(true) // Pass true to indicate this is a refetch
+    console.log('useBattles refetch completed')
   }
 
 

@@ -74,7 +74,8 @@ export const shatterpoint: Theme = {
   },
   
   isDefault: true,
-  
+  isVisible: false,
+
   metadata: {
     description: 'Shatterpoint theme with dramatic TeutonFett typography and small caps model names',
     tags: ['dramatic', 'bold', 'custom-font', 'small-caps']

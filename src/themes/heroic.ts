@@ -20,7 +20,12 @@ const renderStandardLayout = async (context: ThemeRenderContext): Promise<void> 
 
 // Font loading for Agency FB
 const loadFonts = async (): Promise<void> => {
-  await document.fonts.load('48px "Agency FB"')
+  await Promise.all([
+    document.fonts.load('bold 48px "Agency FB"'),
+    document.fonts.load('bold 32px "Agency FB"'),
+    document.fonts.load('bold 28px "Agency FB"'),
+    document.fonts.load('bold 24px "Agency FB"')
+  ])
 }
 
 export const heroic: Theme = {
@@ -45,7 +50,8 @@ export const heroic: Theme = {
   },
   
   isDefault: true,
-  
+  isVisible: false,
+
   metadata: {
     description: 'Heroic theme with dynamic Agency FB typography',
     tags: ['heroic', 'dynamic', 'custom-font']

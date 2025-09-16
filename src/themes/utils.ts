@@ -124,7 +124,19 @@ export const renderStandardTextLayout = (context: ThemeRenderContext, fonts?: {
   // Game name and icon - below collection name (only if enabled)
   const gameName = model.box?.game?.name || model.game?.name
   const gameIcon = model.box?.game?.icon || model.game?.icon
+  
+  // Debug logging to understand what data is available
+  console.log('Game details debug:', {
+    showGameDetails,
+    gameName,
+    gameIcon,
+    'model.box?.game': model.box?.game,
+    'model.game': model.game,
+    'model.box': model.box
+  })
+  
   if (showGameDetails && gameName) {
+    console.log('Inside showGameDetails condition, about to render game details')
     try {
       // Set font for game name (use small font)
       ctx.font = fonts?.smallFont || '28px Overpass, sans-serif'
@@ -134,54 +146,54 @@ export const renderStandardTextLayout = (context: ThemeRenderContext, fonts?: {
       const gameIcon = model.box?.game?.icon || model.game?.icon
       let gameTextX = textX
       
-      // If we have a game icon, render it first and adjust text position
+      console.log('Game icon check:', { gameIcon, hasIcon: !!gameIcon })
+      
+      // If we have a game icon, adjust text positioning but draw a placeholder for now
       if (gameIcon) {
+        console.log('About to draw red placeholder circle')
         const iconSize = 24 // 24px icon size
         const iconPadding = 8 // 8px space between icon and text
         
-        try {
-          const iconImg = new Image()
-          iconImg.crossOrigin = 'anonymous'
-          
-          iconImg.onload = () => {
-            // Calculate icon position
-            let iconX, iconY
-            
-            if (textAlign === 'right') {
-              // For right-aligned text, icon goes to the right of the text
-              // First measure the text width
-              ctx.font = fonts?.smallFont || '28px Overpass, sans-serif'
-              const textWidth = ctx.measureText(gameName).width
-              iconX = textX - textWidth - iconPadding - iconSize
-              gameTextX = textX - iconSize - iconPadding // Adjust text position
-            } else {
-              // For left-aligned text, icon goes to the left
-              iconX = textX
-              gameTextX = textX + iconSize + iconPadding // Adjust text position
-            }
-            
-            iconY = currentY - iconSize + 4 // Vertically center with text baseline
-            
-            // Draw the icon
-            ctx.drawImage(iconImg, iconX, iconY, iconSize, iconSize)
-          }
-          iconImg.onerror = () => {
-            // If icon fails to load, just continue without it
-            console.warn('Game icon failed to load:', gameIcon)
-          }
-          iconImg.src = gameIcon
-          
-          // Adjust text position for icon (even if it hasn't loaded yet)
-          if (textAlign === 'right') {
-            ctx.font = fonts?.smallFont || '28px Overpass, sans-serif'
-            const textWidth = ctx.measureText(gameName).width
-            gameTextX = textX - iconSize - iconPadding
-          } else {
-            gameTextX = textX + iconSize + iconPadding
-          }
-        } catch (error) {
-          console.warn('Error loading game icon:', error)
+        // Pre-calculate text positioning for icon spacing
+        if (textAlign === 'right') {
+          gameTextX = textX - iconSize - iconPadding // Move text left to make room for icon
+        } else {
+          gameTextX = textX + iconSize + iconPadding // Text position for left alignment
         }
+        
+        // Draw a simple placeholder circle where the icon should be for debugging
+        ctx.save()
+        ctx.shadowColor = 'transparent'
+        
+        let iconX, iconY
+        if (textAlign === 'right') {
+          // For right-aligned text, icon goes to the right of the game name
+          // First measure the text width
+          ctx.font = fonts?.smallFont || '28px Overpass, sans-serif'
+          const textWidth = ctx.measureText(gameName).width
+          iconX = gameTextX + textWidth + iconPadding // Icon positioned after the game name text
+        } else {
+          // For left-aligned text, icon goes to the left of the game name
+          iconX = textX
+        }
+        
+        iconY = currentY - iconSize + 4 // Vertically center with text baseline
+        
+        console.log('Circle position:', { iconX, iconY, iconSize, currentY, canvas: { width: context.canvas.width, height: context.canvas.height } })
+        
+        // Draw a much larger, more visible placeholder circle
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.8)' // More opaque red circle
+        ctx.beginPath()
+        const circleRadius = 20 // Make it bigger and more visible
+        ctx.arc(iconX + iconSize/2, iconY + iconSize/2, circleRadius, 0, 2 * Math.PI)
+        ctx.fill()
+        
+        // Also draw a bright green border around it
+        ctx.strokeStyle = 'rgba(0, 255, 0, 1)' // Bright green border
+        ctx.lineWidth = 3
+        ctx.stroke()
+        
+        ctx.restore()
       }
 
       // Draw game name with drop shadow

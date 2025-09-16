@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
-import { X, Calendar, DollarSign, FileText, Share2, Edit, Plus, Package, Trash2, ChevronRight } from 'lucide-react'
+import { X, Calendar, DollarSign, FileText, Share2, Edit, Plus, Package, Trash2, ChevronRight, Camera } from 'lucide-react'
 import { DeleteBoxModal } from './DeleteBoxModal'
 import { AddModelsToBoxModal } from './AddModelsToBoxModal'
 import { EditBoxModal } from './EditBoxModal'
 import { RemoveModelFromBoxModal } from './RemoveModelFromBoxModal'
 import { ShareCollectionModal } from './ShareCollectionModal'
+import { ShareScreenshotPreview } from './ShareScreenshotPreview'
 import { supabase } from '../lib/supabase'
 import { formatLocalDate, formatAustralianDate } from '../utils/timezone'
 import { getBoxWithModels, removeModelFromBox } from '../utils/modelBoxUtils'
@@ -35,6 +36,7 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
   const [showAddModelsModal, setShowAddModelsModal] = React.useState(false)
   const [showEditModal, setShowEditModal] = React.useState(false)
   const [showShareModal, setShowShareModal] = React.useState(false)
+  const [showScreenshotModal, setShowScreenshotModal] = React.useState(false)
   const [removeModelModal, setRemoveModelModal] = React.useState<{
     isOpen: boolean
     model: any | null
@@ -251,6 +253,22 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
     setShowShareModal(true)
   }
 
+  const handleScreenshotShareClick = () => {
+    setShowScreenshotModal(true)
+  }
+
+  const isUserUploadedImage = (imageUrl: string | null) => {
+    if (!imageUrl || typeof imageUrl !== 'string') return false
+    
+    // Check if it's a Supabase storage URL (user-uploaded)
+    return imageUrl.includes('supabase') && imageUrl.includes('storage')
+  }
+
+  const shouldShowScreenshotButton = () => {
+    // Show button only if the collection has a user-uploaded image
+    return isUserUploadedImage(box.image_url)
+  }
+
   const handleDeleteClick = () => {
     setShowDeleteModal(true)
   }
@@ -432,7 +450,8 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
                   {boxModels.map((model) => (
                     <div
                       key={model.id}
-                      className="bg-bg-secondary rounded-lg p-4 flex items-center justify-between hover:bg-bg-primary transition-colors"
+                      className="bg-bg-secondary rounded-lg p-4 flex items-center justify-between hover:bg-bg-primary transition-colors cursor-pointer"
+                      onClick={() => handleViewModelFromBox(model)}
                     >
                                              <div className="flex items-center space-x-3 flex-1 min-w-0">
                          {(() => {
@@ -470,13 +489,19 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
                       
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => handleRemoveModelFromBox(model)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleRemoveModelFromBox(model)
+                          }}
                           className="p-2 text-icon hover:text-icon-hover transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleViewModelFromBox(model)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleViewModelFromBox(model)
+                          }}
                           className="p-2 text-secondary-text hover:text-text transition-colors"
                         >
                           <ChevronRight className="w-4 h-4" />
@@ -498,13 +523,32 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
                   <Plus className="w-4 h-4" />
                   <span>Add Models to Collection</span>
                 </button>
-                <button
-                  onClick={handleShareClick}
-                  className="btn-secondary btn-full btn-with-icon"
-                >
-                  <Share2 className="w-4 h-4" />
-                  <span>Share Collection</span>
-                </button>
+                {shouldShowScreenshotButton() ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={handleShareClick}
+                      className="btn-secondary btn-full btn-with-icon"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span>Share Collection</span>
+                    </button>
+                    <button
+                      onClick={handleScreenshotShareClick}
+                      className="btn-secondary btn-full btn-with-icon"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>Share Screenshot</span>
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleShareClick}
+                    className="btn-secondary btn-full btn-with-icon"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    <span>Share Collection</span>
+                  </button>
+                )}
                 <button
                   onClick={handleDeleteClick}
                   className="btn-danger-outline btn-full"
@@ -555,6 +599,24 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
         onClose={() => setShowShareModal(false)}
         onCollectionUpdated={handleCollectionShared}
         box={box}
+      />
+
+      <ShareScreenshotPreview
+        isOpen={showScreenshotModal}
+        onClose={() => setShowScreenshotModal(false)}
+        model={box ? {
+          id: box.id,
+          name: box.name,
+          image_url: box.image_url,
+          painted_date: box.purchase_date,
+          box: null, // Collections don't have a parent box
+          game: box.game ? {
+            id: '', // We don't have game ID in box
+            name: box.game.name,
+            icon: box.game.icon,
+            default_theme: null
+          } : null
+        } : null}
       />
     </>
   )

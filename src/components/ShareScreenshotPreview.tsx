@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { X, Copy, Download } from 'lucide-react'
+import { X, Copy, Download, Save } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { formatLocalDate } from '../utils/timezone'
 import { supabase } from '../lib/supabase'
@@ -14,6 +14,8 @@ interface ShareScreenshotPreviewProps {
     name: string
     image_url?: string
     painted_date?: string | null
+    share_name?: string | null
+    share_artist?: string | null
     box?: {
       name: string
       game?: {
@@ -36,7 +38,7 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [generating, setGenerating] = useState(false)
   const [copying, setCopying] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [savingImage, setSavingImage] = useState(false)
   const [isDarkText, setIsDarkText] = useState(false)
   const [showPaintedDate, setShowPaintedDate] = useState(true)
   const [showCollectionName, setShowCollectionName] = useState(false)
@@ -56,6 +58,22 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
   const [customGameName, setCustomGameName] = useState('')
   const [customPaintedDate, setCustomPaintedDate] = useState('')
   const [customUserName, setCustomUserName] = useState('')
+
+  // Temporary input states for editing without triggering updates
+  const [tempModelName, setTempModelName] = useState('')
+  const [tempCollectionName, setTempCollectionName] = useState('')
+  const [tempGameName, setTempGameName] = useState('')
+  const [tempPaintedDate, setTempPaintedDate] = useState('')
+  const [tempUserName, setTempUserName] = useState('')
+
+  // Original values for change detection
+  const [originalModelName, setOriginalModelName] = useState('')
+  const [originalUserName, setOriginalUserName] = useState('')
+
+  // Save state
+  const [savingChanges, setSavingChanges] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+
   const [customGradientColor, setCustomGradientColor] = useState('')
   const [customBorderColor, setCustomBorderColor] = useState('')
   const [gradientOpacity, setGradientOpacity] = useState(0.4)
@@ -116,28 +134,127 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
   // Initialize custom text fields when modal opens
   useEffect(() => {
     if (isOpen && model) {
-      setCustomModelName(model.name || '')
-      setCustomCollectionName(model.box?.name || '')
-      setCustomGameName(model.box?.game?.name || model.game?.name || '')
-      setCustomPaintedDate(model.painted_date ? formatLocalDate(model.painted_date, {
+      // Use saved share values if available, otherwise use original values
+      const modelName = model.share_name || model.name || ''
+      const collectionName = model.box?.name || ''
+      const gameName = model.box?.game?.name || model.game?.name || ''
+      const paintedDate = model.painted_date ? formatLocalDate(model.painted_date, {
         month: 'long',
-        day: 'numeric', 
+        day: 'numeric',
         year: 'numeric'
-      }) : '')
-      
-      // Set custom user name
-      if (userPublicName && userPublicName.trim()) {
-        setCustomUserName(userPublicName.trim())
+      }) : ''
+
+      // Set custom user name - use saved share_artist if available
+      let userName = ''
+      if (model.share_artist) {
+        userName = model.share_artist
+      } else if (userPublicName && userPublicName.trim()) {
+        userName = userPublicName.trim()
       } else if (user?.user_metadata?.display_name && user.user_metadata.display_name.trim()) {
-        setCustomUserName(user.user_metadata.display_name.trim())
-      } else {
-        setCustomUserName('')
+        userName = user.user_metadata.display_name.trim()
       }
-      
+
+      // Store original values for change detection
+      setOriginalModelName(model.name || '')
+      setOriginalUserName(userPublicName?.trim() || user?.user_metadata?.display_name?.trim() || '')
+
+      // Set both custom and temp states
+      setCustomModelName(modelName)
+      setCustomCollectionName(collectionName)
+      setCustomGameName(gameName)
+      setCustomPaintedDate(paintedDate)
+      setCustomUserName(userName)
+
+      setTempModelName(modelName)
+      setTempCollectionName(collectionName)
+      setTempGameName(gameName)
+      setTempPaintedDate(paintedDate)
+      setTempUserName(userName)
+
+      // Reset save state
+      setHasUnsavedChanges(false)
+
       // Preload fonts when modal opens
       ensureFontsLoaded().catch(console.warn)
     }
   }, [isOpen, model, userPublicName, user?.user_metadata?.display_name])
+
+  // Helper function to check if there are unsaved changes
+  const checkForUnsavedChanges = (newModelName: string, newUserName: string) => {
+    const modelChanged = newModelName !== originalModelName
+    const userChanged = newUserName !== originalUserName
+    setHasUnsavedChanges(modelChanged || userChanged)
+  }
+
+  // Helper functions to handle input field updates
+  const handleModelNameUpdate = () => {
+    setCustomModelName(tempModelName)
+    checkForUnsavedChanges(tempModelName, customUserName)
+  }
+  const handleCollectionNameUpdate = () => setCustomCollectionName(tempCollectionName)
+  const handleGameNameUpdate = () => setCustomGameName(tempGameName)
+  const handlePaintedDateUpdate = () => setCustomPaintedDate(tempPaintedDate)
+  const handleUserNameUpdate = () => {
+    setCustomUserName(tempUserName)
+    checkForUnsavedChanges(customModelName, tempUserName)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent, updateFn: () => void) => {
+    if (e.key === 'Enter') {
+      updateFn()
+    }
+  }
+
+  // Save changes to database
+  const saveChanges = async () => {
+    if (!model || !hasUnsavedChanges) return
+
+    setSavingChanges(true)
+    try {
+      // Prepare update object
+      const updates: { share_name?: string | null; share_artist?: string | null } = {}
+
+      // Only update share_name if model name has changed
+      if (customModelName !== originalModelName) {
+        updates.share_name = customModelName || null
+      }
+
+      // Only update share_artist if user name has changed
+      if (customUserName !== originalUserName) {
+        updates.share_artist = customUserName || null
+      }
+
+      // Update the database
+      const { error } = await supabase
+        .from('models')
+        .update(updates)
+        .eq('id', model.id)
+
+      if (error) {
+        console.error('Error saving changes:', error)
+        setToastMessage('Failed to save changes')
+        setShowToast(true)
+      } else {
+        // Update original values to reflect the saved state
+        if (updates.share_name !== undefined) {
+          setOriginalModelName(customModelName)
+        }
+        if (updates.share_artist !== undefined) {
+          setOriginalUserName(customUserName)
+        }
+
+        setHasUnsavedChanges(false)
+        setToastMessage('Changes saved successfully!')
+        setShowToast(true)
+      }
+    } catch (error) {
+      console.error('Error saving changes:', error)
+      setToastMessage('Failed to save changes')
+      setShowToast(true)
+    } finally {
+      setSavingChanges(false)
+    }
+  }
 
   // Fetch user's public name when modal opens
   useEffect(() => {
@@ -178,7 +295,7 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
       
       return () => clearTimeout(timeoutId)
     }
-  }, [isOpen, model, isDarkText, showPaintedDate, showCollectionName, showGameDetails, shadowOpacity, textPosition, selectedTheme, userPublicName, showVisualOverlays, overlayOpacity, brightness, saturation, customModelName, customCollectionName, customGameName, customPaintedDate, customUserName, customGradientColor, customBorderColor, gradientOpacity])
+  }, [isOpen, model, isDarkText, showPaintedDate, showCollectionName, showGameDetails, shadowOpacity, textPosition, selectedTheme, userPublicName, showVisualOverlays, overlayOpacity, customModelName, customCollectionName, customGameName, customPaintedDate, customUserName, customGradientColor, customBorderColor, gradientOpacity])
 
   const ensureFontsLoaded = async () => {
     // Check if document.fonts is available (modern browsers)
@@ -260,34 +377,38 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
       }
       
       // Wait a bit more to ensure fonts are fully rendered
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 300))
       // Load the model image first to get its aspect ratio
+      let imageLoaded = false
       if (model.image_url) {
         const img = new Image()
         img.crossOrigin = 'anonymous'
         
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => {
-            // Set canvas dimensions based on image aspect ratio
-            const aspectRatio = img.width / img.height
-            const maxSize = 1200 // Higher resolution for better quality
-            
-            if (aspectRatio > 1) {
-              canvas.width = maxSize
-              canvas.height = maxSize / aspectRatio
-            } else {
-              canvas.width = maxSize * aspectRatio
-              canvas.height = maxSize
-            }
-            
-            // Apply brightness and saturation filters
-            ctx.filter = `brightness(${brightness}) saturate(${saturation})`
-            
-            // Draw the image to fill the entire canvas (no rounded corners)
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-            
-            // Reset filter for subsequent draws
-            ctx.filter = 'none'
+        try {
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => {
+              // Set canvas dimensions based on image aspect ratio
+              const aspectRatio = img.width / img.height
+              const maxSize = 1200 // Higher resolution for better quality
+              
+              if (aspectRatio > 1) {
+                canvas.width = maxSize
+                canvas.height = maxSize / aspectRatio
+              } else {
+                canvas.width = maxSize * aspectRatio
+                canvas.height = maxSize
+              }
+              
+              // Apply brightness and saturation filters
+              ctx.filter = `brightness(${brightness}) saturate(${saturation})`
+              
+              // Draw the image to fill the entire canvas (no rounded corners)
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+              
+              // Reset filter for subsequent draws
+              ctx.filter = 'none'
+              
+              imageLoaded = true
             
             // Add gradients if visual overlays are enabled
             if (showVisualOverlays) {
@@ -329,12 +450,22 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
               ctx.fillRect(0, 0, canvas.width, canvas.height)
             }
             
-            resolve()
-          }
-          img.onerror = reject
-          img.src = model.image_url!
-        })
-      } else {
+              resolve()
+            }
+            img.onerror = (error) => {
+              console.error('Failed to load model/collection image:', model.image_url, error)
+              reject(new Error(`Failed to load image: ${model.image_url}`))
+            }
+            img.src = model.image_url!
+          })
+        } catch (error) {
+          console.warn('Image loading failed, continuing with fallback:', error)
+          imageLoaded = false
+        }
+      }
+      
+      // Fallback if no image or image failed to load
+      if (!imageLoaded) {
         // Fallback dimensions if no image
         canvas.width = 1200
         canvas.height = 1200
@@ -414,7 +545,10 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
         showGameDetails,
         isDarkText,
         showVisualOverlays,
-        overlayOpacity
+        overlayOpacity,
+        customGradientColor,
+        customBorderColor,
+        gradientOpacity
       }
 
       // Render visual overlays if enabled and theme supports them
@@ -447,23 +581,28 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
         await currentTheme.renderOptions.renderStandardLayout(renderContext)
       }
 
-      // Draw border on top of everything (last step) - with rounded corners to match container
+      // Draw border on top of everything (last step) - with or without rounded corners based on theme
       ctx.save()
       const borderWidth = 3
-      const borderCornerRadius = 8 // matches Tailwind rounded-lg (0.5rem = 8px)
+      const useRoundedCorners = selectedTheme !== 'marathon' // Marathon theme uses square corners
+      const borderCornerRadius = useRoundedCorners ? 8 : 0 // matches Tailwind rounded-lg (0.5rem = 8px) or square
       ctx.strokeStyle = customBorderColor
       ctx.lineWidth = borderWidth
       
-      // Draw rounded border inside the canvas bounds
+      // Draw border inside the canvas bounds
       const borderOffset = borderWidth / 2
       const borderX = borderOffset
       const borderY = borderOffset
       const borderW = canvas.width - borderWidth
       const borderH = canvas.height - borderWidth
-      const innerBorderRadius = borderCornerRadius - borderOffset
+      const innerBorderRadius = Math.max(0, borderCornerRadius - borderOffset)
       
       ctx.beginPath()
-      ctx.roundRect(borderX, borderY, borderW, borderH, innerBorderRadius)
+      if (useRoundedCorners) {
+        ctx.roundRect(borderX, borderY, borderW, borderH, innerBorderRadius)
+      } else {
+        ctx.rect(borderX, borderY, borderW, borderH)
+      }
       ctx.stroke()
       ctx.restore()
 
@@ -477,8 +616,30 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
   const createImageForExport = () => {
     if (!canvasRef.current) return null
 
-    // Since we removed rounded corners from the canvas, just return the original canvas
-    return canvasRef.current
+    // If no CSS filters are applied, return original canvas
+    if (brightness === 1 && saturation === 1) {
+      return canvasRef.current
+    }
+
+    // Create a new canvas to apply CSS filters for export
+    const exportCanvas = document.createElement('canvas')
+    const exportCtx = exportCanvas.getContext('2d')
+    if (!exportCtx) return canvasRef.current
+
+    // Set canvas size to match original
+    exportCanvas.width = canvasRef.current.width
+    exportCanvas.height = canvasRef.current.height
+
+    // Apply brightness and saturation filters
+    exportCtx.filter = `brightness(${brightness}) saturate(${saturation})`
+    
+    // Draw the original canvas with filters applied
+    exportCtx.drawImage(canvasRef.current, 0, 0)
+    
+    // Reset filter
+    exportCtx.filter = 'none'
+    
+    return exportCanvas
   }
 
   const copyToClipboard = async () => {
@@ -518,7 +679,7 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
   const saveImage = () => {
     if (!canvasRef.current || !model) return
 
-    setSaving(true)
+    setSavingImage(true)
     try {
       const canvas = createImageForExport()
       if (canvas) {
@@ -530,7 +691,7 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
     } catch (error) {
       console.error('Error saving image:', error)
     } finally {
-      setSaving(false)
+      setSavingImage(false)
     }
   }
 
@@ -565,7 +726,10 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
               <canvas
                 ref={canvasRef}
                 className="max-w-full h-auto"
-                style={{ maxHeight: '70vh' }}
+                style={{ 
+                  maxHeight: '70vh',
+                  filter: `brightness(${brightness}) saturate(${saturation})`
+                }}
               />
             </div>
           </div>
@@ -602,7 +766,6 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
               <div className="space-y-6">
                 {/* Image Adjustments Section */}
                 <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
-                  <h3 className="text-sm font-semibold text-text mb-3">Image Adjustments</h3>
                   
                   {/* Brightness & Saturation - Stacked on Mobile, Side by Side on Desktop */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -658,7 +821,6 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
 
                 {/* Text Styling Section */}
                 <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
-                  <h3 className="text-sm font-semibold text-text mb-3">Text Styling</h3>
                   
                   {/* Text Color & Position Row */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -734,7 +896,6 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
               <div className="space-y-6">
                 {/* Theme Selection Section */}
                 <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
-                  <h3 className="text-sm font-semibold text-text mb-3">Theme Selection</h3>
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-secondary-text">Theme</label>
                     <select
@@ -755,7 +916,6 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
 
                 {/* Visual Effects Section */}
                 <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
-                  <h3 className="text-sm font-semibold text-text mb-3">Visual Effects</h3>
                   
                   {/* Gradients Toggle */}
                   <div className="space-y-3">
@@ -878,15 +1038,18 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
               <div className="space-y-6">
                 {/* Model Information Section */}
                 <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
-                  <h3 className="text-sm font-semibold text-text mb-3">Model Information</h3>
                   
-                  {/* Model Name - Always shown */}
+                  {/* Model/Collection Name - Always shown */}
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-secondary-text">Model Name</label>
+                    <label className="text-sm font-medium text-secondary-text">
+                      {model?.box === null ? 'Collection Name' : 'Model Name'}
+                    </label>
                     <input
                       type="text"
-                      value={customModelName}
-                      onChange={(e) => setCustomModelName(e.target.value)}
+                      value={tempModelName}
+                      onChange={(e) => setTempModelName(e.target.value)}
+                      onBlur={handleModelNameUpdate}
+                      onKeyDown={(e) => handleKeyDown(e, handleModelNameUpdate)}
                       className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand/50 focus:border-brand bg-bg-primary text-text text-sm transition-colors placeholder:text-secondary-text"
                       placeholder="Enter model name"
                     />
@@ -897,8 +1060,10 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                     <label className="text-sm font-medium text-secondary-text">Artist Name</label>
                     <input
                       type="text"
-                      value={customUserName}
-                      onChange={(e) => setCustomUserName(e.target.value)}
+                      value={tempUserName}
+                      onChange={(e) => setTempUserName(e.target.value)}
+                      onBlur={handleUserNameUpdate}
+                      onKeyDown={(e) => handleKeyDown(e, handleUserNameUpdate)}
                       className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand/50 focus:border-brand bg-bg-primary text-text text-sm transition-colors placeholder:text-secondary-text"
                       placeholder="Enter your name or leave blank to hide"
                     />
@@ -908,10 +1073,9 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
 
                 {/* Optional Details Section */}
                 <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
-                  <h3 className="text-sm font-semibold text-text mb-3">Optional Details</h3>
 
-                  {/* Collection Name */}
-                  {model.box?.name && (
+                  {/* Collection Name - Only show for models, not collections themselves */}
+                  {model.box?.name && model.box !== null && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-sm font-medium text-secondary-text">Collection</label>
@@ -931,8 +1095,10 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                       {showCollectionName && (
                         <input
                           type="text"
-                          value={customCollectionName}
-                          onChange={(e) => setCustomCollectionName(e.target.value)}
+                          value={tempCollectionName}
+                          onChange={(e) => setTempCollectionName(e.target.value)}
+                          onBlur={handleCollectionNameUpdate}
+                          onKeyDown={(e) => handleKeyDown(e, handleCollectionNameUpdate)}
                           className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand/50 focus:border-brand bg-bg-primary text-text text-sm transition-colors placeholder:text-secondary-text"
                           placeholder="Enter collection name"
                         />
@@ -961,8 +1127,10 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                       {showGameDetails && (
                         <input
                           type="text"
-                          value={customGameName}
-                          onChange={(e) => setCustomGameName(e.target.value)}
+                          value={tempGameName}
+                          onChange={(e) => setTempGameName(e.target.value)}
+                          onBlur={handleGameNameUpdate}
+                          onKeyDown={(e) => handleKeyDown(e, handleGameNameUpdate)}
                           className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand/50 focus:border-brand bg-bg-primary text-text text-sm transition-colors placeholder:text-secondary-text"
                           placeholder="Enter game name"
                         />
@@ -991,8 +1159,10 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                       {showPaintedDate && (
                         <input
                           type="text"
-                          value={customPaintedDate}
-                          onChange={(e) => setCustomPaintedDate(e.target.value)}
+                          value={tempPaintedDate}
+                          onChange={(e) => setTempPaintedDate(e.target.value)}
+                          onBlur={handlePaintedDateUpdate}
+                          onKeyDown={(e) => handleKeyDown(e, handlePaintedDateUpdate)}
                           className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand/50 focus:border-brand bg-bg-primary text-text text-sm transition-colors placeholder:text-secondary-text"
                           placeholder="Enter painted date (e.g., January 15, 2024)"
                         />
@@ -1004,6 +1174,20 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
             )}
           </div>
 
+
+          {/* Save Changes Button - Only show if there are unsaved changes */}
+          {hasUnsavedChanges && (
+            <div className="flex justify-center">
+              <button
+                onClick={saveChanges}
+                disabled={savingChanges}
+                className="btn-secondary btn-with-icon"
+              >
+                <Save className="w-4 h-4" />
+                <span>{savingChanges ? 'Saving...' : 'Save Changes'}</span>
+              </button>
+            </div>
+          )}
 
           {/* Action Buttons - Both primary now */}
           <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
@@ -1018,11 +1202,11 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
 
             <button
               onClick={saveImage}
-              disabled={generating || saving}
+              disabled={generating || savingImage}
               className="btn-primary btn-with-icon flex-1 sm:flex-initial"
             >
               <Download className="w-4 h-4" />
-              <span>{saving ? 'Saving...' : 'Save Image'}</span>
+              <span>{savingImage ? 'Downloading...' : 'Download Image'}</span>
             </button>
           </div>
         </div>

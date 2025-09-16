@@ -20,7 +20,12 @@ const renderStandardLayout = async (context: ThemeRenderContext): Promise<void> 
 
 // Font loading for Colus
 const loadFonts = async (): Promise<void> => {
-  await document.fonts.load('48px "Colus"')
+  await Promise.all([
+    document.fonts.load('bold 48px "Colus"'),
+    document.fonts.load('32px "Colus"'),
+    document.fonts.load('28px "Colus"'),
+    document.fonts.load('24px "Colus"')
+  ])
 }
 
 export const miniMyths: Theme = {
@@ -45,7 +50,8 @@ export const miniMyths: Theme = {
   },
   
   isDefault: true,
-  
+  isVisible: true,
+
   metadata: {
     description: 'Mini Myths theme with golden Colus typography',
     tags: ['fantasy', 'golden', 'custom-font']

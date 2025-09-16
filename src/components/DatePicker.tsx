@@ -94,6 +94,13 @@ export function DatePicker({
     return formatDate(date) === formatDate(selectedDate)
   }
 
+  const isToday = (date: Date) => {
+    const today = new Date()
+    return date.getDate() === today.getDate() &&
+           date.getMonth() === today.getMonth() &&
+           date.getFullYear() === today.getFullYear()
+  }
+
   const handleDateClick = (date: Date, e: React.MouseEvent) => {
     e.stopPropagation()
     if (isDateDisabled(date)) return
@@ -124,6 +131,14 @@ export function DatePicker({
     setIsOpen(false)
   }
 
+  const handleOpenPicker = () => {
+    if (!disabled) {
+      // Set current month to today's date when opening the picker
+      setCurrentMonth(new Date())
+      setIsOpen(true)
+    }
+  }
+
   const days = getDaysInMonth(currentMonth)
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -146,7 +161,13 @@ export function DatePicker({
           placeholder={placeholder}
           onClick={(e) => {
             e.stopPropagation()
-            if (!disabled) setIsOpen(!isOpen)
+            if (!disabled) {
+              if (isOpen) {
+                setIsOpen(false)
+              } else {
+                handleOpenPicker()
+              }
+            }
           }}
           readOnly
           disabled={disabled}
@@ -211,6 +232,8 @@ export function DatePicker({
                           ? 'bg-brand text-white'
                           : isDateDisabled(day)
                           ? 'text-secondary-text cursor-not-allowed'
+                          : isToday(day)
+                          ? 'bg-bg-secondary text-text font-semibold ring-2 ring-brand ring-opacity-50'
                           : 'hover:bg-bg-secondary text-text'
                       }`}
                     >

@@ -20,7 +20,7 @@ const renderStandardLayout = async (context: ThemeRenderContext): Promise<void> 
 
 // Font loading for Rodchenko
 const loadFonts = async (): Promise<void> => {
-  await document.fonts.load('48px "Rodchenko"')
+  await document.fonts.load('bold 48px "Rodchenko"')
 }
 
 export const eightpoints: Theme = {
@@ -45,7 +45,8 @@ export const eightpoints: Theme = {
   },
   
   isDefault: true,
-  
+  isVisible: false,
+
   metadata: {
     description: 'Eightpoints theme with constructivist Rodchenko typography',
     tags: ['constructivist', 'bold', 'custom-font']

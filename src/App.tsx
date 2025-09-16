@@ -120,11 +120,13 @@ function App() {
     selectedBoxes: [] as string[],
     selectedGames: [] as string[],
     selectedStatuses: [] as string[],
-    searchQuery: ''
+    searchQuery: '',
+    sortOrder: 'dateAdded'
   })
   const [boxFilters, setBoxFilters] = useState({
     selectedGames: [] as string[],
-    searchQuery: ''
+    searchQuery: '',
+    sortOrder: 'dateAdded'
   })
   const [games, setGames] = useState<any[]>([])
   const [authModal, setAuthModal] = useState<{ isOpen: boolean; mode: 'login' | 'signup' }>({
@@ -263,8 +265,13 @@ function App() {
     setCurrentPage(1)
   }
 
+  const handleModelSortChange = (sortOrder: string) => {
+    setModelFilters(prev => ({ ...prev, sortOrder }))
+    setCurrentPage(1)
+  }
+
   const handleModelClearFilters = () => {
-    setModelFilters({ selectedBoxes: [], selectedGames: [], selectedStatuses: [], searchQuery: '' })
+    setModelFilters({ selectedBoxes: [], selectedGames: [], selectedStatuses: [], searchQuery: '', sortOrder: 'dateAdded' })
     setCurrentPage(1)
   }
 
@@ -273,8 +280,13 @@ function App() {
     setBoxCurrentPage(1)
   }
 
+  const handleBoxSortChange = (sortOrder: string) => {
+    setBoxFilters(prev => ({ ...prev, sortOrder }))
+    setBoxCurrentPage(1)
+  }
+
   const handleBoxClearFilters = () => {
-    setBoxFilters({ selectedGames: [], searchQuery: '' })
+    setBoxFilters({ selectedGames: [], searchQuery: '', sortOrder: 'dateAdded' })
     setBoxCurrentPage(1)
   }
 
@@ -310,6 +322,32 @@ function App() {
     if (modelFilters.selectedStatuses.length > 0 && !modelFilters.selectedStatuses.includes(model.status)) return false
     
     return true
+  }).sort((a, b) => {
+    // Apply sorting based on selected sort order
+    switch (modelFilters.sortOrder) {
+      case 'paintedDate':
+        // Sort by painted date (most recent first), fallback to creation date
+        if (a.painted_date && b.painted_date) {
+          return new Date(b.painted_date).getTime() - new Date(a.painted_date).getTime()
+        }
+        if (a.painted_date && !b.painted_date) return -1
+        if (!a.painted_date && b.painted_date) return 1
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+      
+      case 'purchasedDate':
+        // Sort by purchase date (most recent first), fallback to creation date
+        if (a.purchase_date && b.purchase_date) {
+          return new Date(b.purchase_date).getTime() - new Date(a.purchase_date).getTime()
+        }
+        if (a.purchase_date && !b.purchase_date) return -1
+        if (!a.purchase_date && b.purchase_date) return 1
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+      
+      case 'dateAdded':
+      default:
+        // Sort by creation date (most recent first)
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+    }
   })
 
   // For Recent view, filter models based on settings and apply sorting
@@ -343,7 +381,7 @@ function App() {
     .sort((a, b) => {
       if (recentViewSettings.sortOrder === 'mostRecentlyAdded') {
         // Sort by creation date (most recent first)
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
       } else {
         // Sort by painted date (most recent first), fallback to creation date
         if (a.painted_date && b.painted_date) {
@@ -357,7 +395,7 @@ function App() {
           return 1
         }
         // If neither has a painted date, sort by creation date (most recent first)
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
       }
     })
 
@@ -417,6 +455,23 @@ function App() {
     }
     
     return true
+  }).sort((a, b) => {
+    // Apply sorting based on selected sort order
+    switch (boxFilters.sortOrder) {
+      case 'purchasedDate':
+        // Sort by purchase date (most recent first), fallback to creation date
+        if (a.purchase_date && b.purchase_date) {
+          return new Date(b.purchase_date).getTime() - new Date(a.purchase_date).getTime()
+        }
+        if (a.purchase_date && !b.purchase_date) return -1
+        if (!a.purchase_date && b.purchase_date) return 1
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+      
+      case 'dateAdded':
+      default:
+        // Sort by creation date (most recent first)
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+    }
   })
 
   const totalPages = Math.ceil(filteredModels.length / itemsPerPage)
@@ -979,10 +1034,15 @@ function App() {
           isOpen={showNewBattleModal}
           onClose={() => setShowNewBattleModal(false)}
           onBattleCreated={async () => {
+            console.log('onBattleCreated called, closing modal and refetching battles')
             setShowNewBattleModal(false)
             // Refetch battles to show the new battle immediately
             if (battlesRefetch) {
+              console.log('Calling battlesRefetch...')
               await battlesRefetch()
+              console.log('battlesRefetch completed')
+            } else {
+              console.log('battlesRefetch is null - not available yet')
             }
           }}
         />
@@ -1060,10 +1120,15 @@ function App() {
           isOpen={showNewBattleModal}
           onClose={() => setShowNewBattleModal(false)}
           onBattleCreated={async () => {
+            console.log('onBattleCreated called, closing modal and refetching battles')
             setShowNewBattleModal(false)
             // Refetch battles to show the new battle immediately
             if (battlesRefetch) {
+              console.log('Calling battlesRefetch...')
               await battlesRefetch()
+              console.log('battlesRefetch completed')
+            } else {
+              console.log('battlesRefetch is null - not available yet')
             }
           }}
         />
@@ -1124,10 +1189,15 @@ function App() {
           isOpen={showNewBattleModal}
           onClose={() => setShowNewBattleModal(false)}
           onBattleCreated={async () => {
+            console.log('onBattleCreated called, closing modal and refetching battles')
             setShowNewBattleModal(false)
             // Refetch battles to show the new battle immediately
             if (battlesRefetch) {
+              console.log('Calling battlesRefetch...')
               await battlesRefetch()
+              console.log('battlesRefetch completed')
+            } else {
+              console.log('battlesRefetch is null - not available yet')
             }
           }}
         />
@@ -1304,8 +1374,10 @@ function App() {
                boxes={boxes}
                selectedGames={boxFilters.selectedGames}
                searchQuery={boxFilters.searchQuery}
+               sortOrder={boxFilters.sortOrder}
                onGamesChange={handleBoxGamesFilter}
                onSearchChange={handleBoxSearchChange}
+               onSortChange={handleBoxSortChange}
                onClearFilters={handleBoxClearFilters}
              />
             )}
@@ -1430,10 +1502,12 @@ function App() {
                selectedGames={modelFilters.selectedGames}
                selectedStatuses={modelFilters.selectedStatuses}
                searchQuery={modelFilters.searchQuery}
+               sortOrder={modelFilters.sortOrder}
                onBoxesChange={handleModelBoxesFilter}
                onGamesChange={handleModelGamesFilter}
                onStatusesChange={handleModelStatusesFilter}
                onSearchChange={handleModelSearchChange}
+               onSortChange={handleModelSortChange}
                onClearFilters={handleModelClearFilters}
              />
           )}

@@ -54,20 +54,34 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
     if (isOpen && user) {
       fetchModels()
     }
-  }, [isOpen, user])
+  }, [isOpen, user, box.id])
 
   const fetchModels = async () => {
     try {
       setLoading(true)
       if (!user?.id) return
 
-      // Get models that are available to add to boxes (either not in any box, or can be in multiple boxes)
+      // Get all models for the user
       const availableModels = await getModelsNotInBoxes(user.id)
       
+      // Get models that are already in this specific box
+      const { data: modelsInBox, error: boxModelsError } = await supabase
+        .from('model_boxes')
+        .select('model_id')
+        .eq('box_id', box.id)
+      
+      if (boxModelsError) throw boxModelsError
+      
+      // Create a set of model IDs that are already in this box
+      const modelsInBoxIds = new Set(modelsInBox?.map(mb => mb.model_id) || [])
+      
+      // Filter out models that are already in this specific box
+      const modelsNotInThisBox = availableModels.filter(model => !modelsInBoxIds.has(model.id))
+      
       // Convert to the expected format and add box_id for backward compatibility
-      const modelsWithBoxId = availableModels.map(model => ({
+      const modelsWithBoxId = modelsNotInThisBox.map(model => ({
         ...model,
-        box_id: null, // These models are not in any box
+        box_id: null, // These models are not in this specific box
         game: model.game
       }))
 

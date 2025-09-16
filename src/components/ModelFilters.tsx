@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Filter, X, Check, ChevronDown, ChevronRight } from 'lucide-react'
 import { GameDropdown } from './GameDropdown'
 import { MultiSelectDropdown } from './MultiSelectDropdown'
+import { SingleSelectDropdown } from './SingleSelectDropdown'
 
 interface Game {
   id: string
@@ -48,10 +49,12 @@ interface ModelFiltersProps {
   selectedGames: string[]
   selectedStatuses: string[]
   searchQuery: string
+  sortOrder: string
   onBoxesChange: (boxIds: string[]) => void
   onGamesChange: (gameIds: string[]) => void
   onStatusesChange: (statuses: string[]) => void
   onSearchChange: (query: string) => void
+  onSortChange: (sortOrder: string) => void
   onClearFilters: () => void
 }
 
@@ -63,10 +66,12 @@ export function ModelFilters({
   selectedGames,
   selectedStatuses,
   searchQuery,
+  sortOrder,
   onBoxesChange,
   onGamesChange,
   onStatusesChange,
   onSearchChange,
+  onSortChange,
   onClearFilters
 }: ModelFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -247,7 +252,7 @@ export function ModelFilters({
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Box Filter */}
             <div>
               <label className="block text-sm font-medium text-input-label font-overpass mb-2">
@@ -293,6 +298,23 @@ export function ModelFilters({
                 maxSelections={10}
                 searchable={true}
                 type="game"
+              />
+            </div>
+
+            {/* Sort Filter */}
+            <div>
+              <label className="block text-sm font-medium text-input-label font-overpass mb-2">
+                Sort By
+              </label>
+              <SingleSelectDropdown
+                options={[
+                  { id: 'dateAdded', name: 'Date Added to Battleplan' },
+                  { id: 'paintedDate', name: 'Painted Date' },
+                  { id: 'purchasedDate', name: 'Purchased Date' }
+                ]}
+                selectedOption={sortOrder}
+                onSelectionChange={onSortChange}
+                placeholder="Select sort order..."
               />
             </div>
           </div>
