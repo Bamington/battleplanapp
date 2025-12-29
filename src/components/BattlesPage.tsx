@@ -6,17 +6,25 @@ import { DeleteBattleModal } from './DeleteBattleModal'
 import { BattleSubMenu } from './BattleSubMenu'
 import { StatisticsPage } from './StatisticsPage'
 import { EditBattleModal } from './EditBattleModal'
+import { CampaignsList } from './CampaignsList'
+import { NewCampaignModal } from './NewCampaignModal'
+import { ViewCampaignModal } from './ViewCampaignModal'
+import { EditCampaignModal } from './EditCampaignModal'
+import { DeleteCampaignModal } from './DeleteCampaignModal'
+import { AddBattlesToCampaignModal } from './AddBattlesToCampaignModal'
+import { ListsPage } from './ListsPage'
 import { useBattles, Battle } from '../hooks/useBattles'
+import { useCampaigns } from '../hooks/useCampaigns'
 import { supabase } from '../lib/supabase'
 
 interface BattlesPageProps {
   onBack?: () => void
   onRefetchReady?: (refetchFn: () => void) => void
-  initialView?: 'battles' | 'statistics'
+  initialView?: 'battles' | 'lists' | 'statistics' | 'campaigns'
 }
 
 export function BattlesPage({ onBack, onRefetchReady, initialView = 'battles' }: BattlesPageProps) {
-  const [activeView, setActiveView] = useState<'battles' | 'statistics'>(initialView)
+  const [activeView, setActiveView] = useState<'battles' | 'lists' | 'statistics' | 'campaigns'>(initialView)
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean
     battleId: number | null
@@ -40,8 +48,43 @@ export function BattlesPage({ onBack, onRefetchReady, initialView = 'battles' }:
     isOpen: false,
     battle: null
   })
+  const [newCampaignModal, setNewCampaignModal] = useState(false)
+  const [viewCampaignModal, setViewCampaignModal] = useState<{
+    isOpen: boolean
+    campaign: any | null
+  }>({
+    isOpen: false,
+    campaign: null
+  })
+  const [editCampaignModal, setEditCampaignModal] = useState<{
+    isOpen: boolean
+    campaign: any | null
+  }>({
+    isOpen: false,
+    campaign: null
+  })
+  const [deleteCampaignModal, setDeleteCampaignModal] = useState<{
+    isOpen: boolean
+    campaignId: string | null
+    campaignName: string | null
+  }>({
+    isOpen: false,
+    campaignId: null,
+    campaignName: null
+  })
   const [deleting, setDeleting] = useState(false)
-  const { battles, loading, hasInitialized, refetch } = useBattles()
+  const [deletingCampaign, setDeletingCampaign] = useState(false)
+  const [addBattlesToCampaignModal, setAddBattlesToCampaignModal] = useState<{
+    isOpen: boolean
+    campaign: any | null
+  }>({
+    isOpen: false,
+    campaign: null
+  })
+  const [refreshCampaigns, setRefreshCampaigns] = useState<(() => void) | null>(null)
+  const [imageRefreshKey, setImageRefreshKey] = useState(0)
+  const { battles, loading, refetch } = useBattles()
+  const { fetchCampaigns } = useCampaigns()
 
   // Update activeView when initialView prop changes
   useEffect(() => {
@@ -55,8 +98,6 @@ export function BattlesPage({ onBack, onRefetchReady, initialView = 'battles' }:
     }
   }, [onRefetchReady]) // Only depend on onRefetchReady, not refetch
   
-  // Debug logging to help identify the issue
-  console.log('BattlesPage render:', { loading, hasInitialized, battlesLength: battles.length })
 
   const handleDeleteBattle = (battle: Battle) => {
     setDeleteModal({
@@ -111,6 +152,7 @@ export function BattlesPage({ onBack, onRefetchReady, initialView = 'battles' }:
 
   const handleBattleUpdated = async () => {
     await refetch()
+    setImageRefreshKey(prev => prev + 1) // Force image refresh
     // Update the battle in the view modal if it's open
     if (viewBattleModal.isOpen && viewBattleModal.battle) {
       const updatedBattles = await supabase
@@ -118,7 +160,7 @@ export function BattlesPage({ onBack, onRefetchReady, initialView = 'battles' }:
         .select('*')
         .eq('id', viewBattleModal.battle.id)
         .single()
-      
+
       if (updatedBattles.data) {
         setViewBattleModal({
           isOpen: true,
@@ -128,12 +170,116 @@ export function BattlesPage({ onBack, onRefetchReady, initialView = 'battles' }:
     }
   }
 
+  const handleEditCampaign = (campaign: any) => {
+    setEditCampaignModal({
+      isOpen: true,
+      campaign
+    })
+    setViewCampaignModal({ isOpen: false, campaign: null })
+  }
+
+  const handleDeleteCampaign = (campaign: any) => {
+    setDeleteCampaignModal({
+      isOpen: true,
+      campaignId: campaign.id,
+      campaignName: campaign.name
+    })
+    setViewCampaignModal({ isOpen: false, campaign: null })
+  }
+
+  const handleConfirmDeleteCampaign = async () => {
+    if (!deleteCampaignModal.campaignId) return
+
+    setDeletingCampaign(true)
+    try {
+      const { error } = await supabase
+        .from('campaigns')
+        .delete()
+        .eq('id', deleteCampaignModal.campaignId)
+
+      if (error) throw error
+
+      // Refresh campaigns and close modal
+      if (refreshCampaigns) {
+        refreshCampaigns()
+      }
+      setDeleteCampaignModal({ isOpen: false, campaignId: null, campaignName: null })
+    } catch (error) {
+      console.error('Error deleting campaign:', error)
+    } finally {
+      setDeletingCampaign(false)
+    }
+  }
+
+  const handleCampaignUpdated = async () => {
+    if (refreshCampaigns) {
+      refreshCampaigns()
+    }
+    // Update the campaign in the view modal if it's open
+    if (viewCampaignModal.isOpen && viewCampaignModal.campaign) {
+      const updatedCampaign = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('id', viewCampaignModal.campaign.id)
+        .single()
+
+      if (updatedCampaign.data) {
+        setViewCampaignModal({
+          isOpen: true,
+          campaign: updatedCampaign.data
+        })
+      }
+    }
+  }
+
+  const handleAddBattleToCampaign = (campaign: any) => {
+    setAddBattlesToCampaignModal({
+      isOpen: true,
+      campaign
+    })
+    setViewCampaignModal({ isOpen: false, campaign: null })
+  }
+
+  const handleBattlesAddedToCampaign = async () => {
+    // Refresh the campaigns list
+    if (refreshCampaigns) {
+      refreshCampaigns()
+    }
+    // Refresh battles in case they were removed from the uncategorized list
+    refetch()
+
+    // If the ViewCampaignModal is open, refresh the campaign to update battle list
+    if (addBattlesToCampaignModal.campaign) {
+      const updatedCampaign = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('id', addBattlesToCampaignModal.campaign.id)
+        .single()
+
+      if (updatedCampaign.data) {
+        setViewCampaignModal({
+          isOpen: true,
+          campaign: updatedCampaign.data
+        })
+      }
+    }
+  }
+
+  const handleBattleRemoved = async () => {
+    // Refresh the campaigns list to update battle counts
+    if (refreshCampaigns) {
+      refreshCampaigns()
+    }
+    // Refresh battles list in case we're viewing the battles tab
+    refetch()
+  }
+
   return (
     <>
       {/* Header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-4">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-title mb-4">YOUR BATTLES</h1>
+          <h1 className="text-4xl font-bold text-title mb-4">BATTLES</h1>
         </div>
       </div>
 
@@ -146,6 +292,21 @@ export function BattlesPage({ onBack, onRefetchReady, initialView = 'battles' }:
       {/* Content based on active view */}
       {activeView === 'statistics' ? (
         <StatisticsPage />
+      ) : activeView === 'lists' ? (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+          <ListsPage />
+        </div>
+      ) : activeView === 'campaigns' ? (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+          <CampaignsList
+            onCreateCampaign={() => setNewCampaignModal(true)}
+            onRefreshReady={(refreshFn) => setRefreshCampaigns(() => refreshFn)}
+            onViewCampaign={(campaign) => setViewCampaignModal({
+              isOpen: true,
+              campaign
+            })}
+          />
+        </div>
       ) : (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
           {/* Battles Content */}
@@ -154,7 +315,7 @@ export function BattlesPage({ onBack, onRefetchReady, initialView = 'battles' }:
 
         {/* Battles Grid */}
         <div className="mb-8">
-          {loading || !hasInitialized ? (
+          {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {/* Skeleton battle cards */}
               {Array.from({ length: 8 }).map((_, i) => (
@@ -182,7 +343,7 @@ export function BattlesPage({ onBack, onRefetchReady, initialView = 'battles' }:
                 </div>
               ))}
             </div>
-          ) : !loading && hasInitialized && battles.length === 0 ? (
+          ) : battles.length === 0 ? (
             <div className="text-center py-16">
               <Sword className="w-20 h-20 text-secondary-text mx-auto mb-6" />
               <p className="text-xl text-secondary-text mb-4">No battles logged yet.</p>
@@ -199,6 +360,7 @@ export function BattlesPage({ onBack, onRefetchReady, initialView = 'battles' }:
                     onViewBattle={() => handleViewBattle(battle)}
                     onDeleteBattle={handleDeleteBattle}
                     onEditBattle={handleEditBattle}
+                    imageRefreshKey={imageRefreshKey}
                   />
                 ))}
               </div>
@@ -231,6 +393,52 @@ export function BattlesPage({ onBack, onRefetchReady, initialView = 'battles' }:
         battle={editBattleModal.battle}
         onClose={() => setEditBattleModal({ isOpen: false, battle: null })}
         onBattleUpdated={handleBattleUpdated}
+      />
+
+      <NewCampaignModal
+        isOpen={newCampaignModal}
+        onClose={() => setNewCampaignModal(false)}
+        onCampaignCreated={() => {
+          if (refreshCampaigns) {
+            refreshCampaigns()
+          }
+          setNewCampaignModal(false)
+        }}
+      />
+
+      <ViewCampaignModal
+        isOpen={viewCampaignModal.isOpen}
+        campaign={viewCampaignModal.campaign}
+        onClose={() => setViewCampaignModal({
+          isOpen: false,
+          campaign: null
+        })}
+        onEdit={handleEditCampaign}
+        onDelete={handleDeleteCampaign}
+        onAddBattle={handleAddBattleToCampaign}
+        onBattleRemoved={handleBattleRemoved}
+      />
+
+      <EditCampaignModal
+        isOpen={editCampaignModal.isOpen}
+        campaign={editCampaignModal.campaign}
+        onClose={() => setEditCampaignModal({ isOpen: false, campaign: null })}
+        onCampaignUpdated={handleCampaignUpdated}
+      />
+
+      <DeleteCampaignModal
+        isOpen={deleteCampaignModal.isOpen}
+        onClose={() => setDeleteCampaignModal({ isOpen: false, campaignId: null, campaignName: null })}
+        onConfirm={handleConfirmDeleteCampaign}
+        campaignName={deleteCampaignModal.campaignName || undefined}
+        loading={deletingCampaign}
+      />
+
+      <AddBattlesToCampaignModal
+        isOpen={addBattlesToCampaignModal.isOpen}
+        campaign={addBattlesToCampaignModal.campaign}
+        onClose={() => setAddBattlesToCampaignModal({ isOpen: false, campaign: null })}
+        onBattlesAdded={handleBattlesAddedToCampaign}
       />
     </>
   )

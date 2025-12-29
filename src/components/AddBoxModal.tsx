@@ -9,6 +9,7 @@ import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageC
 import { ImageCropper } from './ImageCropper'
 import { ImageSearchResults } from './ImageSearchResults'
 import { Button } from './Button'
+import { addBoxImage } from '../utils/boxImageUtils'
 
 
 interface AddBoxModalProps {
@@ -24,7 +25,8 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
   const [purchaseDate, setPurchaseDate] = useState('')
   const [purchasePrice, setPurchasePrice] = useState('')
   const [displayPrice, setDisplayPrice] = useState('')
-  const [selectedImages, setSelectedImages] = useState<FileList | null>(null)
+  const [selectedImages, setSelectedImages] = useState<File[]>([])
+  const [selectedImageUrls, setSelectedImageUrls] = useState<string[]>([])
   const [showImageCropper, setShowImageCropper] = useState(false)
   const [imageForCropping, setImageForCropping] = useState<File | null>(null)
   const { games, createGame } = useGames()
@@ -65,12 +67,37 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
     return games.filter(game => user.fav_games?.includes(game.id))
   }
 
-  const handleGameSelect = (gameId: string) => {
-    setSelectedGame(gameId)
-    // Add to recent games
-    const selectedGameData = games.find(game => game.id === gameId)
-    if (selectedGameData) {
-      addRecentGame(selectedGameData)
+  const handleGameSelect = async (gameId: string) => {
+    // Handle custom game creation
+    if (gameId.startsWith('new:')) {
+      const gameName = gameId.replace('new:', '')
+      try {
+        setLoading(true)
+
+        // Create the custom game using the hook
+        const newGame = await createGame(gameName)
+
+        // Set the new game as selected
+        setSelectedGame(newGame.id)
+
+        // Add to recent games
+        addRecentGame(newGame)
+
+        console.log('Created custom game:', newGame)
+      } catch (err) {
+        console.error('Failed to create custom game:', err)
+        setError(`Failed to create custom game "${gameName}". Please try again.`)
+      } finally {
+        setLoading(false)
+      }
+    } else {
+      // Handle existing games
+      setSelectedGame(gameId)
+      // Add to recent games
+      const selectedGameData = games.find(game => game.id === gameId)
+      if (selectedGameData) {
+        addRecentGame(selectedGameData)
+      }
     }
   }
 
@@ -463,14 +490,43 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
   }
 
   const handleImageSelected = (imageUrl: string) => {
-    // Create a virtual file input change event with the selected image URL
-    // We'll store the URL directly and skip the file upload process
-    setSelectedImages(null) // Clear any file selection
-    setCompressionInfo(`Selected image: ${imageUrl}`)
+    // Add the URL to our selected images list
+    setSelectedImageUrls(prev => [...prev, imageUrl])
+    setCompressionInfo(`Added image: ${imageUrl}`)
     setShowImageSearch(false)
-    
-    // Store the selected URL for use during submission
-    setSelectedImageUrl(imageUrl)
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    const fileArray = Array.from(files)
+
+    // Validate all files
+    const invalidFiles = fileArray.filter(file => !isValidImageFile(file))
+    if (invalidFiles.length > 0) {
+      setFileSizeError(`Invalid file type: ${invalidFiles[0].name}. Please select image files only.`)
+      return
+    }
+
+    // Check file sizes
+    const oversizedFiles = fileArray.filter(file => file.size > 10 * 1024 * 1024)
+    if (oversizedFiles.length > 0) {
+      setFileSizeError(`File too large: ${oversizedFiles[0].name}. Maximum size is 10MB.`)
+      return
+    }
+
+    setFileSizeError('')
+    setSelectedImages(prev => [...prev, ...fileArray])
+    setCompressionInfo(`Added ${fileArray.length} image${fileArray.length > 1 ? 's' : ''}`)
+  }
+
+  const removeImage = (index: number, type: 'file' | 'url') => {
+    if (type === 'file') {
+      setSelectedImages(prev => prev.filter((_, i) => i !== index))
+    } else {
+      setSelectedImageUrls(prev => prev.filter((_, i) => i !== index))
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -481,127 +537,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
     setError('')
 
     try {
-      let imageUrl = ''
-      
-      // Use selected image URL from search results
-      if (selectedImageUrl) {
-        imageUrl = selectedImageUrl
-      }
-      // Upload image if file was selected
-      else if (selectedImages && selectedImages.length > 0) {
-        const file = selectedImages[0] // This is now the cropped image
-        
-        // Check if this is a cropped image (it will have been processed by our cropper)
-        const isCroppedImage = compressionInfo.includes('Cropped image ready')
-        
-        if (isCroppedImage) {
-          // Compress cropped image before upload
-          setCompressing(true)
-          
-          try {
-            const compressedFile = await compressImage(file, 1200, 1200, 0.8)
-            console.log(`Cropped image compressed: ${formatFileSize(file.size)} → ${formatFileSize(compressedFile.size)}`)
-            
-            const fileExt = compressedFile.name.split('.').pop()
-            const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-            
-            const { data: uploadData, error: uploadError } = await supabase.storage
-              .from('model-images')
-              .upload(fileName, compressedFile)
-              
-            if (uploadError) {
-              console.error('Compressed cropped image upload error:', uploadError)
-              throw new Error(`Failed to upload image: ${uploadError.message}`)
-            } else {
-              const { data } = supabase.storage
-                .from('model-images')
-                .getPublicUrl(uploadData.path)
-              imageUrl = data.publicUrl
-              console.log('Uploaded compressed cropped image URL:', imageUrl)
-            }
-          } catch (compressionError) {
-            console.error('Cropped image compression error:', compressionError)
-            
-            // Fall back to uploading cropped image without compression
-            const fileExt = file.name.split('.').pop()
-            const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-            
-            const { data: uploadData, error: uploadError } = await supabase.storage
-              .from('model-images')
-              .upload(fileName, file)
-              
-            if (uploadError) {
-              console.error('Fallback cropped image upload error:', uploadError)
-              throw new Error(`Failed to upload image: ${uploadError.message}`)
-            } else {
-              const { data } = supabase.storage
-                .from('model-images')
-                .getPublicUrl(uploadData.path)
-              imageUrl = data.publicUrl
-              console.log('Uploaded uncompressed cropped image URL:', imageUrl)
-            }
-          } finally {
-            setCompressing(false)
-          }
-        } else {
-          // Original compression logic for non-cropped images
-          setCompressing(true)
-          
-          try {
-            // Compress the image before upload
-            const compressedFile = await compressImage(file, 1200, 1200, 0.8)
-            console.log(`Image compressed: ${formatFileSize(file.size)} → ${formatFileSize(compressedFile.size)}`)
-            
-            const fileExt = compressedFile.name.split('.').pop()
-            const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-            
-            const { data: uploadData, error: uploadError } = await supabase.storage
-              .from('model-images')
-              .upload(fileName, compressedFile)
-              
-            if (uploadError) {
-              console.error('Image upload error:', uploadError)
-              throw new Error(`Failed to upload image: ${uploadError.message}`)
-            } else {
-              const { data } = supabase.storage
-                .from('model-images')
-                .getPublicUrl(uploadData.path)
-              imageUrl = data.publicUrl
-              console.log('Uploaded compressed image URL:', imageUrl)
-            }
-          } catch (compressionError) {
-            console.error('Image compression error:', compressionError)
-            
-            // Fall back to original file if compression fails
-            try {
-              const fileExt = file.name.split('.').pop()
-              const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-              
-              const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('model-images')
-                .upload(fileName, file)
-                
-              if (uploadError) {
-                console.error('Original image upload error:', uploadError)
-                throw new Error(`Failed to upload image: ${uploadError.message}`)
-              } else {
-                const { data } = supabase.storage
-                  .from('model-images')
-                  .getPublicUrl(uploadData.path)
-                imageUrl = data.publicUrl
-                console.log('Uploaded original image URL:', imageUrl)
-              }
-            } catch (fallbackError) {
-              console.error('Fallback upload failed:', fallbackError)
-              throw new Error('Failed to upload image after compression fallback')
-            }
-          } finally {
-            setCompressing(false)
-          }
-        }
-      }
-
-      // Handle new game creation
+      // Handle new game creation first
       let gameIdToSave = selectedGame || null
       if (selectedGame && selectedGame.startsWith('new:')) {
         const gameName = selectedGame.replace('new:', '')
@@ -611,15 +547,14 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
         addRecentGame(newGame)
       }
 
-      // Create the box
+      // Create the box without image_url (we'll use junction table)
       const { data: boxData, error: boxError } = await supabase
         .from('boxes')
         .insert({
           name: boxName.trim(),
           game_id: gameIdToSave,
           purchase_date: purchaseDate || null,
-          user_id: user.id,
-          image_url: imageUrl
+          user_id: user.id
         })
         .select()
         .single()
@@ -629,13 +564,59 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
       // Store the box ID for potential future use
       lastCreatedBoxId = boxData.id
 
+      // Upload and save selected URL images to junction table
+      for (let i = 0; i < selectedImageUrls.length; i++) {
+        const imageUrl = selectedImageUrls[i]
+        const isPrimary = i === 0 // First image is primary
+        await addBoxImage(boxData.id, imageUrl, isPrimary, i)
+      }
+
+      // Upload and save selected file images to junction table
+      setCompressing(true)
+      for (let i = 0; i < selectedImages.length; i++) {
+        const file = selectedImages[i]
+        const isPrimary = i === 0 && selectedImageUrls.length === 0 // First file image is primary if no URL images
+        const displayOrder = selectedImageUrls.length + i
+
+        try {
+          // Compress the image before upload
+          const compressedFile = await compressImage(file, 1200, 1200, 0.8)
+          console.log(`Image compressed: ${formatFileSize(file.size)} → ${formatFileSize(compressedFile.size)}`)
+
+          const fileExt = compressedFile.name.split('.').pop()
+          const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('model-images')
+            .upload(fileName, compressedFile)
+
+          if (uploadError) {
+            console.error('Image upload error:', uploadError)
+            throw new Error(`Failed to upload image: ${uploadError.message}`)
+          }
+
+          const { data } = supabase.storage
+            .from('model-images')
+            .getPublicUrl(uploadData.path)
+
+          // Save to junction table
+          await addBoxImage(boxData.id, data.publicUrl, isPrimary, displayOrder)
+          console.log('Uploaded and saved image URL:', data.publicUrl)
+        } catch (uploadError) {
+          console.error('Image upload error:', uploadError)
+          // Continue with other images even if one fails
+        }
+      }
+      setCompressing(false)
+
       // Reset form
       setBoxName('')
       setSelectedGame('')
       setPurchaseDate('')
       setPurchasePrice('')
       setDisplayPrice('')
-      setSelectedImages(null)
+      setSelectedImages([])
+      setSelectedImageUrls([])
       setCompressionInfo('')
       setSelectedImageUrl('')
       setShowImageSearch(false)
@@ -734,6 +715,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
               onGameSelect={handleGameSelect}
               placeholder="Choose a Game"
               favoriteGames={getFavoriteGames()}
+              showAddNewButton={true}
             />
           </div>
 
@@ -805,49 +787,70 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
             
             {/* Image Upload Area */}
             <div className="border-2 border-dashed border-border-custom rounded-lg p-6 text-center hover:border-[var(--color-brand)] transition-colors">
-              {selectedImages && selectedImages.length > 0 ? (
+              {(selectedImages.length > 0 || selectedImageUrls.length > 0) ? (
                 <div className="space-y-4">
-                  <div className="relative mx-auto w-32 h-32">
-                    <img
-                      src={URL.createObjectURL(selectedImages[0])}
-                      alt="Selected collection image"
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedImages(null)
-                        setFileSizeError('')
-                        setCompressionInfo('')
-                      }}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                  {/* Show selected images */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {/* URL Images */}
+                    {selectedImageUrls.map((url, index) => (
+                      <div key={`url-${index}`} className="relative">
+                        <img
+                          src={url}
+                          alt={`Selected image ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index, 'url')}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        {index === 0 && selectedImages.length === 0 && (
+                          <div className="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-1 rounded">
+                            Primary
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* File Images */}
+                    {selectedImages.map((file, index) => (
+                      <div key={`file-${index}`} className="relative">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`Selected file ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index, 'file')}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        {index === 0 && selectedImageUrls.length === 0 && (
+                          <div className="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-1 rounded">
+                            Primary
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Add more images button */}
+                    <label className="cursor-pointer border-2 border-dashed border-border-custom rounded-lg flex flex-col items-center justify-center h-24 hover:border-brand transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        disabled={loading}
+                        multiple
+                      />
+                      <Image className="w-6 h-6 text-icon mb-1" />
+                      <span className="text-xs text-secondary-text">Add More</span>
+                    </label>
                   </div>
-                  <p className="text-sm text-secondary-text">{selectedImages[0].name}</p>
-                </div>
-              ) : selectedImageUrl ? (
-                <div className="space-y-4">
-                  <div className="relative mx-auto w-32 h-32">
-                    <img
-                      src={selectedImageUrl}
-                      alt="Selected collection image"
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedImageUrl('')
-                        setFileSizeError('')
-                        setCompressionInfo('')
-                      }}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <p className="text-sm text-secondary-text">Selected image</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -856,16 +859,17 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={handleImageChange}
+                        onChange={handleFileSelect}
                         className="hidden"
                         disabled={loading}
+                        multiple
                       />
                       <div className="flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-bg-secondary transition-colors">
                         <Image className="w-8 h-8 text-icon" />
-                        <span className="text-sm font-medium text-text">Upload Image</span>
+                        <span className="text-sm font-medium text-text">Upload Images</span>
                       </div>
                     </label>
-                    
+
                     <button
                       type="button"
                       onClick={handleCameraCapture}
@@ -877,14 +881,14 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
                     </button>
                   </div>
                   <p className="text-xs text-secondary-text">
-                    JPEG, PNG, or WebP up to 50MB
+                    Select multiple images • JPEG, PNG, or WebP up to 10MB each
                   </p>
                 </div>
               )}
             </div>
 
             {/* Image Search Button */}
-            {boxName.trim() && !selectedImages && !selectedImageUrl && (
+            {boxName.trim() && selectedImages.length === 0 && selectedImageUrls.length === 0 && (
               <div className="mt-3">
                 <Button
                   variant="secondary"

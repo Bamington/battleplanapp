@@ -1,12 +1,14 @@
 import React, { useState } from 'react'
-import { X, Share2, Edit, Trash2, Calendar, Hash, Palette, FileText, Package, Gamepad2, Info, BookOpen, Brush, ChevronLeft, ChevronRight } from 'lucide-react'
+import { X, Share2, Edit, Trash2, Calendar, Hash, Palette, FileText, Package, Gamepad2, Info, BookOpen, Brush, ChevronLeft, ChevronRight, Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { DeleteModelModal } from './DeleteModelModal'
 import { EditModelModal } from './EditModelModal'
 import { ShareModelModal } from './ShareModelModal'
+import { ShareScreenshotPreview } from './ShareScreenshotPreview'
 import { Toast } from './Toast'
 import { TabSelector } from './TabSelector'
 import { RichTextEditor } from './RichTextEditor'
+import { DatePicker } from './DatePicker'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { formatLocalDate } from '../utils/timezone'
@@ -64,6 +66,7 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
   const [showDeleteModal, setShowDeleteModal] = React.useState(false)
   const [showEditModal, setShowEditModal] = React.useState(false)
   const [showShareModal, setShowShareModal] = React.useState(false)
+  const [showScreenshotModal, setShowScreenshotModal] = React.useState(false)
   const [deleting, setDeleting] = React.useState(false)
   const [showToast, setShowToast] = React.useState(false)
   const [currentModel, setCurrentModel] = React.useState(model)
@@ -77,11 +80,16 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
     lore_description: ''
   })
   const [paintingData, setPaintingData] = React.useState({
-    painting_notes: ''
+    painting_notes: '',
+    status: '',
+    painted_date: ''
   })
   const [originalPaintingData, setOriginalPaintingData] = React.useState({
-    painting_notes: ''
+    painting_notes: '',
+    status: '',
+    painted_date: ''
   })
+  const [isEditingPaintingNotes, setIsEditingPaintingNotes] = React.useState(false)
   const [modelCollections, setModelCollections] = React.useState<Array<{ id: string; name: string; added_at: string; purchase_date: string | null }>>([])
   const [collectionsLoading, setCollectionsLoading] = React.useState(false)
   const [modelImages, setModelImages] = React.useState<{
@@ -197,7 +205,9 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
         lore_description: model.lore_description || ''
       }
       const newPaintingData = {
-        painting_notes: model.painting_notes || ''
+        painting_notes: model.painting_notes || '',
+        status: model.status || '',
+        painted_date: model.painted_date || ''
       }
       setLoreData(newLoreData)
       setOriginalLoreData(newLoreData)
@@ -365,6 +375,10 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
     setShowShareModal(true)
   }
 
+  const handleScreenshotShare = () => {
+    setShowScreenshotModal(true)
+  }
+
   const handleEditSuccess = async () => {
     // Close both edit modal and view modal, return to collections
     setShowEditModal(false)
@@ -402,7 +416,9 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
     const { error } = await supabase
       .from('models')
       .update({
-        painting_notes: paintingData.painting_notes
+        painting_notes: paintingData.painting_notes,
+        status: paintingData.status,
+        painted_date: paintingData.painted_date || null
       })
       .eq('id', currentModel.id)
 
@@ -410,9 +426,25 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
       console.error('Error saving painting notes:', error)
       // You could add error handling UI here
     } else {
-      setCurrentModel(prev => prev ? { ...prev, painting_notes: paintingData.painting_notes } : null)
+      setCurrentModel(prev => prev ? {
+        ...prev,
+        painting_notes: paintingData.painting_notes,
+        status: paintingData.status,
+        painted_date: paintingData.painted_date
+      } : null)
       setOriginalPaintingData(paintingData)
+      setIsEditingPaintingNotes(false)
+      
+      // Notify parent component to refresh data
+      if (onModelUpdated) {
+        await onModelUpdated()
+      }
     }
+  }
+
+  const handleCancelPaintingEdit = () => {
+    setPaintingData(originalPaintingData)
+    setIsEditingPaintingNotes(false)
   }
 
   // Check if lore data has changed
@@ -420,7 +452,9 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
                         loreData.lore_description !== originalLoreData.lore_description
 
   // Check if painting data has changed
-  const hasPaintingChanges = paintingData.painting_notes !== originalPaintingData.painting_notes
+  const hasPaintingChanges = paintingData.painting_notes !== originalPaintingData.painting_notes ||
+                            paintingData.status !== originalPaintingData.status ||
+                            paintingData.painted_date !== originalPaintingData.painted_date
 
   if (!isOpen || !currentModel) return null
 
@@ -445,25 +479,28 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
           <div className="flex-1 overflow-y-auto">
             {/* Image Carousel */}
             <div className="relative">
-              {modelImages.length > 0 ? (
+              {(modelImages.length > 0 || (!imagesLoading && model.image_url)) ? (
                 <>
                   {/* Current Image */}
                   <img
                     src={(() => {
-                      const currentImage = modelImages[currentImageIndex]
-                      if (currentImage?.image_url) {
-                        return currentImage.image_url
+                      // If we have images from model_images table, use those
+                      if (modelImages.length > 0) {
+                        const currentImage = modelImages[currentImageIndex]
+                        if (currentImage?.image_url) {
+                          return currentImage.image_url
+                        }
                       }
-                      
-                      // Fallback to model.image_url if no images in model_images
-                      if (model.image_url && 
+
+                      // Fallback to model.image_url (legacy)
+                      if (model.image_url &&
                          typeof model.image_url === 'string' &&
-                         model.image_url.trim() !== '' && 
-                         model.image_url !== 'undefined' && 
+                         model.image_url.trim() !== '' &&
+                         model.image_url !== 'undefined' &&
                          model.image_url !== 'null') {
                         return model.image_url
                       }
-                      
+
                       // Final fallback
                       return '/bp-unkown.svg'
                     })()}
@@ -484,7 +521,7 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
                     }}
                   />
                   
-                  {/* Carousel Controls - Only show if multiple images */}
+                  {/* Carousel Controls - Only show if multiple images from model_images table */}
                   {modelImages.length > 1 && (
                     <>
                       {/* Previous Button */}
@@ -529,36 +566,27 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
                   )}
                 </>
               ) : (
-                /* Fallback for when no images are found in model_images table */
+                /* No image available - show game icon or default */
                 <img
                   src={(() => {
-                    // Check if we have a valid model image URL
-                    if (model.image_url && 
-                       typeof model.image_url === 'string' &&
-                       model.image_url.trim() !== '' && 
-                       model.image_url !== 'undefined' && 
-                       model.image_url !== 'null') {
-                      return model.image_url
-                    }
-                    
                     // Try to use the game's icon as fallback
                     const gameIcon = model.box?.game?.icon || model.game?.icon
-                    if (gameIcon && 
+                    if (gameIcon &&
                         typeof gameIcon === 'string' &&
-                        gameIcon.trim() !== '' && 
-                        gameIcon !== 'undefined' && 
+                        gameIcon.trim() !== '' &&
+                        gameIcon !== 'undefined' &&
                         gameIcon !== 'null' &&
                         gameIcon.startsWith('http')) {
                       return gameIcon
                     }
-                    
+
                     // Final fallback to default image
                     return '/bp-unkown.svg'
                   })()}
                   alt={model.name}
                   className="w-full object-cover rounded-none sm:rounded-t-lg"
-                  style={{ 
-                    marginTop: 'calc(-1 * max(1rem, env(safe-area-inset-top)))', 
+                  style={{
+                    marginTop: 'calc(-1 * max(1rem, env(safe-area-inset-top)))',
                     paddingTop: 'max(1rem, env(safe-area-inset-top))'
                   }}
                   loading="lazy"
@@ -752,37 +780,147 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
 
             {activeTab === 'painting' && (
               <div className="space-y-3">
-                {/* Painted Date - only show if painted date exists */}
-                {getPaintedDate() && (
-                  <div className="bg-bg-secondary rounded-lg p-4 flex items-center space-x-3">
-                    <Palette className="w-5 h-5 text-secondary-text" />
-                    <span className="text-base text-text font-medium">
-                      Painted {formatDate(getPaintedDate()!)}
-                    </span>
+                {/* Painted Status */}
+                <div className="bg-bg-secondary rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-medium text-text">
+                      Painted Status
+                    </label>
+                    {!isEditingPaintingNotes && (
+                      <button
+                        onClick={() => setIsEditingPaintingNotes(true)}
+                        className="p-1 text-secondary-text hover:text-text transition-colors rounded"
+                        title="Edit painting status"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {isEditingPaintingNotes ? (
+                    <select
+                      value={paintingData.status}
+                      onChange={(e) => setPaintingData({ ...paintingData, status: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white"
+                    >
+                      <option value="">Select Status</option>
+                      <option value="Assembled">Assembled</option>
+                      <option value="Primed">Primed</option>
+                      <option value="Partially Painted">Partially Painted</option>
+                      <option value="Painted">Painted</option>
+                    </select>
+                  ) : (
+                    <div className="text-base text-text font-medium">
+                      {paintingData.status || 'No status selected'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Painted Date - Only show if status is Painted */}
+                {(paintingData.status === 'Painted' || (!isEditingPaintingNotes && getPaintedDate())) && (
+                  <div className="bg-bg-secondary rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-sm font-medium text-text">
+                        Painted Date
+                      </label>
+                      {!isEditingPaintingNotes && (
+                        <button
+                          onClick={() => setIsEditingPaintingNotes(true)}
+                          className="p-1 text-secondary-text hover:text-text transition-colors rounded"
+                          title="Edit painted date"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {isEditingPaintingNotes ? (
+                      <DatePicker
+                        value={paintingData.painted_date}
+                        onChange={(date) => setPaintingData({ ...paintingData, painted_date: date })}
+                        placeholder="Select painted date"
+                        minDate=""
+                      />
+                    ) : (
+                      <div className="flex items-center space-x-3">
+                        <Calendar className="w-5 h-5 text-secondary-text" />
+                        <span className="text-base text-text font-medium">
+                          {paintingData.painted_date ? `Painted ${formatDate(paintingData.painted_date)}` : 'No painted date selected'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Painting Information */}
-                <div className="bg-bg-secondary rounded-lg p-4">
-                  <RichTextEditor
-                    value={paintingData.painting_notes}
-                    onChange={(value) => setPaintingData({ ...paintingData, painting_notes: value })}
-                    placeholder="Enter painting information..."
-                    label="Painting Information"
-                    rows={6}
-                  />
-                </div>
+                {/* Painting Information - only show if there's content or if editing */}
+                {(paintingData.painting_notes || isEditingPaintingNotes) && (
+                  <div className="bg-bg-secondary rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-sm font-medium text-text">
+                        Painting Information
+                      </label>
+                      {!isEditingPaintingNotes && (
+                        <button
+                          onClick={() => setIsEditingPaintingNotes(true)}
+                          className="p-1 text-secondary-text hover:text-text transition-colors rounded"
+                          title="Edit painting information"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
 
-                {/* Save Button */}
-                <div className="pt-4">
-                  <button
-                    onClick={handleSavePainting}
-                    disabled={!hasPaintingChanges}
-                    className="btn-secondary btn-full w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Save Painting Information
-                  </button>
-                </div>
+                    {isEditingPaintingNotes ? (
+                      <>
+                        <RichTextEditor
+                          value={paintingData.painting_notes}
+                          onChange={(value) => setPaintingData({ ...paintingData, painting_notes: value })}
+                          placeholder="Enter painting information..."
+                          rows={6}
+                        />
+                        <div className="flex space-x-3 mt-4">
+                          <button
+                            onClick={handleCancelPaintingEdit}
+                            className="btn-danger-outline flex-1"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleSavePainting}
+                            disabled={!hasPaintingChanges}
+                            className="btn-secondary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="min-h-[6rem]">
+                        <div className="prose prose-sm max-w-none">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              p: ({ children }) => <p className="mb-2 last:mb-0 text-base text-text">{children}</p>,
+                              h1: ({ children }) => <h1 className="text-base font-bold mb-2 text-text">{children}</h1>,
+                              h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-text">{children}</h2>,
+                              h3: ({ children }) => <h3 className="text-base font-bold mb-1 text-text">{children}</h3>,
+                              ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                              ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                              li: ({ children }) => <li className="text-base text-text">{children}</li>,
+                              strong: ({ children }) => <strong className="font-semibold text-text">{children}</strong>,
+                              em: ({ children }) => <em className="italic text-text">{children}</em>,
+                              code: ({ children }) => <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                              pre: ({ children }) => <pre className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs font-mono overflow-x-auto mb-2">{children}</pre>,
+                              blockquote: ({ children }) => <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-3 italic mb-2 text-text">{children}</blockquote>,
+                            }}
+                          >
+                            {paintingData.painting_notes}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Notes - only show if notes exist */}
                 {getPaintNotes() && (
@@ -826,13 +964,23 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
             {/* Action Buttons */}
             <div className="pt-6 modal-actions">
               <div className="space-y-3">
-                <button
-                  onClick={handleShareModel}
-                  className="btn-primary btn-full btn-with-icon w-full"
-                >
-                  <Share2 className="w-4 h-4" />
-                  <span>Share Model</span>
-                </button>
+                {/* Share Buttons */}
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={handleShareModel}
+                    className="btn-secondary btn-full btn-with-icon"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    <span>Share Model</span>
+                  </button>
+                  <button
+                    onClick={handleScreenshotShare}
+                    className="btn-secondary btn-full btn-with-icon"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>Share Screenshot</span>
+                  </button>
+                </div>
                 <button
                   onClick={handleDeleteClick}
                   className="btn-danger-outline w-full"
@@ -872,6 +1020,15 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
         message="A share link has been copied to your clipboard"
         isVisible={showToast}
         onClose={() => setShowToast(false)}
+      />
+
+      <ShareScreenshotPreview
+        isOpen={showScreenshotModal}
+        onClose={() => setShowScreenshotModal(false)}
+        model={currentModel ? {
+          ...currentModel,
+          images: modelImages
+        } : null}
       />
     </>
   )

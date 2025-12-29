@@ -1,7 +1,8 @@
 import React from 'react'
-import { Trash2, Calendar, User, Gamepad2, Edit } from 'lucide-react'
+import { Trash2, Calendar, User, Gamepad2, Edit, Flag } from 'lucide-react'
 import { formatLocalDate } from '../utils/timezone'
 import { useGameIcons } from '../hooks/useGameIcons'
+import { BattleImage } from './BattleImage'
 
 interface Battle {
   id: number
@@ -11,7 +12,6 @@ interface Battle {
   game_name: string | null
   game_uid: string | null
   game_icon: string | null
-  image_url: string | null
   location: string | null
   opp_name: string | null // Keep for backward compatibility
   opp_id: string[] | null
@@ -26,6 +26,14 @@ interface Battle {
   result: string | null
   user_id: string | null
   created_at: string
+  campaign_id: string | null
+  campaign?: {
+    id: string
+    name: string
+    description: string | null
+    start_date: string | null
+    end_date: string | null
+  } | null
 }
 
 interface BattleCardProps {
@@ -33,9 +41,10 @@ interface BattleCardProps {
   onViewBattle: () => void
   onDeleteBattle: (battle: Battle) => void
   onEditBattle?: (battle: Battle) => void
+  imageRefreshKey?: number
 }
 
-export function BattleCard({ battle, onViewBattle, onDeleteBattle, onEditBattle }: BattleCardProps) {
+export function BattleCard({ battle, onViewBattle, onDeleteBattle, onEditBattle, imageRefreshKey }: BattleCardProps) {
   const { getGameIcon, isValidGameIcon } = useGameIcons()
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -85,48 +94,15 @@ export function BattleCard({ battle, onViewBattle, onDeleteBattle, onEditBattle 
     >
       {/* Battle Image */}
       <div className="relative h-48 bg-bg-secondary overflow-hidden">
-        {battle.image_url ? (
-          <img
-            src={battle.image_url}
-            alt="Battle image"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement
-              console.warn('Battle image failed to load:', battle.image_url, 'Falling back to game icon')
-              target.style.display = 'none'
-              const fallback = target.nextElementSibling as HTMLElement
-              if (fallback && fallback.classList.contains('game-icon-fallback')) {
-                fallback.style.display = 'flex'
-              }
-            }}
-          />
-        ) : null}
-        
-        {/* Game icon fallback */}
-        <div 
-          className={`game-icon-fallback ${battle.image_url ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}
-        >
-          {isValidGameIcon(gameIcon) ? (
-            <img
-              src={gameIcon || ''}
-              alt={`${battle.game_name || 'Unknown Game'} icon`}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement
-                target.style.display = 'none'
-                const fallback = target.nextElementSibling as HTMLElement
-                if (fallback && fallback.classList.contains('icon-fallback')) {
-                  fallback.style.display = 'flex'
-                }
-              }}
-            />
-          ) : null}
-          <div className={`w-full h-full bg-red-600 flex items-center justify-center icon-fallback ${isValidGameIcon(gameIcon) ? 'hidden' : ''}`}>
-            <span className="text-white text-6xl font-bold">
-              {battle.game_name?.charAt(0) || '?'}
-            </span>
-          </div>
-        </div>
+        <BattleImage
+          battleId={battle.id}
+          name={battle.battle_name || 'Untitled Battle'}
+          gameImage={null} // Let the hook handle game images as fallback
+          gameIcon={gameIcon}
+          size="large"
+          className=""
+          refreshKey={imageRefreshKey}
+        />
 
         {/* Result pill */}
         <div className="absolute top-2 left-2">
@@ -134,35 +110,23 @@ export function BattleCard({ battle, onViewBattle, onDeleteBattle, onEditBattle 
             {getResultText(battle.result)}
           </span>
         </div>
-
-        {/* Action buttons overlay */}
-        <div className="absolute top-2 right-2 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          {onEditBattle && (
-            <button
-              onClick={handleEditClick}
-              className="bg-white/90 hover:bg-white text-blue-600 hover:text-blue-700 transition-colors p-2 rounded-full shadow-sm"
-              title="Edit Battle"
-            >
-              <Edit className="w-4 h-4" />
-            </button>
-          )}
-          <button
-            onClick={handleDeleteClick}
-            className="bg-white/90 hover:bg-white text-red-600 hover:text-red-700 transition-colors p-2 rounded-full shadow-sm"
-            title="Delete Battle"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
       </div>
 
       {/* Battle Details */}
       <div className="p-4">
-        <h3 className="text-lg font-semibold text-title mb-3 h-14 overflow-hidden">
+        <h3 className="text-lg font-semibold text-title mb-2 h-14 overflow-hidden">
           <div className="overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
             {battle.battle_name || 'Untitled Battle'}
           </div>
         </h3>
+
+        {/* Campaign */}
+        {battle.campaign && (
+          <div className="flex items-center space-x-2 mb-3">
+            <Flag className="w-4 h-4 flex-shrink-0 text-brand" />
+            <span className="text-sm text-brand font-medium truncate">{battle.campaign.name}</span>
+          </div>
+        )}
         
         <div className="space-y-2 text-sm text-secondary-text">
           {/* Game */}

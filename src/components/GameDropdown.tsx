@@ -162,8 +162,24 @@ export function GameDropdown({ games, selectedGame, onGameSelect, placeholder = 
           {/* Games List */}
           <div className="max-h-48 overflow-y-auto">
             {filteredRecentGame.length === 0 && filteredFavoriteGames.length === 0 && filteredOtherGames.length === 0 && (!otherGame || !showOtherOption) ? (
-              <div className="px-4 py-3 text-secondary-text text-sm">
-                No games found matching "{searchTerm}"
+              <div className="space-y-2">
+                <div className="px-4 py-3 text-secondary-text text-sm">
+                  No games found matching "{searchTerm}"
+                </div>
+                {searchTerm.trim() && showAddNewButton && (
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(`new:${searchTerm.trim()}`)}
+                    className="w-full px-4 py-3 text-left hover:bg-bg-secondary flex items-center space-x-3 transition-colors border-t border-border-custom"
+                  >
+                    <img
+                      src="/bp-unkown.svg"
+                      alt=""
+                      className="w-6 h-6 object-contain flex-shrink-0 fallback-icon dark:invert-0 invert"
+                    />
+                    <span className="text-text">Create "{searchTerm.trim()}"</span>
+                  </button>
+                )}
               </div>
             ) : (
               <>

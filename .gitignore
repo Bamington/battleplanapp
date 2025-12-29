@@ -24,3 +24,10 @@ dist-ssr
 *.sw?
 .env
 .vercel
+.claude
+
+# Reserved Windows device names
+nul
+CON
+PRN
+AUX

@@ -1,50 +1,20 @@
 import React from 'react'
 import { formatLocalDate } from '../utils/timezone'
+import { CollectionImage } from './CollectionImage'
 
 interface BoxCardProps {
+  boxId: string
   name: string
   gameName: string
   modelCount: number
-  imageUrl: string | null
   gameImage: string | null
   gameIcon: string | null
   onViewBox: () => void
 }
 
-export function BoxCard({ name, gameName, modelCount, imageUrl, gameImage, gameIcon, onViewBox }: BoxCardProps) {
-  const formatDate = (dateString: string) => {
-    return formatLocalDate(dateString)
-  }
-
+export function BoxCard({ boxId, name, gameName, modelCount, gameImage, gameIcon, onViewBox }: BoxCardProps) {
   const getModelCountText = (count: number) => {
     return `${count} Model${count !== 1 ? 's' : ''}`
-  }
-
-  const getImageSrc = () => {
-    // Check if we have a valid box image URL
-    if (imageUrl && 
-        typeof imageUrl === 'string' &&
-        imageUrl.trim() !== '' && 
-        imageUrl !== 'undefined' && 
-        imageUrl !== 'null' &&
-        !imageUrl.includes('undefined') &&
-        !imageUrl.includes('null') &&
-        (imageUrl.startsWith('http') || imageUrl.startsWith('/'))) {
-      return imageUrl
-    }
-    
-    // Try to use the game's image as fallback
-    if (gameImage && 
-        typeof gameImage === 'string' &&
-        gameImage.trim() !== '' && 
-        gameImage !== 'undefined' && 
-        gameImage !== 'null' &&
-        gameImage.startsWith('http')) {
-      return gameImage
-    }
-    
-    // Fallback to default image (we don't have access to game image in BoxCard props)
-    return '/bp-unkown.svg'
   }
 
   const isValidGameIcon = (iconUrl: string | null | undefined): boolean => {
@@ -58,15 +28,18 @@ export function BoxCard({ name, gameName, modelCount, imageUrl, gameImage, gameI
   }
 
      return (
-     <div 
+     <div
        className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden max-w-[380px] flex flex-col hover:shadow-[0_8px_25px_rgba(114,77,221,0.25)] hover:-translate-y-1 transition-all duration-300 cursor-pointer"
        onClick={onViewBox}
      >
        <div className="aspect-w-16 aspect-h-12 relative bg-bg-card-secondary">
-         <img
-           src={getImageSrc()}
-           alt={name}
-           className="w-full h-48 min-h-[400px] bg-bg-card-secondary object-cover"
+         <CollectionImage
+           boxId={boxId}
+           name={name}
+           gameImage={gameImage}
+           gameIcon={gameIcon}
+           size="large"
+           className="bg-bg-card-secondary"
          />
        </div>
               <div className="p-4 flex flex-col flex-1">

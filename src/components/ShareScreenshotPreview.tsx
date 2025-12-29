@@ -3,7 +3,7 @@ import { X, Copy, Download, Save } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { formatLocalDate } from '../utils/timezone'
 import { supabase } from '../lib/supabase'
-import { themes, getTheme, type ThemeId } from '../themes'
+import { themes, getTheme, getVisibleThemes, type ThemeId } from '../themes'
 import { Toast } from './Toast'
 
 interface ShareScreenshotPreviewProps {
@@ -16,6 +16,18 @@ interface ShareScreenshotPreviewProps {
     painted_date?: string | null
     share_name?: string | null
     share_artist?: string | null
+    battle_result?: string | null
+    opponent_name?: string | null
+    images?: {
+      id: string
+      model_id?: string  // Optional for model images
+      box_id?: string    // Optional for box images
+      image_url: string
+      display_order: number
+      is_primary: boolean
+      created_at: string
+      user_id: string
+    }[]
     box?: {
       name: string
       game?: {
@@ -35,6 +47,21 @@ interface ShareScreenshotPreviewProps {
 }
 
 export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreenshotPreviewProps) {
+  // Detect the type of object we're working with
+  const getObjectType = (): 'battle' | 'collection' | 'model' => {
+    if (!model) return 'model'
+    // Battle: explicitly has box set to null
+    if (model.box === null) return 'battle'
+    // Collection: has box_id in images
+    if (model.images?.some(img => img.box_id)) return 'collection'
+    // Model: has a box property with name
+    if (model.box?.name) return 'model'
+    // Default to model
+    return 'model'
+  }
+
+  const objectType = getObjectType()
+
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [generating, setGenerating] = useState(false)
   const [copying, setCopying] = useState(false)
@@ -77,7 +104,59 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
   const [customGradientColor, setCustomGradientColor] = useState('')
   const [customBorderColor, setCustomBorderColor] = useState('')
   const [gradientOpacity, setGradientOpacity] = useState(0.4)
+  const [customBannerColor, setCustomBannerColor] = useState('')
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const { user, isBetaTester } = useAuth()
+
+  // Helper function to get all available images for the model
+  const getAvailableImages = () => {
+    if (!model) return []
+
+    const images = []
+
+    console.log('ShareScreenshot - getAvailableImages debug:', {
+      hasModel: !!model,
+      modelImages: model.images,
+      modelImageUrl: model.image_url,
+      modelName: model.name
+    })
+
+    // Add model images from the images array if available
+    if (model.images && model.images.length > 0) {
+      // Sort images: primary first, then by creation date
+      const sortedImages = [...model.images].sort((a, b) => {
+        if (a.is_primary && !b.is_primary) return -1
+        if (!a.is_primary && b.is_primary) return 1
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      })
+
+      images.push(...sortedImages.map(img => img.image_url))
+      console.log('ShareScreenshot - Using images array:', images)
+    } else if (model.image_url) {
+      // Fallback to the model's main image_url if no images array
+      images.push(model.image_url)
+      console.log('ShareScreenshot - Using fallback image_url:', model.image_url)
+    } else {
+      console.log('ShareScreenshot - No images found!')
+    }
+
+    return images
+  }
+
+  // Helper function to get the currently selected image URL
+  const getSelectedImageUrl = () => {
+    const availableImages = getAvailableImages()
+    if (availableImages.length === 0) {
+      console.log('ShareScreenshot - No available images to select')
+      return null
+    }
+
+    // Ensure selected index is within bounds
+    const safeIndex = Math.max(0, Math.min(selectedImageIndex, availableImages.length - 1))
+    const selectedUrl = availableImages[safeIndex]
+    console.log('ShareScreenshot - Selected image URL:', selectedUrl, 'at index', safeIndex)
+    return selectedUrl
+  }
 
   // Helper function to get the appropriate theme based on the model's game
   const getGameTheme = (model: ShareScreenshotPreviewProps['model']): ThemeId => {
@@ -103,11 +182,14 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
   // Get current theme from the new theme system
   const currentTheme = getTheme(selectedTheme)
 
-  // Update theme when model changes
+  // Update theme when model changes and reset image selection
   useEffect(() => {
     if (model) {
       const gameTheme = getGameTheme(model)
       setSelectedTheme(gameTheme)
+
+      // Reset to first image when model changes
+      setSelectedImageIndex(0)
     }
   }, [model])
 
@@ -295,7 +377,7 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
       
       return () => clearTimeout(timeoutId)
     }
-  }, [isOpen, model, isDarkText, showPaintedDate, showCollectionName, showGameDetails, shadowOpacity, textPosition, selectedTheme, userPublicName, showVisualOverlays, overlayOpacity, customModelName, customCollectionName, customGameName, customPaintedDate, customUserName, customGradientColor, customBorderColor, gradientOpacity])
+  }, [isOpen, model, isDarkText, showPaintedDate, showCollectionName, showGameDetails, shadowOpacity, textPosition, selectedTheme, userPublicName, showVisualOverlays, overlayOpacity, customModelName, customCollectionName, customGameName, customPaintedDate, customUserName, customGradientColor, customBorderColor, gradientOpacity, customBannerColor, selectedImageIndex])
 
   const ensureFontsLoaded = async () => {
     // Check if document.fonts is available (modern browsers)
@@ -378,9 +460,10 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
       
       // Wait a bit more to ensure fonts are fully rendered
       await new Promise(resolve => setTimeout(resolve, 300))
-      // Load the model image first to get its aspect ratio
+      // Load the selected image first to get its aspect ratio
       let imageLoaded = false
-      if (model.image_url) {
+      const selectedImageUrl = getSelectedImageUrl()
+      if (selectedImageUrl) {
         const img = new Image()
         img.crossOrigin = 'anonymous'
         
@@ -390,28 +473,36 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
               // Set canvas dimensions based on image aspect ratio
               const aspectRatio = img.width / img.height
               const maxSize = 1200 // Higher resolution for better quality
-              
+              const containerHeight = selectedTheme === 'shatterpoint' ? 100 : 0
+
               if (aspectRatio > 1) {
                 canvas.width = maxSize
-                canvas.height = maxSize / aspectRatio
+                canvas.height = (maxSize / aspectRatio) + containerHeight
               } else {
                 canvas.width = maxSize * aspectRatio
-                canvas.height = maxSize
+                canvas.height = maxSize + containerHeight
               }
               
               // Apply brightness and saturation filters
               ctx.filter = `brightness(${brightness}) saturate(${saturation})`
               
-              // Draw the image to fill the entire canvas (no rounded corners)
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+              // Draw the image to fill the canvas (no rounded corners)
+              // For Shatterpoint theme, offset the image down to make room for the container
+              if (selectedTheme === 'shatterpoint') {
+                const containerHeight = 100 // Blue container height from shatterpoint theme
+                const imageHeight = canvas.height - containerHeight
+                ctx.drawImage(img, 0, containerHeight, canvas.width, imageHeight)
+              } else {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+              }
               
               // Reset filter for subsequent draws
               ctx.filter = 'none'
               
               imageLoaded = true
             
-            // Add gradients if visual overlays are enabled
-            if (showVisualOverlays) {
+            // Add gradients if visual overlays are enabled (but not for Shatterpoint theme)
+            if (showVisualOverlays && selectedTheme !== 'shatterpoint') {
               // Convert hex color to RGB
               const hexToRgb = (hex: string) => {
                 const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
@@ -430,22 +521,22 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
               const gradient = ctx.createLinearGradient(0, 0, 0, gradientHeight)
               gradient.addColorStop(0, `rgba(${gradientRgbString}, ${gradientOpacity})`) // Custom color at custom opacity
               gradient.addColorStop(1, `rgba(${gradientRgbString}, 0)`)   // Fully transparent
-              
+
               ctx.fillStyle = gradient
               ctx.fillRect(0, 0, canvas.width, gradientHeight)
-              
+
               // Add radial gradient to bottom-right corner
               const cornerRadius = Math.min(canvas.width, canvas.height) * 0.3 // 30% of smallest dimension
               const cornerCenterX = canvas.width
               const cornerCenterY = canvas.height
-              
+
               const radialGradient = ctx.createRadialGradient(
                 cornerCenterX, cornerCenterY, 0, // Inner circle (center point, no radius)
                 cornerCenterX, cornerCenterY, cornerRadius // Outer circle
               )
               radialGradient.addColorStop(0, `rgba(${gradientRgbString}, ${gradientOpacity})`) // Custom color at custom opacity at center
               radialGradient.addColorStop(1, `rgba(${gradientRgbString}, 0)`)   // Fully transparent at edge
-              
+
               ctx.fillStyle = radialGradient
               ctx.fillRect(0, 0, canvas.width, canvas.height)
             }
@@ -453,10 +544,10 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
               resolve()
             }
             img.onerror = (error) => {
-              console.error('Failed to load model/collection image:', model.image_url, error)
-              reject(new Error(`Failed to load image: ${model.image_url}`))
+              console.error('Failed to load model/collection image:', selectedImageUrl, error)
+              reject(new Error(`Failed to load image: ${selectedImageUrl}`))
             }
-            img.src = model.image_url!
+            img.src = selectedImageUrl
           })
         } catch (error) {
           console.warn('Image loading failed, continuing with fallback:', error)
@@ -467,40 +558,51 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
       // Fallback if no image or image failed to load
       if (!imageLoaded) {
         // Fallback dimensions if no image
+        const containerHeight = selectedTheme === 'shatterpoint' ? 100 : 0
         canvas.width = 1200
-        canvas.height = 1200
+        canvas.height = 1200 + containerHeight
         ctx.fillStyle = '#f0f0f0'
         ctx.fillRect(0, 0, canvas.width, canvas.height)
       }
 
-      // Add Battleplan logo to top-left
-      try {
+      // Add Battleplan logo (but not for Red Fog or Shatterpoint themes as they have their own logos)
+      if (selectedTheme !== 'red-fog' && selectedTheme !== 'shatterpoint') {
+        try {
         const logoImg = new Image()
         logoImg.crossOrigin = 'anonymous'
-        
+
         await new Promise<void>((resolve, reject) => {
           logoImg.onload = () => {
             // Calculate logo size (proportional to canvas size) - reduced by 25% from previous
             const logoMaxSize = Math.min(canvas.width, canvas.height) * 0.24 // 24% of smallest dimension (75% of previous size)
             const logoAspectRatio = logoImg.width / logoImg.height
-            
+
             let logoWidth = logoMaxSize
             let logoHeight = logoMaxSize
-            
+
             if (logoAspectRatio > 1) {
               logoHeight = logoMaxSize / logoAspectRatio
             } else {
               logoWidth = logoMaxSize * logoAspectRatio
             }
-            
-            // Position in top-left with padding
+
             const logoPadding = 40
-            const logoX = logoPadding
-            const logoY = logoPadding
-            
+            let logoX, logoY
+
+            // Position based on theme
+            if (selectedTheme === 'shatterpoint') {
+              // Bottom-left positioning for Shatterpoint theme
+              logoX = logoPadding
+              logoY = canvas.height - logoHeight - logoPadding
+            } else {
+              // Top-left positioning for other themes
+              logoX = logoPadding
+              logoY = logoPadding
+            }
+
             // Draw the logo
             ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight)
-            
+
             resolve()
           }
           logoImg.onerror = () => {
@@ -511,8 +613,9 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
           // Use the same Battleplan logo for both themes
           logoImg.src = '/Battleplan-Logo-Purple.svg'
         })
-      } catch (error) {
-        console.warn('Error loading logo:', error)
+        } catch (error) {
+          console.warn('Error loading logo:', error)
+        }
       }
 
       // Use new theme system for rendering
@@ -523,6 +626,8 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
           ...model,
           name: customModelName || model.name,
           painted_date: customPaintedDate || model.painted_date,
+          battle_result: model.battle_result,
+          opponent_name: model.opponent_name,
           box: model.box ? {
             ...model.box,
             name: customCollectionName || model.box.name,
@@ -540,15 +645,16 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
         userPublicName: customUserName || userPublicName,
         shadowOpacity,
         textPosition,
-        showPaintedDate,
+        showPaintedDate: objectType === 'battle' ? true : showPaintedDate,
         showCollectionName,
-        showGameDetails,
+        showGameDetails: objectType === 'battle' ? false : showGameDetails,
         isDarkText,
         showVisualOverlays,
         overlayOpacity,
         customGradientColor,
         customBorderColor,
-        gradientOpacity
+        gradientOpacity,
+        customBannerColor
       }
 
       // Render visual overlays if enabled and theme supports them
@@ -581,30 +687,32 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
         await currentTheme.renderOptions.renderStandardLayout(renderContext)
       }
 
-      // Draw border on top of everything (last step) - with or without rounded corners based on theme
-      ctx.save()
-      const borderWidth = 3
-      const useRoundedCorners = selectedTheme !== 'marathon' // Marathon theme uses square corners
-      const borderCornerRadius = useRoundedCorners ? 8 : 0 // matches Tailwind rounded-lg (0.5rem = 8px) or square
-      ctx.strokeStyle = customBorderColor
-      ctx.lineWidth = borderWidth
-      
-      // Draw border inside the canvas bounds
-      const borderOffset = borderWidth / 2
-      const borderX = borderOffset
-      const borderY = borderOffset
-      const borderW = canvas.width - borderWidth
-      const borderH = canvas.height - borderWidth
-      const innerBorderRadius = Math.max(0, borderCornerRadius - borderOffset)
-      
-      ctx.beginPath()
-      if (useRoundedCorners) {
-        ctx.roundRect(borderX, borderY, borderW, borderH, innerBorderRadius)
-      } else {
-        ctx.rect(borderX, borderY, borderW, borderH)
+      // Draw border on top of everything (last step) - but not for Shatterpoint theme
+      if (selectedTheme !== 'shatterpoint') {
+        ctx.save()
+        const borderWidth = 3
+        const useRoundedCorners = selectedTheme !== 'marathon' // Marathon theme uses square corners
+        const borderCornerRadius = useRoundedCorners ? 8 : 0 // matches Tailwind rounded-lg (0.5rem = 8px) or square
+        ctx.strokeStyle = customBorderColor
+        ctx.lineWidth = borderWidth
+
+        // Draw border inside the canvas bounds
+        const borderOffset = borderWidth / 2
+        const borderX = borderOffset
+        const borderY = borderOffset
+        const borderW = canvas.width - borderWidth
+        const borderH = canvas.height - borderWidth
+        const innerBorderRadius = Math.max(0, borderCornerRadius - borderOffset)
+
+        ctx.beginPath()
+        if (useRoundedCorners) {
+          ctx.roundRect(borderX, borderY, borderW, borderH, innerBorderRadius)
+        } else {
+          ctx.rect(borderX, borderY, borderW, borderH)
+        }
+        ctx.stroke()
+        ctx.restore()
       }
-      ctx.stroke()
-      ctx.restore()
 
     } catch (error) {
       console.error('Error generating screenshot:', error)
@@ -764,6 +872,47 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
           <div className="space-y-6">
             {activeTab === 'Photo' && (
               <div className="space-y-6">
+                {/* Photo Selection Section - Only show if multiple photos available */}
+                {getAvailableImages().length > 1 && (
+                  <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium text-secondary-text">
+                        Select Photo ({selectedImageIndex + 1} of {getAvailableImages().length})
+                      </label>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                        {getAvailableImages().map((imageUrl, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setSelectedImageIndex(index)}
+                            className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
+                              selectedImageIndex === index
+                                ? 'border-brand shadow-lg'
+                                : 'border-border-custom hover:border-brand/50'
+                            }`}
+                          >
+                            <img
+                              src={imageUrl}
+                              alt={`Photo ${index + 1}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.src = '/bp-unkown.svg'
+                              }}
+                            />
+                            {selectedImageIndex === index && (
+                              <div className="absolute inset-0 bg-brand/20 flex items-center justify-center">
+                                <div className="w-6 h-6 rounded-full bg-brand flex items-center justify-center">
+                                  <span className="text-white text-xs font-bold">✓</span>
+                                </div>
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Image Adjustments Section */}
                 <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
                   
@@ -825,6 +974,7 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                   {/* Text Color & Position Row */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Text Color Toggle */}
+                    {!currentTheme.customControls?.hideDarkTextToggle && (
                     <div className="space-y-3">
                       <label className="text-sm font-medium text-secondary-text">Text Color</label>
                       <div className="flex items-center justify-between bg-bg-primary rounded-lg p-3">
@@ -848,6 +998,7 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                         </span>
                       </div>
                     </div>
+                    )}
 
                     {/* Text Position - Hidden for themes with custom text positioning */}
                     {!currentTheme.renderOptions.customTextPosition && (
@@ -866,6 +1017,7 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                   </div>
 
                   {/* Text Shadow Slider */}
+                  {!currentTheme.customControls?.hideTextShadow && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-medium text-secondary-text">Text Shadow</label>
@@ -888,6 +1040,7 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                       <span className="text-xs text-secondary-text w-8 text-center">Strong</span>
                     </div>
                   </div>
+                  )}
                 </div>
               </div>
             )}
@@ -903,10 +1056,10 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                       onChange={(e) => setSelectedTheme(e.target.value as ThemeId)}
                       className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand/50 focus:border-brand bg-bg-primary text-text text-sm transition-colors"
                     >
-                      {Object.entries(themes)
-                        .sort(([, a], [, b]) => a.name.localeCompare(b.name))
-                        .map(([key, theme]) => (
-                          <option key={key} value={key}>
+                      {getVisibleThemes()
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((theme) => (
+                          <option key={theme.id} value={theme.id}>
                             {theme.name}
                           </option>
                         ))}
@@ -918,6 +1071,7 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                 <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
                   
                   {/* Gradients Toggle */}
+                  {!currentTheme.customControls?.hideVisualOverlays && (
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-secondary-text">Gradients</label>
                     <div className="flex items-center justify-between bg-bg-primary rounded-lg p-3">
@@ -938,6 +1092,7 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                       </button>
                     </div>
                   </div>
+                  )}
 
                   {/* Gradient Controls - Only show when gradients are enabled */}
                   {showVisualOverlays && (
@@ -945,6 +1100,7 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                       {/* Color Pickers Row */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* Gradient Color */}
+                        {!currentTheme.customControls?.hideGradientColor && (
                         <div className="space-y-3">
                           <label className="text-sm font-medium text-secondary-text">Gradient Color</label>
                           <div className="flex items-center space-x-3 bg-bg-primary rounded-lg p-3">
@@ -960,8 +1116,10 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                             </div>
                           </div>
                         </div>
+                        )}
 
                         {/* Border Color */}
+                        {!currentTheme.customControls?.hideBorderColor && (
                         <div className="space-y-3">
                           <label className="text-sm font-medium text-secondary-text">Border Color</label>
                           <div className="flex items-center space-x-3 bg-bg-primary rounded-lg p-3">
@@ -977,9 +1135,11 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                             </div>
                           </div>
                         </div>
+                        )}
                       </div>
 
                       {/* Gradient Opacity Slider */}
+                      {!currentTheme.customControls?.hideGradientOpacity && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <label className="text-sm font-medium text-secondary-text">Gradient Opacity</label>
@@ -1002,6 +1162,7 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                           <span className="text-xs text-secondary-text w-12 text-center">Strong</span>
                         </div>
                       </div>
+                      )}
                     </>
                   )}
 
@@ -1031,6 +1192,26 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                     </div>
                   )}
                 </div>
+
+                {/* Theme Color Section - Only show for themes with banner color options */}
+                {currentTheme.customControls?.bannerColorOptions && (
+                <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-secondary-text">Theme Color</label>
+                    <select
+                      value={customBannerColor || currentTheme.customControls.bannerColorOptions[0].value}
+                      onChange={(e) => setCustomBannerColor(e.target.value)}
+                      className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand/50 focus:border-brand bg-bg-primary text-text text-sm transition-colors"
+                    >
+                      {currentTheme.customControls.bannerColorOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                )}
               </div>
             )}
 
@@ -1039,10 +1220,10 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                 {/* Model Information Section */}
                 <div className="bg-bg-secondary/50 rounded-xl p-4 space-y-4">
                   
-                  {/* Model/Collection Name - Always shown */}
+                  {/* Model/Collection/Battle Name - Always shown */}
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-secondary-text">
-                      {model?.box === null ? 'Collection Name' : 'Model Name'}
+                      {objectType === 'battle' ? 'Battle Name' : objectType === 'collection' ? 'Collection Name' : 'Model Name'}
                     </label>
                     <input
                       type="text"
@@ -1106,8 +1287,8 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                     </div>
                   )}
 
-                  {/* Game Name */}
-                  {(model.box?.game?.name || model.game?.name) && (
+                  {/* Game Name - Only show for models/collections, not battles */}
+                  {objectType !== 'battle' && (model.box?.game?.name || model.game?.name) && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-sm font-medium text-secondary-text">Game</label>
@@ -1138,11 +1319,13 @@ export function ShareScreenshotPreview({ isOpen, onClose, model }: ShareScreensh
                     </div>
                   )}
 
-                  {/* Painted Date */}
+                  {/* Painted/Played Date */}
                   {model.painted_date && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-secondary-text">Painted Date</label>
+                        <label className="text-sm font-medium text-secondary-text">
+                          {objectType === 'battle' ? 'Played Date' : 'Painted Date'}
+                        </label>
                         <button
                           onClick={() => setShowPaintedDate(!showPaintedDate)}
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand/50 focus:ring-offset-2 focus:ring-offset-bg-secondary ${

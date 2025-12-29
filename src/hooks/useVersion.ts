@@ -3,9 +3,10 @@ import { supabase } from '../lib/supabase'
 
 interface Version {
   id: number
-  ver_number: number
+  ver_number: string
   created_at: string
   ver_notes?: string | null
+  published: boolean
 }
 
 export function useVersion() {
@@ -21,7 +22,8 @@ export function useVersion() {
 
       const { data, error: fetchError } = await supabase
         .from('version')
-        .select('id, ver_number, created_at, ver_notes')
+        .select('id, ver_number, created_at, ver_notes, published')
+        .eq('published', true)
         .order('created_at', { ascending: false })
         .limit(1)
 
@@ -31,9 +33,10 @@ export function useVersion() {
           console.warn('Version table not accessible, using default version')
           setCurrentVersion({
             id: 0,
-            ver_number: 1.00,
+            ver_number: '1.0.0',
             created_at: new Date().toISOString(),
-            ver_notes: 'Default version'
+            ver_notes: 'Default version',
+            published: true
           })
           return
         }
@@ -45,9 +48,10 @@ export function useVersion() {
         console.warn('No version found in database, using default version')
         setCurrentVersion({
           id: 0,
-          ver_number: 1.00,
+          ver_number: '1.0.0',
           created_at: new Date().toISOString(),
-          ver_notes: 'Default version'
+          ver_notes: 'Default version',
+          published: true
         })
       } else {
         setCurrentVersion(data[0])
@@ -57,9 +61,10 @@ export function useVersion() {
       // Set a default version instead of showing error
       setCurrentVersion({
         id: 0,
-        ver_number: 1.00,
+        ver_number: '1.0.0',
         created_at: new Date().toISOString(),
-        ver_notes: 'Default version'
+        ver_notes: 'Default version',
+        published: true
       })
     } finally {
       setLoading(false)

@@ -4,10 +4,17 @@ import { useAuth } from './useAuth'
 
 interface WishlistItem {
   id: number
-  item_name: string | null
+  product_name: string
+  description: string | null
   user_uid: string | null
   image_url: string | null
   created_at: string
+}
+
+interface ProductToAdd {
+  product_name: string
+  description?: string
+  image_url?: string
 }
 
 export function useWishlist() {
@@ -38,7 +45,7 @@ export function useWishlist() {
       
       const { data, error } = await supabase
         .from('wishlist')
-        .select('id, item_name, user_uid, created_at')
+        .select('id, product_name, description, user_uid, image_url, created_at')
         .eq('user_uid', user.id)
         .order('created_at', { ascending: false })
 
@@ -62,14 +69,16 @@ export function useWishlist() {
     }
   }
 
-  const addWishlistItem = async (itemName: string) => {
+  const addWishlistItem = async (product: ProductToAdd) => {
     if (!user) return { error: new Error('User not authenticated') }
 
     try {
       const { data, error } = await supabase
         .from('wishlist')
         .insert([{
-          item_name: itemName,
+          product_name: product.product_name,
+          description: product.description || null,
+          image_url: product.image_url || null,
           user_uid: user.id
         }])
         .select()

@@ -25,48 +25,36 @@ export interface Battle {
   result: string | null
   user_id: string | null
   created_at: string
+  campaign_id: string | null
+  campaign?: {
+    id: string
+    name: string
+    description: string | null
+    start_date: string | null
+    end_date: string | null
+  } | null
 }
 
 export function useBattles() {
   const [battles, setBattles] = useState<Battle[]>([])
-  const [loading, setLoading] = useState(true)
-  const [hasInitialized, setHasInitialized] = useState(false)
+  const [isLoading, setIsLoading] = useState(true) // Always start with loading = true
   const { user, loading: authLoading } = useAuth()
 
-  const fetchBattles = async (isRefetch = false) => {
-    console.log('fetchBattles called:', { isRefetch, authLoading, user: !!user })
-    
-    // Show loading while auth is loading
-    if (authLoading) {
-      console.log('Auth still loading, setting loading=true and returning')
-      setLoading(true)
-      setHasInitialized(false)
-      return
-    }
-
-    if (!user) {
-      console.log('No user, clearing battles and returning')
-      setBattles([])
-      setLoading(false)
-      setHasInitialized(true)
-      return
-    }
-
-    const startTime = Date.now()
-    // Only apply minimum loading time for initial loads, not refetches
-    const minLoadingTime = isRefetch ? 0 : 500
-
+  const fetchBattles = async () => {
     try {
-      // Only show loading for initial loads, not refetches
-      if (!isRefetch) {
-        setLoading(true)
+      // Don't fetch if no user
+      if (!user) {
+        setBattles([])
+        setIsLoading(false)
+        return
       }
-      
+
       const { data, error } = await supabase
         .from('battles')
         .select(`
           *,
-          opponent:opponents(*)
+          opponent:opponents(*),
+          campaign:campaigns(id, name, description, start_date, end_date)
         `)
         .eq('user_id', user.id)
         .order('date_played', { ascending: false, nullsLast: true })
@@ -76,47 +64,33 @@ export function useBattles() {
         console.error('Error fetching battles:', error)
         setBattles([])
       } else {
-        console.log('Battles fetched successfully:', { count: data?.length || 0, isRefetch })
         setBattles(data || [])
       }
     } catch (error) {
       console.error('Error fetching battles:', error)
       setBattles([])
     } finally {
-      // Ensure minimum loading time for better UX (only for initial loads)
-      const elapsedTime = Date.now() - startTime
-      const remainingTime = Math.max(0, minLoadingTime - elapsedTime)
-      
-      setTimeout(() => {
-        // For refetches, ensure loading is turned off if it was on
-        // For initial loads, always set loading to false
-        if (isRefetch) {
-          if (loading) {
-            setLoading(false)
-          }
-        } else {
-          setLoading(false)
-        }
-        setHasInitialized(true)
-      }, remainingTime)
+      // Only stop loading when we're completely done
+      setIsLoading(false)
     }
   }
 
+  // Fetch data when auth completes
   useEffect(() => {
-    fetchBattles()
+    if (!authLoading) {
+      // Ensure we show loading state when starting to fetch
+      setIsLoading(true)
+      fetchBattles()
+    }
   }, [user, authLoading])
 
   const refetch = async () => {
-    console.log('useBattles refetch called')
-    await fetchBattles(true) // Pass true to indicate this is a refetch
-    console.log('useBattles refetch completed')
+    await fetchBattles()
   }
-
 
   return {
     battles,
-    loading,
-    hasInitialized,
+    loading: isLoading || authLoading,
     refetch
   }
 }

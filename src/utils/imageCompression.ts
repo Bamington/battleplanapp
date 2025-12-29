@@ -77,8 +77,20 @@ export async function compressImage(
  * @returns boolean - True if the file is a supported image
  */
 export function isValidImageFile(file: File): boolean {
-  const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-  return supportedTypes.includes(file.type.toLowerCase())
+  const supportedTypes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+    'image/jfif',
+    'application/octet-stream' // Allow for unusual extensions like .mp.jpg
+  ]
+
+  // Also check file extension as backup for MIME type detection issues
+  const fileName = file.name.toLowerCase()
+  const hasValidExtension = /\.(jpg|jpeg|png|webp|mp\.jpg|jfif)$/i.test(fileName)
+
+  return supportedTypes.includes(file.type.toLowerCase()) || hasValidExtension
 }
 
 /**

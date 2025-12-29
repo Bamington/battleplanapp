@@ -1,6 +1,7 @@
 import React from 'react'
 import { Trash2, Calendar, User, Gamepad2, Edit } from 'lucide-react'
 import { formatLocalDate } from '../utils/timezone'
+import { BattleImage } from './BattleImage'
 
 interface Battle {
   id: number
@@ -10,7 +11,6 @@ interface Battle {
   game_name: string | null
   game_uid: string | null
   game_icon: string | null
-  image_url: string | null
   opp_name: string | null // Keep for backward compatibility
   opp_id: string[] | null
   opponent_id: number | null
@@ -46,15 +46,6 @@ export function BattleListItem({ battle, onViewBattle, onDeleteBattle, onEditBat
     }
   }
 
-  const isValidGameIcon = (iconUrl: string | null | undefined): boolean => {
-    return !!(iconUrl && 
-      typeof iconUrl === 'string' &&
-      iconUrl.trim() !== '' && 
-      iconUrl !== 'undefined' && 
-      iconUrl !== 'null' &&
-      iconUrl.startsWith('http') &&
-      iconUrl.includes('game-assets'))
-  }
 
   return (
     <div 
@@ -63,71 +54,16 @@ export function BattleListItem({ battle, onViewBattle, onDeleteBattle, onEditBat
     >
       {/* Left side: Battle info */}
       <div className="flex items-center space-x-4 flex-1 min-w-0">
-        {/* Battle image or game icon/placeholder */}
+        {/* Battle image */}
         <div className="flex-shrink-0">
-          {battle.image_url ? (
-            // Show battle image if available
-            <img
-              src={battle.image_url}
-              alt="Battle image"
-              className="w-10 h-10 object-cover rounded flex-shrink-0"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement
-                console.warn('Battle image failed to load:', battle.image_url, 'Falling back to game icon')
-                // Hide the broken image and show game icon fallback
-                target.style.display = 'none'
-                const fallback = target.nextElementSibling as HTMLElement
-                if (fallback && fallback.classList.contains('game-icon-fallback')) {
-                  fallback.style.display = 'block'
-                }
-              }}
-            />
-          ) : null}
-          
-          {/* Game icon fallback (shown when no battle image or battle image fails to load) */}
-          <div 
-            className="game-icon-fallback"
-            style={{ display: battle.image_url ? 'none' : 'block' }}
-          >
-            {isValidGameIcon(battle.game_icon) ? (
-              <>
-                <img
-                  src={battle.game_icon || ''}
-                  alt={`${battle.game_name || 'Unknown Game'} icon`}
-                  className="w-10 h-10 object-contain rounded flex-shrink-0"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement
-                    console.warn('Game icon failed to load:', battle.game_icon, 'Falling back to letter icon')
-                    // Hide the broken image and show fallback
-                    target.style.display = 'none'
-                    const fallback = target.nextElementSibling as HTMLElement
-                    if (fallback && fallback.classList.contains('icon-fallback')) {
-                      fallback.style.display = 'flex'
-                    }
-                  }}
-                  onLoad={(e) => {
-                    // Hide fallback when image loads successfully
-                    const target = e.target as HTMLImageElement
-                    const fallback = target.nextElementSibling as HTMLElement
-                    if (fallback && fallback.classList.contains('icon-fallback')) {
-                      fallback.style.display = 'none'
-                    }
-                  }}
-                />
-                <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center icon-fallback">
-                  <span className="text-white text-sm font-bold">
-                    {battle.game_name?.charAt(0) || '?'}
-                  </span>
-                </div>
-              </>
-            ) : (
-              <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-bold">
-                  {battle.game_name?.charAt(0) || '?'}
-                </span>
-              </div>
-            )}
-          </div>
+          <BattleImage
+            battleId={battle.id}
+            name={battle.battle_name || 'Untitled Battle'}
+            gameImage={null}
+            gameIcon={battle.game_icon}
+            size="small"
+            className="w-10 h-10 object-cover rounded flex-shrink-0"
+          />
         </div>
 
         {/* Battle details */}

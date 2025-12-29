@@ -1,38 +1,49 @@
 import React, { useState } from 'react'
-import { Plus, Palette, Info, Lightbulb, X } from 'lucide-react'
-import { PaintingInspirationModal } from './PaintingInspirationModal'
+import { Plus, Palette, Info, Trash2 } from 'lucide-react'
+import { ModelCard } from './ModelCard'
 
 interface PaintingTablePageProps {
   onSelectModel: () => void
   paintingTableModels: any[]
   onRemoveModel: (modelId: string) => void
+  onViewModel: (model: any) => void
+  onViewBox?: (box: any) => void
 }
 
-export function PaintingTablePage({ onSelectModel, paintingTableModels, onRemoveModel }: PaintingTablePageProps) {
+export function PaintingTablePage({ onSelectModel, paintingTableModels, onRemoveModel, onViewModel, onViewBox }: PaintingTablePageProps) {
   const maxModels = 3
-  const [inspirationModal, setInspirationModal] = useState<{
+  const [confirmRemove, setConfirmRemove] = useState<{
     isOpen: boolean
+    modelId: string
     modelName: string
-    gameName: string
   }>({
     isOpen: false,
-    modelName: '',
-    gameName: ''
+    modelId: '',
+    modelName: ''
   })
 
-  const showInspiration = (model: any) => {
-    setInspirationModal({
+  const handleRemoveClick = (model: any) => {
+    setConfirmRemove({
       isOpen: true,
-      modelName: model.name,
-      gameName: model.game?.name || model.box?.game?.name || 'Unknown Game'
+      modelId: model.id,
+      modelName: model.name
     })
   }
 
-  const closeInspiration = () => {
-    setInspirationModal({
+  const handleConfirmRemove = () => {
+    onRemoveModel(confirmRemove.modelId)
+    setConfirmRemove({
       isOpen: false,
-      modelName: '',
-      gameName: ''
+      modelId: '',
+      modelName: ''
+    })
+  }
+
+  const handleCancelRemove = () => {
+    setConfirmRemove({
+      isOpen: false,
+      modelId: '',
+      modelName: ''
     })
   }
 
@@ -84,58 +95,33 @@ export function PaintingTablePage({ onSelectModel, paintingTableModels, onRemove
 
       {/* Painting Table Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[400px]">
-        {/* Model tiles */}
+        {/* Model cards with remove functionality */}
         {paintingTableModels.map((model, index) => (
-          <div 
-            key={model.id || index} 
-            className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden max-w-[380px] flex flex-col h-full hover:shadow-[0_8px_25px_rgba(114,77,221,0.25)] hover:-translate-y-1 transition-all duration-300 cursor-pointer min-h-[300px]"
-          >
-            {/* Model image area - placeholder for now */}
-            <div className="h-48 bg-bg-secondary flex items-center justify-center">
-              <Palette className="w-12 h-12 text-icon" />
-            </div>
-
-            {/* Model info */}
-            <div className="flex-1 p-6 flex flex-col">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-bold text-title text-lg flex-1">{model.name}</h3>
-                <div className="flex items-center space-x-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      showInspiration(model)
-                    }}
-                    className="text-secondary-text hover:text-brand transition-colors p-1 rounded"
-                    title="Get painting inspiration"
-                  >
-                    <Lightbulb className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onRemoveModel(model.id)
-                    }}
-                    className="text-secondary-text hover:text-red-500 transition-colors p-1 rounded"
-                    title="Remove from painting table"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              <p className="text-secondary-text text-sm flex-1">Painting in progress...</p>
-            </div>
-
-            {/* Footer with progress info */}
-            <div className="px-6 py-4 bg-bg-secondary border-t border-border-custom">
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-secondary-text font-medium">
-                  Status
-                </div>
-                <div className="text-xs text-yellow-600 font-bold bg-yellow-100 rounded-full px-2 py-1">
-                  In Progress
-                </div>
-              </div>
-            </div>
+          <div key={model.id || index} className="relative">
+            <ModelCard
+              model={model}
+              name={model.name}
+              boxName={model.box?.name || 'Unknown Collection'}
+              gameName={model.game?.name || model.box?.game?.name || 'Unknown Game'}
+              gameIcon={model.game?.icon || model.box?.game?.icon}
+              status={model.status || 'None'}
+              count={model.count || 1}
+              imageUrl={model.image_url}
+              paintedDate={model.painted_date}
+              onViewModel={() => onViewModel(model)}
+              onViewBox={onViewBox}
+            />
+            {/* Remove button overlay */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleRemoveClick(model)
+              }}
+              className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors z-10 m-1"
+              title="Remove from painting table"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
         ))}
       </div>
@@ -151,13 +137,40 @@ export function PaintingTablePage({ onSelectModel, paintingTableModels, onRemove
         </div>
       )}
 
-      {/* Painting Inspiration Modal */}
-      <PaintingInspirationModal
-        isOpen={inspirationModal.isOpen}
-        onClose={closeInspiration}
-        modelName={inspirationModal.modelName}
-        gameName={inspirationModal.gameName}
-      />
+      {/* Confirmation Modal */}
+      {confirmRemove.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-modal-bg rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 bg-red-100 rounded-full">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-title">Remove from Painting Table</h3>
+            </div>
+
+            <p className="text-text mb-6">
+              Are you sure you want to remove <strong>{confirmRemove.modelName}</strong> from your painting table?
+              This will not delete the model from your collection.
+            </p>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={handleConfirmRemove}
+                className="btn-danger flex-1"
+              >
+                Remove
+              </button>
+              <button
+                onClick={handleCancelRemove}
+                className="btn-secondary flex-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

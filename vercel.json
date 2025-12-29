@@ -16,6 +16,6 @@
       ]
     }
   ],
-  "buildCommand": "npm ci && npm install @rollup/rollup-linux-x64-gnu && npm run build",
+  "buildCommand": "npm ci && npm install @rollup/rollup-linux-x64-gnu && npm run sync-version && npm run build",
   "installCommand": "npm ci"
 }

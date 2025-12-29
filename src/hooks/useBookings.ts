@@ -33,39 +33,19 @@ interface Booking {
 
 export function useBookings() {
   const [bookings, setBookings] = useState<Booking[]>([])
-  const [loading, setLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(true) // Always start with loading = true
   const [error, setError] = useState<string | null>(null)
-  const [hasInitialized, setHasInitialized] = useState(false)
   const { user, loading: authLoading } = useAuth()
 
-  useEffect(() => {
-    // Show skeleton loading while auth is loading
-    if (authLoading) {
-      setLoading(true)
-      setHasInitialized(false)
-      return
-    }
-
-    // Only proceed if auth has finished loading
-    if (!authLoading) {
+  const fetchBookings = async () => {
+    try {
+      // Don't fetch if no user
       if (!user) {
         setBookings([])
-        setLoading(false)
-        setHasInitialized(true)
+        setIsLoading(false)
         return
       }
 
-      // Always show loading when user is available
-      setLoading(true)
-      fetchBookings()
-    }
-  }, [user, authLoading])
-
-  const fetchBookings = async () => {
-    const startTime = Date.now()
-    const minLoadingTime = 500 // Minimum 500ms loading time for better UX
-    
-    try {
       // First, get bookings with related data (except user)
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
@@ -94,7 +74,7 @@ export function useBookings() {
             icon
           )
         `)
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('date', { ascending: true })
 
       if (bookingsError) throw bookingsError
@@ -105,7 +85,7 @@ export function useBookings() {
 
       // Get unique user IDs
       const userIds = [...new Set(bookingsData.map(booking => booking.user_id))]
-      
+
       // Fetch user data
       const { data: usersData, error: usersError } = await supabase
         .from('users')
@@ -126,20 +106,29 @@ export function useBookings() {
       }))
 
       setBookings(bookingsWithUsers)
+      setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch bookings')
-         } finally {
-       // Ensure minimum loading time for better UX
-       const elapsedTime = Date.now() - startTime
-       const remainingTime = Math.max(0, minLoadingTime - elapsedTime)
-       
-       setTimeout(() => {
-         setLoading(false)
-         setHasInitialized(true)
-       }, remainingTime)
-     }
+      setBookings([])
+    } finally {
+      // Only stop loading when we're completely done
+      setIsLoading(false)
+    }
   }
 
+  // Fetch data when auth completes
+  useEffect(() => {
+    if (!authLoading) {
+      // Ensure we show loading state when starting to fetch
+      setIsLoading(true)
+      fetchBookings()
+    }
+  }, [user, authLoading])
 
-  return { bookings, loading, error, hasInitialized, refetch: fetchBookings }
+  return {
+    bookings,
+    loading: isLoading || authLoading,
+    error,
+    refetch: fetchBookings
+  }
 }

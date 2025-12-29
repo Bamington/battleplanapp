@@ -40,52 +40,64 @@ export function ModelCard({ model, name, boxName, gameName, gameIcon, status, co
   }
 
   const getImageSrc = () => {
-    // First, try to get the primary image from the images array
-    const primaryImage = model?.images?.find((img: any) => img.is_primary)
-    if (primaryImage?.image_url && 
+    // First, try to get the primary non-progress image from the images array
+    const primaryImage = model?.images?.find((img: any) => img.is_primary && !img.is_progress_photo)
+    if (primaryImage?.image_url &&
         typeof primaryImage.image_url === 'string' &&
-        primaryImage.image_url.trim() !== '' && 
-        primaryImage.image_url !== 'undefined' && 
+        primaryImage.image_url.trim() !== '' &&
+        primaryImage.image_url !== 'undefined' &&
         primaryImage.image_url !== 'null' &&
         !primaryImage.image_url.includes('undefined') &&
         !primaryImage.image_url.includes('null')) {
       return { src: primaryImage.image_url, isGameFallback: false, isBpUnknownFallback: false }
     }
-    
-    // Fallback to first image in the array if no primary image
-    const firstImage = model?.images?.[0]
-    if (firstImage?.image_url && 
-        typeof firstImage.image_url === 'string' &&
-        firstImage.image_url.trim() !== '' && 
-        firstImage.image_url !== 'undefined' && 
-        firstImage.image_url !== 'null' &&
-        !firstImage.image_url.includes('undefined') &&
-        !firstImage.image_url.includes('null')) {
-      return { src: firstImage.image_url, isGameFallback: false, isBpUnknownFallback: false }
+
+    // Fallback to first non-progress image in the array if no primary image
+    const firstNonProgressImage = model?.images?.find((img: any) => !img.is_progress_photo)
+    if (firstNonProgressImage?.image_url &&
+        typeof firstNonProgressImage.image_url === 'string' &&
+        firstNonProgressImage.image_url.trim() !== '' &&
+        firstNonProgressImage.image_url !== 'undefined' &&
+        firstNonProgressImage.image_url !== 'null' &&
+        !firstNonProgressImage.image_url.includes('undefined') &&
+        !firstNonProgressImage.image_url.includes('null')) {
+      return { src: firstNonProgressImage.image_url, isGameFallback: false, isBpUnknownFallback: false }
     }
-    
+
+    // If no non-progress photos exist, use the first progress photo
+    const firstProgressImage = model?.images?.find((img: any) => img.is_progress_photo)
+    if (firstProgressImage?.image_url &&
+        typeof firstProgressImage.image_url === 'string' &&
+        firstProgressImage.image_url.trim() !== '' &&
+        firstProgressImage.image_url !== 'undefined' &&
+        firstProgressImage.image_url !== 'null' &&
+        !firstProgressImage.image_url.includes('undefined') &&
+        !firstProgressImage.image_url.includes('null')) {
+      return { src: firstProgressImage.image_url, isGameFallback: false, isBpUnknownFallback: false }
+    }
+
     // Fallback to legacy image_url for backward compatibility
-    if (imageUrl && 
+    if (imageUrl &&
         typeof imageUrl === 'string' &&
-        imageUrl.trim() !== '' && 
-        imageUrl !== 'undefined' && 
+        imageUrl.trim() !== '' &&
+        imageUrl !== 'undefined' &&
         imageUrl !== 'null' &&
         !imageUrl.includes('undefined') &&
         !imageUrl.includes('null')) {
       return { src: imageUrl, isGameFallback: false, isBpUnknownFallback: false }
     }
-    
+
     // Try to use the game's icon as fallback
     const gameIcon = model?.box?.game?.icon || model?.game?.icon
-    if (gameIcon && 
+    if (gameIcon &&
         typeof gameIcon === 'string' &&
-        gameIcon.trim() !== '' && 
-        gameIcon !== 'undefined' && 
+        gameIcon.trim() !== '' &&
+        gameIcon !== 'undefined' &&
         gameIcon !== 'null' &&
         gameIcon.startsWith('http')) {
       return { src: gameIcon, isGameFallback: true, isBpUnknownFallback: false }
     }
-    
+
     // Fallback to default image
     return { src: '/bp-unkown.svg', isGameFallback: false, isBpUnknownFallback: true }
   }

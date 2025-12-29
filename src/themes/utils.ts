@@ -1,12 +1,8 @@
-import { ThemeRenderContext } from './types'
+import { ThemeRenderContext, ThemeFonts } from './types'
 import { formatLocalDate } from '../utils/timezone'
+import { getLegacyFontString, getThemeFontStyle, transformText, getFontConfig } from './fontUtils'
 
-export const renderStandardTextLayout = (context: ThemeRenderContext, fonts?: { 
-  titleFont: string
-  bodyFont: string 
-  smallFont: string
-  tinyFont: string 
-}): number => {
+export const renderStandardTextLayout = (context: ThemeRenderContext, themeFonts?: ThemeFonts): number => {
   const { 
     ctx, 
     canvas, 
@@ -34,11 +30,46 @@ export const renderStandardTextLayout = (context: ThemeRenderContext, fonts?: {
   let currentY = canvas.height - padding
 
   // User's public name (bottom) - with drop shadow
+  // For battles, show result instead of username
   // Only show username if we have a userPublicName or display_name (no email fallback)
-  if (userPublicName || user?.user_metadata?.display_name) {
+  const isBattle = !model.box && model.battle_result !== undefined
+  let displayText = ''
+
+  console.log('Battle detection debug:', {
+    isBattle,
+    'model.box': model.box,
+    'model.battle_result': model.battle_result,
+    'model.opponent_name': model.opponent_name,
+    'typeof model.box': typeof model.box,
+    'model.box === null': model.box === null,
+    'model.box === undefined': model.box === undefined
+  })
+
+  if (isBattle && model.battle_result) {
+    // For battles, show the winner or draw
+    const result = model.battle_result.toLowerCase()
+    if (result.includes('draw') || result.includes('tie')) {
+      displayText = 'Draw'
+    } else if (result.includes('i won') || result.includes('win')) {
+      // User won - use their name if available, otherwise "I won"
+      if (userPublicName && userPublicName.trim()) {
+        displayText = `${userPublicName.trim()} won`
+      } else if (user?.user_metadata?.display_name && user.user_metadata.display_name.trim()) {
+        displayText = `${user.user_metadata.display_name.trim()} won`
+      } else {
+        displayText = 'I won'
+      }
+    } else if (model.opponent_name) {
+      // Opponent won
+      displayText = `${model.opponent_name} won`
+    } else {
+      displayText = 'Loss'
+    }
+  } else if (userPublicName || user?.user_metadata?.display_name) {
+    // For models/collections, show artist name
     // Prioritize userPublicName (which should be the user's chosen public name)
     let displayName = 'Unknown User'
-    
+
     if (userPublicName && userPublicName.trim()) {
       // Use the user's public name if available and not empty
       displayName = userPublicName.trim()
@@ -46,8 +77,11 @@ export const renderStandardTextLayout = (context: ThemeRenderContext, fonts?: {
       // Fallback to display name from user metadata
       displayName = user.user_metadata.display_name.trim()
     }
-    
-    const displayText = `by ${displayName}`
+
+    displayText = `by ${displayName}`
+  }
+
+  if (displayText) {
     
     console.log('Share screenshot username debug:', {
       userPublicName,
@@ -58,42 +92,62 @@ export const renderStandardTextLayout = (context: ThemeRenderContext, fonts?: {
     })
     
     // Set font for user name (use tiny font)
-    ctx.font = fonts?.tinyFont || '24px Overpass, sans-serif'
+    ctx.font = getThemeFontStyle('tiny', themeFonts)
     ctx.textAlign = textAlign as CanvasTextAlign
-    
+
+    // Apply text transforms based on font configuration
+    const tinyFontConfig = getFontConfig('tiny', themeFonts)
+    const transformedText = transformText(displayText, tinyFontConfig)
+
     // Draw text with drop shadow
     ctx.shadowColor = `rgba(0, 0, 0, ${shadowOpacity})`
     ctx.shadowBlur = 8
     ctx.shadowOffsetX = 2
     ctx.shadowOffsetY = 2
     ctx.fillStyle = quaternaryColor
-    ctx.fillText(displayText, textX, currentY)
+    ctx.fillText(transformedText, textX, currentY)
     
     // Reset shadow for next elements
     ctx.shadowColor = 'transparent'
     currentY -= 35
   }
 
-  // Painted date - with drop shadow (only if enabled)
+  // Painted/Played date - with drop shadow (only if enabled)
   if (showPaintedDate && model.painted_date) {
     const formattedDate = formatLocalDate(model.painted_date, {
       month: 'long',
       day: 'numeric',
       year: 'numeric'
     })
-    const dateText = `Painted ${formattedDate}`
-    
+    // For battles, show "Played on [date]", for models show "Painted [date]"
+    const isBattleForDate = !model.box && model.battle_result !== undefined
+    const dateText = isBattleForDate ? `Played on ${formattedDate}` : `Painted ${formattedDate}`
+
+    console.log('Date text debug:', {
+      isBattle,
+      isBattleForDate,
+      showPaintedDate,
+      'model.painted_date': model.painted_date,
+      'model.box': model.box,
+      'model.battle_result': model.battle_result,
+      dateText
+    })
+
     // Set font for painted date (use small font)
-    ctx.font = fonts?.smallFont || '28px Overpass, sans-serif'
+    ctx.font = getThemeFontStyle('small', themeFonts)
     ctx.textAlign = textAlign as CanvasTextAlign
-    
+
+    // Apply text transforms based on font configuration
+    const smallFontConfig = getFontConfig('small', themeFonts)
+    const transformedDateText = transformText(dateText, smallFontConfig)
+
     // Draw text with drop shadow
     ctx.shadowColor = `rgba(0, 0, 0, ${shadowOpacity})`
     ctx.shadowBlur = 8
     ctx.shadowOffsetX = 2
     ctx.shadowOffsetY = 2
     ctx.fillStyle = tertiaryColor
-    ctx.fillText(dateText, textX, currentY)
+    ctx.fillText(transformedDateText, textX, currentY)
     
     // Reset shadow for next elements
     ctx.shadowColor = 'transparent'
@@ -103,18 +157,22 @@ export const renderStandardTextLayout = (context: ThemeRenderContext, fonts?: {
   // Collection name - with drop shadow (only if enabled)
   if (showCollectionName && model.box?.name) {
     const collectionText = model.box.name
-    
+
     // Set font for collection name (use body font)
-    ctx.font = fonts?.bodyFont || '32px Overpass, sans-serif'
+    ctx.font = getThemeFontStyle('body', themeFonts)
     ctx.textAlign = textAlign as CanvasTextAlign
-    
+
+    // Apply text transforms based on font configuration
+    const bodyFontConfig = getFontConfig('body', themeFonts)
+    const transformedCollectionText = transformText(collectionText, bodyFontConfig)
+
     // Draw text with drop shadow
     ctx.shadowColor = `rgba(0, 0, 0, ${shadowOpacity})`
     ctx.shadowBlur = 8
     ctx.shadowOffsetX = 2
     ctx.shadowOffsetY = 2
     ctx.fillStyle = secondaryColor
-    ctx.fillText(collectionText, textX, currentY)
+    ctx.fillText(transformedCollectionText, textX, currentY)
     
     // Reset shadow for next elements
     ctx.shadowColor = 'transparent'
@@ -139,7 +197,7 @@ export const renderStandardTextLayout = (context: ThemeRenderContext, fonts?: {
     console.log('Inside showGameDetails condition, about to render game details')
     try {
       // Set font for game name (use small font)
-      ctx.font = fonts?.smallFont || '28px Overpass, sans-serif'
+      ctx.font = getThemeFontStyle('small', themeFonts)
       ctx.textAlign = textAlign as CanvasTextAlign
       
       // Handle game icon and text positioning
@@ -161,50 +219,56 @@ export const renderStandardTextLayout = (context: ThemeRenderContext, fonts?: {
           gameTextX = textX + iconSize + iconPadding // Text position for left alignment
         }
         
-        // Draw a simple placeholder circle where the icon should be for debugging
-        ctx.save()
-        ctx.shadowColor = 'transparent'
-        
-        let iconX, iconY
-        if (textAlign === 'right') {
-          // For right-aligned text, icon goes to the right of the game name
-          // First measure the text width
-          ctx.font = fonts?.smallFont || '28px Overpass, sans-serif'
-          const textWidth = ctx.measureText(gameName).width
-          iconX = gameTextX + textWidth + iconPadding // Icon positioned after the game name text
-        } else {
-          // For left-aligned text, icon goes to the left of the game name
-          iconX = textX
+        // Load and draw the actual game icon
+        const iconImg = new Image()
+        iconImg.crossOrigin = 'anonymous'
+
+        iconImg.onload = () => {
+          ctx.save()
+          ctx.shadowColor = 'transparent'
+
+          let iconX, iconY
+          if (textAlign === 'right') {
+            // For right-aligned text, icon goes to the right of the game name
+            // First measure the text width
+            ctx.font = getThemeFontStyle('small', themeFonts)
+            const smallFontConfig = getFontConfig('small', themeFonts)
+            const transformedGameName = transformText(gameName, smallFontConfig)
+            const textWidth = ctx.measureText(transformedGameName).width
+            iconX = gameTextX + textWidth + iconPadding // Icon positioned after the game name text
+          } else {
+            // For left-aligned text, icon goes to the left of the game name
+            iconX = textX
+          }
+
+          iconY = currentY - iconSize + 4 // Vertically center with text baseline
+
+          // Draw the actual game icon
+          ctx.drawImage(iconImg, iconX, iconY, iconSize, iconSize)
+          ctx.restore()
         }
-        
-        iconY = currentY - iconSize + 4 // Vertically center with text baseline
-        
-        console.log('Circle position:', { iconX, iconY, iconSize, currentY, canvas: { width: context.canvas.width, height: context.canvas.height } })
-        
-        // Draw a much larger, more visible placeholder circle
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.8)' // More opaque red circle
-        ctx.beginPath()
-        const circleRadius = 20 // Make it bigger and more visible
-        ctx.arc(iconX + iconSize/2, iconY + iconSize/2, circleRadius, 0, 2 * Math.PI)
-        ctx.fill()
-        
-        // Also draw a bright green border around it
-        ctx.strokeStyle = 'rgba(0, 255, 0, 1)' // Bright green border
-        ctx.lineWidth = 3
-        ctx.stroke()
-        
-        ctx.restore()
+
+        iconImg.onerror = () => {
+          console.warn('Failed to load game icon:', gameIcon)
+        }
+
+        iconImg.src = gameIcon
       }
 
       // Draw game name with drop shadow
-      ctx.font = fonts?.smallFont || '28px Overpass, sans-serif'
+      ctx.font = getThemeFontStyle('small', themeFonts)
       ctx.textAlign = textAlign as CanvasTextAlign
+
+      // Apply text transforms based on font configuration
+      const smallFontConfig = getFontConfig('small', themeFonts)
+      const transformedGameName = transformText(gameName, smallFontConfig)
+
       ctx.shadowColor = `rgba(0, 0, 0, ${shadowOpacity})`
       ctx.shadowBlur = 8
       ctx.shadowOffsetX = 2
       ctx.shadowOffsetY = 2
       ctx.fillStyle = tertiaryColor
-      ctx.fillText(gameName, gameTextX, currentY)
+      ctx.fillText(transformedGameName, gameTextX, currentY)
       
       // Reset shadow for next elements
       ctx.shadowColor = 'transparent'
@@ -221,9 +285,9 @@ export const renderStandardTextLayout = (context: ThemeRenderContext, fonts?: {
 }
 
 export const renderStandardModelName = (
-  context: ThemeRenderContext, 
-  currentY: number, 
-  fonts: { titleFont: string }
+  context: ThemeRenderContext,
+  currentY: number,
+  themeFonts?: ThemeFonts
 ): void => {
   const { ctx, model, shadowOpacity, textPosition, isDarkText } = context
   
@@ -234,16 +298,20 @@ export const renderStandardModelName = (
 
   // Model name (top) - use theme title font for the main title with drop shadow
   const modelNameText = model.name
-  ctx.font = fonts.titleFont
+  ctx.font = getThemeFontStyle('title', themeFonts)
   ctx.textAlign = textAlign as CanvasTextAlign
-  
+
+  // Apply text transforms based on font configuration
+  const titleFontConfig = getFontConfig('title', themeFonts)
+  const transformedModelName = transformText(modelNameText, titleFontConfig)
+
   // Draw model name with drop shadow
   ctx.shadowColor = `rgba(0, 0, 0, ${shadowOpacity})`
   ctx.shadowBlur = 8
   ctx.shadowOffsetX = 2
   ctx.shadowOffsetY = 2
   ctx.fillStyle = primaryColor
-  ctx.fillText(modelNameText, textX, currentY)
+  ctx.fillText(transformedModelName, textX, currentY)
   
   // Reset shadow for next elements
   ctx.shadowColor = 'transparent'

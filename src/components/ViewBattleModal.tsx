@@ -1,12 +1,17 @@
 import React, { useState } from 'react'
-import { X, Edit, Trash2, Calendar, User, Gamepad2, Trophy, Image, FileText, MapPin } from 'lucide-react'
+import { X, Edit, Trash2, Calendar, User, Gamepad2, Trophy, Image, FileText, MapPin, Flag, Share2 } from 'lucide-react'
 import { DeleteBattleModal } from './DeleteBattleModal'
 import { EditBattleModal } from './EditBattleModal'
+import { AddBattleToCampaignModal } from './AddBattleToCampaignModal'
+import { ShareScreenshotPreview } from './ShareScreenshotPreview'
 import { formatLocalDate } from '../utils/timezone'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useGameIcons } from '../hooks/useGameIcons'
+import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
+import { getBattleWithImages, getBattleImageSrc, type BattleWithImages } from '../utils/battleImageUtils'
+import { BattleImage } from './BattleImage'
 
 interface Battle {
   id: number
@@ -16,7 +21,6 @@ interface Battle {
   game_name: string | null
   game_uid: string | null
   game_icon: string | null
-  image_url: string | null
   location: string | null
   opp_name: string | null // Keep for backward compatibility
   opp_id: string[] | null
@@ -31,6 +35,14 @@ interface Battle {
   result: string | null
   user_id: string | null
   created_at: string
+  campaign_id: string | null
+  campaign?: {
+    id: string
+    name: string
+    description: string | null
+    start_date: string | null
+    end_date: string | null
+  } | null
 }
 
 interface ViewBattleModalProps {
@@ -38,14 +50,38 @@ interface ViewBattleModalProps {
   onClose: () => void
   onBattleDeleted?: () => void
   onBattleUpdated?: () => void
-  battle: Battle | null
+  battle: BattleWithImages | null
 }
 
 export function ViewBattleModal({ isOpen, onClose, onBattleDeleted, onBattleUpdated, battle }: ViewBattleModalProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showAddToCampaignModal, setShowAddToCampaignModal] = useState(false)
+  const [showScreenshotModal, setShowScreenshotModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [battleWithImages, setBattleWithImages] = useState<BattleWithImages | null>(null)
   const { getGameIcon, isValidGameIcon } = useGameIcons()
+  const { isBetaTester } = useAuth()
+
+  // Fetch battle with images when modal opens
+  React.useEffect(() => {
+    if (isOpen && battle) {
+      fetchBattleImages()
+    }
+  }, [isOpen, battle])
+
+  const fetchBattleImages = async () => {
+    if (!battle) return
+
+    try {
+      const battleImagesData = await getBattleWithImages(battle.id)
+      if (battleImagesData) {
+        setBattleWithImages(battleImagesData)
+      }
+    } catch (err) {
+      console.error('Error fetching battle images:', err)
+    }
+  }
   
   // Get the game icon from cache using game_uid
   const gameIcon = getGameIcon(battle?.game_uid)
@@ -85,28 +121,12 @@ export function ViewBattleModal({ isOpen, onClose, onBattleDeleted, onBattleUpda
             <h2 className="text-xl font-semibold text-text font-overpass">
               Battle Details
             </h2>
-                         <div className="flex items-center space-x-2">
-               <button
-                 onClick={() => setShowEditModal(true)}
-                 className="text-secondary-text hover:text-text transition-colors p-2 rounded-full hover:bg-bg-secondary"
-                 title="Edit Battle"
-               >
-                 <Edit className="w-5 h-5" />
-               </button>
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="text-red-500 hover:text-red-700 transition-colors p-2 rounded-full hover:bg-red-50"
-                title="Delete Battle"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
-              <button
-                onClick={onClose}
-                className="text-secondary-text hover:text-text transition-colors p-2 rounded-full hover:bg-bg-secondary"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <button
+              onClick={onClose}
+              className="text-secondary-text hover:text-text transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
 
           {/* Battle Content */}
@@ -119,21 +139,20 @@ export function ViewBattleModal({ isOpen, onClose, onBattleDeleted, onBattleUpda
             </div>
 
                             {/* Battle Image */}
-                {battle.image_url && (
+                {battleWithImages && battleWithImages.battle_images && battleWithImages.battle_images.length > 0 && (
                   <div className="col-span-full mb-6">
                     <div className="flex items-center space-x-3 mb-3">
                       <Image className="w-5 h-5 text-icon" />
-                      <h3 className="text-lg font-semibold text-text">Battle Image</h3>
+                      <h3 className="text-lg font-semibold text-text">Battle Images</h3>
                     </div>
-                    <div className="relative">
-                      <img
-                        src={battle.image_url}
-                        alt="Battle image"
-                        className="w-full max-w-md mx-auto rounded-lg shadow-lg"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
-                        }}
+                    <div className="relative max-w-md mx-auto">
+                      <BattleImage
+                        battleId={battle.id}
+                        name={battle.battle_name || 'Untitled Battle'}
+                        gameImage={null}
+                        gameIcon={gameIcon}
+                        size="large"
+                        className="rounded-lg shadow-lg"
                       />
                     </div>
                   </div>
@@ -231,6 +250,17 @@ export function ViewBattleModal({ isOpen, onClose, onBattleDeleted, onBattleUpda
                   <p className="font-medium text-text">{battle.location || 'No location'}</p>
                 </div>
               </div>
+
+              {/* Campaign - only show if battle has a campaign */}
+              {battle.campaign && (
+                <div className="flex items-center space-x-3 p-4 bg-bg-secondary rounded-lg">
+                  <Flag className="w-10 h-10 text-icon flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-secondary-text">Campaign</p>
+                    <p className="font-medium text-text">{battle.campaign.name}</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Battle Notes - only show if notes exist */}
@@ -276,6 +306,46 @@ export function ViewBattleModal({ isOpen, onClose, onBattleDeleted, onBattleUpda
                   minute: '2-digit'
                 })}
               </p>
+            </div>
+
+            {/* Add to Campaign button - only show if battle has no campaign */}
+            {!battle.campaign && (
+              <div className="pt-4 border-t border-border-custom">
+                <button
+                  onClick={() => setShowAddToCampaignModal(true)}
+                  className="btn-primary w-full"
+                >
+                  <Flag className="w-4 h-4 mr-2" />
+                  Add to Campaign
+                </button>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="pt-4 border-t border-border-custom flex gap-3">
+              {isBetaTester && (
+                <button
+                  onClick={() => setShowScreenshotModal(true)}
+                  className="btn-secondary flex-1"
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Screenshot
+                </button>
+              )}
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="btn-secondary flex-1"
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit
+              </button>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="btn-danger flex-1"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </button>
             </div>
           </div>
         </div>
@@ -323,6 +393,51 @@ export function ViewBattleModal({ isOpen, onClose, onBattleDeleted, onBattleUpda
            setShowEditModal(false)
          }}
        />
+
+       {/* Add to Campaign Modal */}
+       <AddBattleToCampaignModal
+         isOpen={showAddToCampaignModal}
+         onClose={() => setShowAddToCampaignModal(false)}
+         battle={battle}
+         onBattleAddedToCampaign={() => {
+           onBattleUpdated?.()
+           setShowAddToCampaignModal(false)
+           onClose() // Close the battle details modal too
+         }}
+       />
+
+       {/* Screenshot Modal */}
+       {battleWithImages && (
+         <ShareScreenshotPreview
+           isOpen={showScreenshotModal}
+           onClose={() => setShowScreenshotModal(false)}
+           model={{
+             id: String(battleWithImages.id),
+             name: battleWithImages.battle_name || 'Untitled Battle',
+             painted_date: battleWithImages.date_played,
+             share_name: null,
+             share_artist: null,
+             box: null,
+             battle_result: battleWithImages.result,
+             opponent_name: battleWithImages.opponent?.opp_name || battleWithImages.opp_name,
+             images: battleWithImages.images?.map((img, index) => ({
+               id: img.id,
+               model_id: String(battleWithImages.id),
+               image_url: img.image_url,
+               display_order: img.display_order,
+               is_primary: img.is_primary,
+               created_at: img.created_at,
+               user_id: img.user_id
+             })),
+             game: battleWithImages.game_uid ? {
+               id: battleWithImages.game_uid,
+               name: battleWithImages.game_name || 'Unknown Game',
+               icon: gameIcon,
+               default_theme: battleWithImages.game?.default_theme || null
+             } : undefined
+           }}
+         />
+       )}
      </>
    )
  }

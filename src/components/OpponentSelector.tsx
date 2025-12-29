@@ -31,16 +31,16 @@ export function OpponentSelector({
   React.useEffect(() => {
     console.log('OpponentSelector mounted/updated:', {
       selectedOpponentId,
-      opponentsCount: opponents.length,
+      opponentsCount: opponents?.length || 0,
       loading,
-      opponents: opponents.map(opp => ({ id: opp.id, name: opp.opp_name }))
+      opponents: (opponents || []).map(opp => ({ id: opp.id, name: opp.opp_name }))
     })
   }, [selectedOpponentId, opponents, loading])
 
-  const selectedOpponent = opponents.find(opp => opp.id === selectedOpponentId)
+  const selectedOpponent = opponents?.find(opp => opp.id === selectedOpponentId)
 
   // Filter opponents based on search term
-  const filteredOpponents = opponents.filter(opp => 
+  const filteredOpponents = (opponents || []).filter(opp =>
     opp.opp_name?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 

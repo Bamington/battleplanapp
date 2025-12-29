@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useGames } from '../hooks/useGames';
 import { useRecentGames } from '../hooks/useRecentGames';
-import { compressImage } from '../utils/imageCompression';
+import { compressImage, isValidImageFile } from '../utils/imageCompression';
 import { ImageCropper } from './ImageCropper';
 import { GameDropdown } from './GameDropdown';
 import { AddNewGameModal } from './AddNewGameModal';
@@ -84,6 +84,39 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
     display_order: number;
   }[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch model images from the database
+  const fetchModelImages = async () => {
+    if (!model?.id) return
+
+    try {
+      const { data, error } = await supabase
+        .from('model_images')
+        .select('*')
+        .eq('model_id', model.id)
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching model images:', error)
+        setModelImages([])
+      } else {
+        const images = data || []
+
+        // Reorder images: primary first, then rest by creation date
+        const primaryImage = images.find(img => img.is_primary)
+        const nonPrimaryImages = images.filter(img => !img.is_primary).sort((a, b) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        )
+
+        const orderedImages = primaryImage ? [primaryImage, ...nonPrimaryImages] : nonPrimaryImages
+        setModelImages(orderedImages)
+      }
+    } catch (error) {
+      console.error('Error fetching model images:', error)
+      setModelImages([])
+    }
+  }
 
   useEffect(() => {
     if (model) {
@@ -96,14 +129,47 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
         status: model.status || '',
         painted_date: model.painted_date || ''
       });
-      
-      // Initialize model images
-      setModelImages(model.images || []);
+
+      // Fetch images from database instead of relying on model.images
+      fetchModelImages();
       setImagesToDelete([]);
       setNewImagesToUpload([]);
     }
   }, [model]);
 
+  const handleGameSelect = async (gameId: string) => {
+    // Handle custom game creation
+    if (gameId.startsWith('new:')) {
+      const gameName = gameId.replace('new:', '')
+      try {
+        setLoading(true)
+
+        // Create the custom game using the hook
+        const newGame = await createGame(gameName)
+
+        // Set the new game as selected
+        setFormData({ ...formData, game_id: newGame.id })
+
+        // Add to recent games
+        addRecentGame(newGame)
+
+        console.log('Created custom game:', newGame)
+      } catch (err) {
+        console.error('Failed to create custom game:', err)
+        // You could add an error state if needed
+      } finally {
+        setLoading(false)
+      }
+    } else {
+      // Handle existing games
+      setFormData({ ...formData, game_id: gameId })
+      // Add to recent games
+      const selectedGameData = games.find(game => game.id === gameId)
+      if (selectedGameData) {
+        addRecentGame(selectedGameData)
+      }
+    }
+  }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -118,9 +184,9 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
     const validFiles: File[] = [];
     
     for (const file of files) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        alert(`Invalid file: ${file.name}. Please select only image files.`);
+      // Validate file type using the proper validation function
+      if (!isValidImageFile(file)) {
+        alert(`Invalid file: ${file.name}. Please select valid image files (JPEG, PNG, or WebP).`);
         return;
       }
       
@@ -133,13 +199,15 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
     }
     
     if (validFiles.length > 0) {
-      // Check if model already has a primary image
-      const hasPrimaryImage = modelImages.some(img => img.is_primary) || model.image_url;
-      
-      if (hasPrimaryImage) {
-        // Skip cropping for all files if model already has a primary image
-        validFiles.forEach(file => {
-          // Compress and add all files directly without cropping
+      // Always show cropper for the first image
+      setSelectedFile(validFiles[0]);
+      setImageForCropping(validFiles[0]);
+      setShowImageCropper(true);
+
+      // If there are additional files, add them directly without cropping
+      if (validFiles.length > 1) {
+        const additionalFiles = validFiles.slice(1);
+        additionalFiles.forEach(file => {
           compressImage(file, 1200, 1200, 0.8).then(compressedFile => {
             addNewImage(file, compressedFile);
           }).catch(() => {
@@ -147,25 +215,6 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
             addNewImage(file, file);
           });
         });
-      } else {
-        // Show image cropper for the first selected image if no primary exists
-        setSelectedFile(validFiles[0]);
-        setImageForCropping(validFiles[0]);
-        setShowImageCropper(true);
-        
-        // If there are additional files, add them directly to newImagesToUpload
-        if (validFiles.length > 1) {
-          const additionalFiles = validFiles.slice(1);
-          additionalFiles.forEach(file => {
-            // For additional files, we'll compress them without cropping
-            compressImage(file, 1200, 1200, 0.8).then(compressedFile => {
-              addNewImage(file, compressedFile);
-            }).catch(() => {
-              // If compression fails, use original file
-              addNewImage(file, file);
-            });
-          });
-        }
       }
     }
   };
@@ -288,23 +337,10 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                 lastModified: Date.now()
               });
 
-              // Check if model already has a primary image
-              const hasPrimaryImage = modelImages.some(img => img.is_primary) || model.image_url;
-              
-              if (hasPrimaryImage) {
-                // Skip cropping and compress directly
-                compressImage(file, 1200, 1200, 0.8).then(compressedFile => {
-                  addNewImage(file, compressedFile);
-                }).catch(() => {
-                  // If compression fails, use original file
-                  addNewImage(file, file);
-                });
-              } else {
-                // Show cropper for primary image
-                setSelectedFile(file);
-                setImageForCropping(file);
-                setShowImageCropper(true);
-              }
+              // Always show cropper for camera captures
+              setSelectedFile(file);
+              setImageForCropping(file);
+              setShowImageCropper(true);
             }
             
             // Clean up
@@ -532,15 +568,37 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
       // 4. Set primary image
       const allImages = [...modelImages, ...uploadedImages]
       const primaryImage = allImages.find(img => img.is_primary)
+
       if (primaryImage) {
+        // First, clear all primary flags
+        await supabase
+          .from('model_images')
+          .update({ is_primary: false })
+          .eq('model_id', model.id)
+
+        // Then set the selected image as primary
+        await supabase
+          .from('model_images')
+          .update({ is_primary: true })
+          .eq('id', primaryImage.id)
+
         primaryImageUrl = primaryImage.image_url
       } else if (allImages.length > 0) {
         // If no primary image set, make the first one primary
         const firstImage = allImages[0]
+
+        // Clear all primary flags first
+        await supabase
+          .from('model_images')
+          .update({ is_primary: false })
+          .eq('model_id', model.id)
+
+        // Set first image as primary
         await supabase
           .from('model_images')
           .update({ is_primary: true })
           .eq('id', firstImage.id)
+
         primaryImageUrl = firstImage.image_url
       }
 
@@ -679,9 +737,8 @@ export function EditModelModal({ isOpen, onClose, model, onModelUpdated }: EditM
                   <GameDropdown
                     games={games}
                     selectedGame={formData.game_id}
-                    onGameSelect={(gameId) => setFormData({ ...formData, game_id: gameId })}
+                    onGameSelect={handleGameSelect}
                     showAddNewButton={true}
-                    onAddNewGame={() => setShowAddGameModal(true)}
                   />
                 </div>
                 

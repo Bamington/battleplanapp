@@ -113,12 +113,37 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
     return games.filter(game => user.fav_games?.includes(game.id))
   }
 
-  const handleGameSelect = (gameId: string) => {
-    setSelectedGame(gameId)
-    // Add to recent games
-    const selectedGameData = games.find(game => game.id === gameId)
-    if (selectedGameData) {
-      addRecentGame(selectedGameData)
+  const handleGameSelect = async (gameId: string) => {
+    // Handle custom game creation
+    if (gameId.startsWith('new:')) {
+      const gameName = gameId.replace('new:', '')
+      try {
+        setLoading(true)
+
+        // Create the custom game using the hook
+        const newGame = await createGame(gameName)
+
+        // Set the new game as selected
+        setSelectedGame(newGame.id)
+
+        // Add to recent games
+        addRecentGame(newGame)
+
+        console.log('Created custom game:', newGame)
+      } catch (err) {
+        console.error('Failed to create custom game:', err)
+        setError(`Failed to create custom game "${gameName}". Please try again.`)
+      } finally {
+        setLoading(false)
+      }
+    } else {
+      // Handle existing games
+      setSelectedGame(gameId)
+      // Add to recent games
+      const selectedGameData = games.find(game => game.id === gameId)
+      if (selectedGameData) {
+        addRecentGame(selectedGameData)
+      }
     }
   }
 
@@ -954,6 +979,7 @@ export function AddModelModal({ isOpen, onClose, onSuccess, preselectedBoxId }: 
                   onGameSelect={handleGameSelect}
                   placeholder="Choose a Game"
                   favoriteGames={getFavoriteGames()}
+                  showAddNewButton={true}
                 />
               </div>
               

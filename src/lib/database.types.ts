@@ -14,13 +14,52 @@ export type Database = {
   }
   public: {
     Tables: {
+      battle_images: {
+        Row: {
+          battle_id: number
+          created_at: string
+          display_order: number
+          id: string
+          image_url: string
+          is_primary: boolean
+          user_id: string
+        }
+        Insert: {
+          battle_id: number
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url: string
+          is_primary?: boolean
+          user_id: string
+        }
+        Update: {
+          battle_id?: number
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url?: string
+          is_primary?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_images_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       battles: {
         Row: {
           battle_name: string | null
           battle_notes: string | null
+          campaign_id: string | null
           created_at: string
+          custom_game: string | null
           date_played: string | null
-          event_id: string | null
           game_name: string | null
           game_uid: string | null
           id: number
@@ -28,15 +67,17 @@ export type Database = {
           location: string | null
           opp_id: string[] | null
           opp_name: string | null
+          opponent_id: number | null
           result: string | null
           user_id: string | null
         }
         Insert: {
           battle_name?: string | null
           battle_notes?: string | null
+          campaign_id?: string | null
           created_at?: string
+          custom_game?: string | null
           date_played?: string | null
-          event_id?: string | null
           game_name?: string | null
           game_uid?: string | null
           id?: number
@@ -44,15 +85,17 @@ export type Database = {
           location?: string | null
           opp_id?: string[] | null
           opp_name?: string | null
+          opponent_id?: number | null
           result?: string | null
           user_id?: string | null
         }
         Update: {
           battle_name?: string | null
           battle_notes?: string | null
+          campaign_id?: string | null
           created_at?: string
+          custom_game?: string | null
           date_played?: string | null
-          event_id?: string | null
           game_name?: string | null
           game_uid?: string | null
           id?: number
@@ -60,21 +103,30 @@ export type Database = {
           location?: string | null
           opp_id?: string[] | null
           opp_name?: string | null
+          opponent_id?: number | null
           result?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "battles_event_id_fkey"
-            columns: ["event_id"]
+            foreignKeyName: "battles_campaign_id_fkey"
+            columns: ["campaign_id"]
             isOneToOne: false
-            referencedRelation: "events"
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battles_opponent_id_fkey"
+            columns: ["opponent_id"]
+            isOneToOne: false
+            referencedRelation: "opponents"
             referencedColumns: ["id"]
           },
         ]
       }
       blocked_dates: {
         Row: {
+          blocked_tables: number | null
           created_at: string | null
           date: string
           description: string | null
@@ -82,6 +134,7 @@ export type Database = {
           location_id: string
         }
         Insert: {
+          blocked_tables?: number | null
           created_at?: string | null
           date: string
           description?: string | null
@@ -89,6 +142,7 @@ export type Database = {
           location_id: string
         }
         Update: {
+          blocked_tables?: number | null
           created_at?: string | null
           date?: string
           description?: string | null
@@ -163,71 +217,82 @@ export type Database = {
           },
         ]
       }
-      events: {
+      box_images: {
         Row: {
+          box_id: string
           created_at: string
-          description: string | null
-          end_date: string | null
+          display_order: number
           id: string
-          location: string | null
-          name: string
-          start_date: string | null
-          updated_at: string
+          image_url: string
+          is_primary: boolean
           user_id: string
         }
         Insert: {
+          box_id: string
           created_at?: string
-          description?: string | null
-          end_date?: string | null
+          display_order?: number
           id?: string
-          location?: string | null
-          name: string
-          start_date?: string | null
-          updated_at?: string
+          image_url: string
+          is_primary?: boolean
           user_id: string
         }
         Update: {
+          box_id?: string
           created_at?: string
-          description?: string | null
-          end_date?: string | null
+          display_order?: number
           id?: string
-          location?: string | null
-          name?: string
-          start_date?: string | null
-          updated_at?: string
+          image_url?: string
+          is_primary?: boolean
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "box_images_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       boxes: {
         Row: {
           created_at: string | null
+          custom_game: string | null
           game_id: string | null
           id: string
           image_url: string | null
+          includes_string: string | null
           name: string
           public: boolean | null
           purchase_date: string | null
+          show_carousel: boolean | null
           user_id: string | null
         }
         Insert: {
           created_at?: string | null
+          custom_game?: string | null
           game_id?: string | null
           id?: string
           image_url?: string | null
+          includes_string?: string | null
           name: string
           public?: boolean | null
           purchase_date?: string | null
+          show_carousel?: boolean | null
           user_id?: string | null
         }
         Update: {
           created_at?: string | null
+          custom_game?: string | null
           game_id?: string | null
           id?: string
           image_url?: string | null
+          includes_string?: string | null
           name?: string
           public?: boolean | null
           purchase_date?: string | null
+          show_carousel?: boolean | null
           user_id?: string | null
         }
         Relationships: [
@@ -240,36 +305,132 @@ export type Database = {
           },
         ]
       }
+      boxes_staging: {
+        Row: {
+          custom_game: string | null
+          game_id: string | null
+          includes_string: string | null
+          name: string | null
+          purchase_date: string | null
+          user_id: string | null
+        }
+        Insert: {
+          custom_game?: string | null
+          game_id?: string | null
+          includes_string?: string | null
+          name?: string | null
+          purchase_date?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          custom_game?: string | null
+          game_id?: string | null
+          includes_string?: string | null
+          name?: string | null
+          purchase_date?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      campaigns: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string | null
+          id: string
+          location: string | null
+          name: string
+          start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      friendships: {
+        Row: {
+          created_at: string
+          friend_id: string
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          friend_id: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          friend_id?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       games: {
         Row: {
           created_at: string | null
           created_by: string | null
+          default_theme: string | null
           icon: string | null
           id: string
           image: string | null
           manufacturer_id: string | null
           name: string
           supported: boolean | null
+          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           created_by?: string | null
+          default_theme?: string | null
           icon?: string | null
           id?: string
           image?: string | null
           manufacturer_id?: string | null
           name: string
           supported?: boolean | null
+          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           created_by?: string | null
+          default_theme?: string | null
           icon?: string | null
           id?: string
           image?: string | null
           manufacturer_id?: string | null
           name?: string
           supported?: boolean | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -277,6 +438,50 @@ export type Database = {
             columns: ["manufacturer_id"]
             isOneToOne: false
             referencedRelation: "manufacturers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lists: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          game_id: string | null
+          id: string
+          name: string
+          points_limit: number | null
+          points_total: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          game_id?: string | null
+          id?: string
+          name: string
+          points_limit?: number | null
+          points_total?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          game_id?: string | null
+          id?: string
+          name?: string
+          points_limit?: number | null
+          points_total?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lists_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
             referencedColumns: ["id"]
           },
         ]
@@ -289,6 +494,7 @@ export type Database = {
           icon: string | null
           id: string
           name: string
+          store_email: string | null
           tables: number
         }
         Insert: {
@@ -298,6 +504,7 @@ export type Database = {
           icon?: string | null
           id?: string
           name: string
+          store_email?: string | null
           tables?: number
         }
         Update: {
@@ -307,6 +514,7 @@ export type Database = {
           icon?: string | null
           id?: string
           name?: string
+          store_email?: string | null
           tables?: number
         }
         Relationships: []
@@ -329,11 +537,89 @@ export type Database = {
         }
         Relationships: []
       }
+      model_boxes: {
+        Row: {
+          added_at: string | null
+          box_id: string
+          id: string
+          model_id: string
+        }
+        Insert: {
+          added_at?: string | null
+          box_id: string
+          id?: string
+          model_id: string
+        }
+        Update: {
+          added_at?: string | null
+          box_id?: string
+          id?: string
+          model_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "model_boxes_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "model_boxes_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      model_images: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          id: string
+          image_url: string
+          is_primary: boolean | null
+          is_progress_photo: boolean | null
+          model_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          image_url: string
+          is_primary?: boolean | null
+          is_progress_photo?: boolean | null
+          model_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string
+          is_primary?: boolean | null
+          is_progress_photo?: boolean | null
+          model_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "model_images_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       models: {
         Row: {
           box_id: string | null
           count: number | null
           created_at: string | null
+          custom_game: string | null
           game_id: string | null
           id: string
           image_url: string | null
@@ -346,6 +632,7 @@ export type Database = {
           public: boolean | null
           purchase_date: string | null
           share_artist: string | null
+          share_content: boolean[] | null
           share_name: string | null
           status: string | null
           user_id: string | null
@@ -354,6 +641,7 @@ export type Database = {
           box_id?: string | null
           count?: number | null
           created_at?: string | null
+          custom_game?: string | null
           game_id?: string | null
           id?: string
           image_url?: string | null
@@ -366,6 +654,7 @@ export type Database = {
           public?: boolean | null
           purchase_date?: string | null
           share_artist?: string | null
+          share_content?: boolean[] | null
           share_name?: string | null
           status?: string | null
           user_id?: string | null
@@ -374,6 +663,7 @@ export type Database = {
           box_id?: string | null
           count?: number | null
           created_at?: string | null
+          custom_game?: string | null
           game_id?: string | null
           id?: string
           image_url?: string | null
@@ -386,6 +676,7 @@ export type Database = {
           public?: boolean | null
           purchase_date?: string | null
           share_artist?: string | null
+          share_content?: boolean[] | null
           share_name?: string | null
           status?: string | null
           user_id?: string | null
@@ -407,56 +698,12 @@ export type Database = {
           },
         ]
       }
-      model_images: {
-        Row: {
-          id: string
-          model_id: string
-          image_url: string
-          display_order: number
-          is_primary: boolean
-          created_at: string
-          user_id: string
-        }
-        Insert: {
-          id?: string
-          model_id: string
-          image_url: string
-          display_order?: number
-          is_primary?: boolean
-          created_at?: string
-          user_id: string
-        }
-        Update: {
-          id?: string
-          model_id?: string
-          image_url?: string
-          display_order?: number
-          is_primary?: boolean
-          created_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "model_images_model_id_fkey"
-            columns: ["model_id"]
-            isOneToOne: false
-            referencedRelation: "models"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "model_images_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       opponents: {
         Row: {
           created_at: string
           created_by: string | null
           id: number
+          opp_email: string | null
           opp_name: string | null
           opp_rel_uuid: string | null
         }
@@ -464,6 +711,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: number
+          opp_email?: string | null
           opp_name?: string | null
           opp_rel_uuid?: string | null
         }
@@ -471,6 +719,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: number
+          opp_email?: string | null
           opp_name?: string | null
           opp_rel_uuid?: string | null
         }
@@ -499,6 +748,158 @@ export type Database = {
           users_assigned?: string[] | null
         }
         Relationships: []
+      }
+      shared_battles: {
+        Row: {
+          battle_id: number
+          created_at: string
+          expires_at: string | null
+          id: string
+          owner_id: string
+          permission_level: string
+          shared_with_user_id: string | null
+        }
+        Insert: {
+          battle_id: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          owner_id: string
+          permission_level?: string
+          shared_with_user_id?: string | null
+        }
+        Update: {
+          battle_id?: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          owner_id?: string
+          permission_level?: string
+          shared_with_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_battles_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shared_bookings: {
+        Row: {
+          booking_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          owner_id: string
+          permission_level: string
+          shared_with_user_id: string | null
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          owner_id: string
+          permission_level?: string
+          shared_with_user_id?: string | null
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          owner_id?: string
+          permission_level?: string
+          shared_with_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_bookings_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shared_boxes: {
+        Row: {
+          box_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          owner_id: string
+          permission_level: string
+          shared_with_user_id: string | null
+        }
+        Insert: {
+          box_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          owner_id: string
+          permission_level?: string
+          shared_with_user_id?: string | null
+        }
+        Update: {
+          box_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          owner_id?: string
+          permission_level?: string
+          shared_with_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_boxes_box_id_fkey"
+            columns: ["box_id"]
+            isOneToOne: false
+            referencedRelation: "boxes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shared_models: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          model_id: string
+          owner_id: string
+          permission_level: string
+          shared_with_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          model_id: string
+          owner_id: string
+          permission_level?: string
+          shared_with_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          model_id?: string
+          owner_id?: string
+          permission_level?: string
+          shared_with_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_models_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       timeslots: {
         Row: {
@@ -534,6 +935,86 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unit_models: {
+        Row: {
+          created_at: string | null
+          id: string
+          model_id: string
+          unit_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          model_id: string
+          unit_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          model_id?: string
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_models_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unit_models_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      units: {
+        Row: {
+          cost: number | null
+          created_at: string | null
+          display_order: number | null
+          id: string
+          list_id: string
+          model_count: number
+          name: string
+          notes: string | null
+          type: string | null
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          list_id: string
+          model_count?: number
+          name: string
+          notes?: string | null
+          type?: string | null
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          list_id?: string
+          model_count?: number
+          name?: string
+          notes?: string | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "units_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
             referencedColumns: ["id"]
           },
         ]
@@ -578,22 +1059,25 @@ export type Database = {
         Row: {
           created_at: string
           id: number
+          published: boolean
           ver_notes: string | null
-          ver_number: number | null
+          ver_number: string
           ver_title: string | null
         }
         Insert: {
           created_at?: string
           id?: number
+          published?: boolean
           ver_notes?: string | null
-          ver_number?: number | null
+          ver_number?: string
           ver_title?: string | null
         }
         Update: {
           created_at?: string
           id?: number
+          published?: boolean
           ver_notes?: string | null
-          ver_number?: number | null
+          ver_number?: string
           ver_title?: string | null
         }
         Relationships: []
@@ -604,18 +1088,24 @@ export type Database = {
           id: number
           item_name: string | null
           user_uid: string | null
+          wishlist_category: string[] | null
+          wishlist_game: string | null
         }
         Insert: {
           created_at?: string
           id?: number
           item_name?: string | null
           user_uid?: string | null
+          wishlist_category?: string[] | null
+          wishlist_game?: string | null
         }
         Update: {
           created_at?: string
           id?: number
           item_name?: string | null
           user_uid?: string | null
+          wishlist_category?: string[] | null
+          wishlist_game?: string | null
         }
         Relationships: []
       }
@@ -624,10 +1114,55 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      is_admin_user: {
-        Args: { p_user_id: string }
+      are_friends: {
+        Args: { p_friend_id: string; p_user_id: string }
         Returns: boolean
       }
+      check_friendship_status: {
+        Args: { p_friend_id: string; p_user_id: string }
+        Returns: {
+          friendship_id: string
+          requester_id: string
+          status: string
+        }[]
+      }
+      get_friends: {
+        Args: { p_user_id: string }
+        Returns: {
+          friend_email: string
+          friend_name: string
+          friend_user_id: string
+          friendship_created_at: string
+          friendship_id: string
+        }[]
+      }
+      get_pending_requests: {
+        Args: { p_user_id: string }
+        Returns: {
+          created_at: string
+          direction: string
+          recipient_id: string
+          request_id: string
+          requester_email: string
+          requester_id: string
+          requester_name: string
+        }[]
+      }
+      get_shared_content_count: {
+        Args: { p_user_id: string }
+        Returns: {
+          battles_i_shared: number
+          battles_shared_with_me: number
+          bookings_i_shared: number
+          bookings_shared_with_me: number
+          boxes_i_shared: number
+          boxes_shared_with_me: number
+          models_i_shared: number
+          models_shared_with_me: number
+        }[]
+      }
+      is_admin_user: { Args: { p_user_id: string }; Returns: boolean }
+      send_friend_request: { Args: { p_friend_id: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never

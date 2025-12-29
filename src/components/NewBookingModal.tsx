@@ -396,7 +396,7 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
           .eq('id', user.id)
       }
 
-      const { error } = await supabase
+      const { data: bookingData, error } = await supabase
         .from('bookings')
         .insert({
           location_id: selectedLocation,
@@ -407,8 +407,42 @@ export function NewBookingModal({ isOpen, onClose, onBookingCreated, lastSelecte
           user_name: userNameInput.trim(),
           user_email: user.email
         })
+        .select()
+        .single()
 
       if (error) throw error
+
+      // Send email notification to store
+      try {
+        console.log('🚀 Invoking booking notification function for booking:', bookingData.id)
+        const { data: functionResponse, error: functionError } = await supabase.functions.invoke('send-booking-notification', {
+          body: { booking_id: bookingData.id }
+        })
+
+        if (functionError) {
+          console.error('❌ Function error details:', {
+            message: functionError.message,
+            details: functionError.details,
+            hint: functionError.hint,
+            code: functionError.code
+          })
+          // Don't fail the booking if email fails
+        } else {
+          console.log('✅ Function response:', functionResponse)
+          if (functionResponse?.success) {
+            console.log('📧 Email notification sent successfully!')
+          } else {
+            console.log('⚠️  Function completed but with warning:', functionResponse?.message)
+          }
+        }
+      } catch (emailError) {
+        console.error('💥 Exception during email notification:', {
+          error: emailError,
+          message: emailError?.message,
+          stack: emailError?.stack
+        })
+        // Don't fail the booking if email fails
+      }
       
       // Add the selected game to recent games if one was selected
       if (selectedGame) {

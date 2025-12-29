@@ -9,8 +9,10 @@ import { RichTextEditor } from './RichTextEditor'
 import { DatePicker } from './DatePicker'
 import { OpponentSelector } from './OpponentSelector'
 import { useOpponents } from '../hooks/useOpponents'
+import { useCampaigns } from '../hooks/useCampaigns'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
+import { addBattleImage } from '../utils/battleImageUtils'
 
 
 interface NewBattleModalProps {
@@ -28,10 +30,12 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
   const [result, setResult] = useState('')
   const [location, setLocation] = useState('')
   const [showLocationDropdown, setShowLocationDropdown] = useState(false)
-  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('')
+  const [selectedImages, setSelectedImages] = useState<File[]>([])
+  const [selectedImageUrls, setSelectedImageUrls] = useState<string[]>([])
   const [showImageCropper, setShowImageCropper] = useState(false)
   const [imageForCropping, setImageForCropping] = useState<File | null>(null)
-  const { games } = useGames()
+  const { games, createGame } = useGames()
   const [loading, setLoading] = useState(false)
   const [compressing, setCompressing] = useState(false)
   const [creatingOpponent, setCreatingOpponent] = useState(false)
@@ -41,11 +45,8 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
   const { user } = useAuth()
   const { addRecentGame } = useRecentGames()
   const { opponents, loading: opponentsLoading, createOpponent, findOrCreateOpponent } = useOpponents()
+  const { campaigns } = useCampaigns()
 
-  // Debug logging for game selection
-  React.useEffect(() => {
-    console.log('NewBattleModal - selectedGame changed:', selectedGame)
-  }, [selectedGame])
 
   // Prevent body scroll when modal is open
   React.useEffect(() => {
@@ -71,7 +72,9 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
       setSelectedGame('')
       setResult('')
       setLocation('')
-      setSelectedImage(null)
+      setSelectedCampaignId('')
+      setSelectedImages([])
+      setSelectedImageUrls([])
       setError('')
       setFileSizeError('')
       setCompressionInfo('')
@@ -108,53 +111,77 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
 
 
 
-  const handleGameSelect = (gameId: string) => {
-    console.log('Game selected:', gameId)
-    setSelectedGame(gameId)
-    // Add to recent games
-    const selectedGameData = games.find(game => game.id === gameId)
-    if (selectedGameData) {
-      console.log('Adding to recent games:', selectedGameData)
-      addRecentGame(selectedGameData)
+  const handleGameSelect = async (gameId: string) => {
+
+    // Handle custom game creation
+    if (gameId.startsWith('new:')) {
+      const gameName = gameId.replace('new:', '')
+      try {
+        setLoading(true)
+
+        // Create the custom game using the hook
+        const newGame = await createGame(gameName)
+
+        // Set the new game as selected
+        setSelectedGame(newGame.id)
+
+        // Add to recent games
+        addRecentGame(newGame)
+
+      } catch (err) {
+        console.error('Failed to create custom game:', err)
+        setError(`Failed to create custom game "${gameName}". Please try again.`)
+      } finally {
+        setLoading(false)
+      }
+    } else {
+      // Handle existing games
+      setSelectedGame(gameId)
+      // Add to recent games
+      const selectedGameData = games.find(game => game.id === gameId)
+      if (selectedGameData) {
+        addRecentGame(selectedGameData)
+      }
     }
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
-    setFileSizeError('')
-    setCompressionInfo('')
-    
-    if (files && files.length > 0) {
-      const file = files[0]
-      
-      // Validate file type
-      if (!isValidImageFile(file)) {
-        setFileSizeError('Please select a valid image file (JPEG, PNG, or WebP)')
-        setSelectedImage(null)
-        e.target.value = ''
-        return
-      }
+    if (!files || files.length === 0) return
 
-      const maxSize = 50 * 1024 * 1024 // 50MB in bytes
-      
-      if (file.size > maxSize) {
-        setFileSizeError(`Your image must be 50MB or less. Current size: ${formatFileSize(file.size)}`)
-        setSelectedImage(null)
-        e.target.value = ''
-      } else {
-        setSelectedImage(file)
-        
-        // Show image cropper for the selected image
-        setImageForCropping(file)
-        setShowImageCropper(true)
-        
-        // Show compression info for larger files
-        if (file.size > 1024 * 1024) { // Files larger than 1MB
-          setCompressionInfo(`Original size: ${formatFileSize(file.size)}. Image will be automatically compressed before upload.`)
-        }
-      }
+    const fileArray = Array.from(files)
+
+    // Validate all files
+    const invalidFiles = fileArray.filter(file => !isValidImageFile(file))
+    if (invalidFiles.length > 0) {
+      setFileSizeError(`Invalid file type: ${invalidFiles[0].name}. Please select image files only.`)
+      return
+    }
+
+    // Check file sizes
+    const oversizedFiles = fileArray.filter(file => file.size > 10 * 1024 * 1024)
+    if (oversizedFiles.length > 0) {
+      setFileSizeError(`File too large: ${oversizedFiles[0].name}. Maximum size is 10MB.`)
+      return
+    }
+
+    setFileSizeError('')
+
+    // If single file, show cropper. Otherwise add all files directly
+    if (fileArray.length === 1) {
+      setImageForCropping(fileArray[0])
+      setShowImageCropper(true)
     } else {
-      setSelectedImage(null)
+      setSelectedImages(prev => [...prev, ...fileArray])
+      setCompressionInfo(`Added ${fileArray.length} images`)
+    }
+  }
+
+  const removeImage = (index: number, type: 'file' | 'url') => {
+    if (type === 'file') {
+      setSelectedImages(prev => prev.filter((_, i) => i !== index))
+    } else {
+      setSelectedImageUrls(prev => prev.filter((_, i) => i !== index))
     }
   }
 
@@ -319,7 +346,6 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
 
       // Wait for video to be ready
       video.addEventListener('loadedmetadata', () => {
-        console.log('Video ready, dimensions:', video.videoWidth, 'x', video.videoHeight)
       })
 
       video.addEventListener('error', (e) => {
@@ -348,12 +374,12 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
   }
 
   const handleCrop = (croppedFile: File) => {
-    setSelectedImage(croppedFile)
+    setSelectedImages(prev => [...prev, croppedFile])
     setShowImageCropper(false)
     setImageForCropping(null)
   }
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
+  const handleBackdropClick = (e: React.MouseCampaign) => {
     if (e.target === e.currentTarget) {
       onClose()
     }
@@ -361,7 +387,7 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
 
   // Close location dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseCampaign) => {
       const target = event.target as Element
       if (!target.closest('#location') && !target.closest('.location-dropdown')) {
         setShowLocationDropdown(false)
@@ -377,25 +403,17 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
     
     if (!user) return
 
+
     if (!datePlayed) {
       setError('Date played is required')
       return
     }
 
     if (!selectedOpponentId) {
-      console.log('Validation failed - selectedOpponentId:', selectedOpponentId, 'selectedOpponentName:', selectedOpponentName)
-      console.log('Current form state:', {
-        datePlayed,
-        selectedOpponentId,
-        selectedOpponentName,
-        selectedGame,
-        result
-      })
       
       // Check if there's text in the opponent field but no selection - try to create opponent
       const opponentInput = document.querySelector('input[placeholder*="opponent"]') as HTMLInputElement
       if (opponentInput && opponentInput.value.trim()) {
-        console.log('Attempting to auto-create opponent:', opponentInput.value.trim())
         setCreatingOpponent(true)
         setError('Creating opponent...')
         
@@ -403,7 +421,6 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
           const newOpponent = await createOpponent(opponentInput.value.trim())
           
           if (newOpponent) {
-            console.log('Auto-created opponent:', newOpponent)
             setSelectedOpponentId(newOpponent.id)
             setSelectedOpponentName(newOpponent.opp_name)
             setError('')
@@ -440,51 +457,8 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
       // Generate battle name: "[Game] against [Opponent]"
       const generatedBattleName = `${selectedGameData?.name || 'Unknown Game'} against ${selectedOpponentName || 'Unknown Opponent'}`
       
-      let imageUrl = null
-
-      // Upload image if selected
-      if (selectedImage) {
-        setCompressing(true)
-        try {
-          // Compress the image
-          const compressedImage = await compressImage(selectedImage)
-          
-          // Generate unique filename
-          const fileExt = compressedImage.name.split('.').pop()
-          const fileName = `battle-images/${user.id}/${Date.now()}.${fileExt}`
-          
-          // Upload to Supabase Storage
-          const { error: uploadError } = await supabase.storage
-            .from('battle-images')
-            .upload(fileName, compressedImage, {
-              cacheControl: '3600',
-              upsert: true
-            })
-
-          if (uploadError) throw uploadError
-
-          // Get public URL
-          const { data: urlData } = supabase.storage
-            .from('battle-images')
-            .getPublicUrl(fileName)
-
-          imageUrl = urlData.publicUrl
-        } catch (imageError) {
-          console.error('Error uploading image:', imageError)
-          setError('Failed to upload image. Please try again.')
-          setCompressing(false)
-          return
-        } finally {
-          setCompressing(false)
-        }
-      }
-      
-      // Save location to history if provided
-      if (location.trim()) {
-        addLocationToHistory(location.trim())
-      }
-
-      const { error } = await supabase
+      // Create the battle first without image_url (we'll use junction table)
+      const { data: battleData, error: battleError } = await supabase
         .from('battles')
         .insert({
           battle_name: generatedBattleName,
@@ -494,13 +468,56 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
           game_name: selectedGameData?.name || '',
           game_uid: selectedGame,
           result: result,
-          image_url: imageUrl,
           battle_notes: battleNotes.trim() || null,
           location: location.trim() || null,
+          campaign_id: selectedCampaignId || null,
           user_id: user.id
         })
+        .select()
+        .single()
 
-      if (error) throw error
+      if (battleError) throw battleError
+
+      // Upload and save selected file images to junction table
+      setCompressing(true)
+      for (let i = 0; i < selectedImages.length; i++) {
+        const file = selectedImages[i]
+        const isPrimary = i === 0 && selectedImageUrls.length === 0 // First file image is primary if no URL images
+        const displayOrder = selectedImageUrls.length + i
+
+        try {
+          // Compress the image before upload
+          const compressedFile = await compressImage(file, 1200, 1200, 0.8)
+
+          const fileExt = compressedFile.name.split('.').pop()
+          const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('model-images')
+            .upload(fileName, compressedFile)
+
+          if (uploadError) {
+            console.error('Image upload error:', uploadError)
+            throw new Error(`Failed to upload image: ${uploadError.message}`)
+          }
+
+          const { data } = supabase.storage
+            .from('model-images')
+            .getPublicUrl(uploadData.path)
+
+          // Save to junction table
+          await addBattleImage(battleData.id, data.publicUrl, isPrimary, displayOrder)
+        } catch (uploadError) {
+          console.error('Image upload error:', uploadError)
+          // Continue with other images even if one fails
+        }
+      }
+      setCompressing(false)
+
+      // Save location to history if provided
+      if (location.trim()) {
+        addLocationToHistory(location.trim())
+      }
 
       // Trigger refresh (this will also close the modal)
       await onBattleCreated()
@@ -571,7 +588,6 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
             <OpponentSelector
               selectedOpponentId={selectedOpponentId}
               onOpponentChange={(opponentId, opponentName) => {
-                console.log('Opponent changed:', { opponentId, opponentName })
                 setSelectedOpponentId(opponentId)
                 setSelectedOpponentName(opponentName)
               }}
@@ -654,6 +670,31 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
             </div>
           </div>
 
+          {/* Campaign */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label htmlFor="event" className="block text-sm font-medium text-input-label font-overpass">
+                Campaign
+              </label>
+              <span className="text-sm text-gray-500">Optional</span>
+            </div>
+            <select
+              id="event"
+              value={selectedCampaignId}
+              onChange={(e) => setSelectedCampaignId(e.target.value)}
+              className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text"
+              disabled={loading}
+            >
+              <option value="">No event selected</option>
+              {campaigns.map((event) => (
+                <option key={event.id} value={event.id}>
+                  {event.name}
+                  {event.start_date && ` (${new Date(event.start_date).toLocaleDateString()})`}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Game */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -668,6 +709,7 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
               onGameSelect={handleGameSelect}
               placeholder="Choose a Game"
               favoriteGames={getFavoriteGames()}
+              showAddNewButton={true}
             />
           </div>
 
@@ -698,27 +740,70 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
             
             {/* Image Upload Area */}
             <div className="border-2 border-dashed border-border-custom rounded-lg p-6 text-center hover:border-[var(--color-brand)] transition-colors">
-              {selectedImage ? (
+              {(selectedImages.length > 0 || selectedImageUrls.length > 0) ? (
                 <div className="space-y-4">
-                  <div className="relative mx-auto w-32 h-32">
-                    <img
-                      src={URL.createObjectURL(selectedImage)}
-                      alt="Selected battle image"
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedImage(null)
-                        setFileSizeError('')
-                        setCompressionInfo('')
-                      }}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                  {/* Show selected images */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {/* URL Images */}
+                    {selectedImageUrls.map((url, index) => (
+                      <div key={`url-${index}`} className="relative">
+                        <img
+                          src={url}
+                          alt={`Selected image ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index, 'url')}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        {index === 0 && selectedImages.length === 0 && (
+                          <div className="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-1 rounded">
+                            Primary
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* File Images */}
+                    {selectedImages.map((file, index) => (
+                      <div key={`file-${index}`} className="relative">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`Selected file ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index, 'file')}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        {index === 0 && selectedImageUrls.length === 0 && (
+                          <div className="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-1 rounded">
+                            Primary
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Add more images button */}
+                    <label className="cursor-pointer border-2 border-dashed border-border-custom rounded-lg flex flex-col items-center justify-center h-24 hover:border-brand transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        disabled={loading}
+                        multiple
+                      />
+                      <Image className="w-6 h-6 text-icon mb-1" />
+                      <span className="text-xs text-secondary-text">Add More</span>
+                    </label>
                   </div>
-                  <p className="text-sm text-secondary-text">{selectedImage.name}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -727,16 +812,17 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={handleImageChange}
+                        onChange={handleFileSelect}
                         className="hidden"
                         disabled={loading}
+                        multiple
                       />
                       <div className="flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-bg-secondary transition-colors">
                         <Image className="w-8 h-8 text-icon" />
-                        <span className="text-sm font-medium text-text">Upload Image</span>
+                        <span className="text-sm font-medium text-text">Upload Images</span>
                       </div>
                     </label>
-                    
+
                     <button
                       type="button"
                       onClick={handleCameraCapture}
@@ -748,7 +834,7 @@ export function NewBattleModal({ isOpen, onClose, onBattleCreated }: NewBattleMo
                     </button>
                   </div>
                   <p className="text-xs text-secondary-text">
-                    JPEG, PNG, or WebP up to 50MB
+                    Select multiple images • JPEG, PNG, or WebP up to 10MB each
                   </p>
                 </div>
               )}

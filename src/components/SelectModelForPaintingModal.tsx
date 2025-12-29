@@ -24,7 +24,7 @@ interface Model {
 interface SelectModelForPaintingModalProps {
   isOpen: boolean
   onClose: () => void
-  onModelSelected: (model: Model, showInspiration?: boolean) => void
+  onModelSelected: (model: Model) => void
   excludeModelIds?: string[] // Models already on painting table
 }
 
@@ -59,7 +59,7 @@ export function SelectModelForPaintingModal({
   }
 
   const handleModelSelect = (model: Model) => {
-    onModelSelected(model, true) // Show inspiration automatically
+    onModelSelected(model)
     setSearchQuery('')
     onClose()
   }

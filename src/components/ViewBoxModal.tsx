@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
-import { X, Calendar, DollarSign, FileText, Share2, Edit, Plus, Package, Trash2, ChevronRight, Camera } from 'lucide-react'
+import { X, Calendar, DollarSign, FileText, Share2, Edit, Plus, Package, Trash2, ChevronRight, Camera, Image, Info, Settings } from 'lucide-react'
+import { TabSelector } from './TabSelector'
+import { CollectionImage } from './CollectionImage'
 import { DeleteBoxModal } from './DeleteBoxModal'
 import { AddModelsToBoxModal } from './AddModelsToBoxModal'
 import { EditBoxModal } from './EditBoxModal'
@@ -9,6 +11,7 @@ import { ShareScreenshotPreview } from './ShareScreenshotPreview'
 import { supabase } from '../lib/supabase'
 import { formatLocalDate, formatAustralianDate } from '../utils/timezone'
 import { getBoxWithModels, removeModelFromBox } from '../utils/modelBoxUtils'
+import { getBoxWithImages, getBoxImageSrc, type BoxWithImages } from '../utils/boxImageUtils'
 
 interface ViewBoxModalProps {
   isOpen: boolean
@@ -17,18 +20,7 @@ interface ViewBoxModalProps {
   onModelsUpdated?: () => void
   onViewModel?: (model: any) => void
   onAddNewModel?: (boxId: string | null) => void
-  box: {
-    id: string
-    name: string
-    purchase_date: string | null
-    image_url: string | null
-    public: boolean
-    game: {
-      name: string
-      image: string | null
-      icon: string | null
-    } | null
-  } | null
+  box: BoxWithImages | null
 }
 
 export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, onViewModel, onAddNewModel, box }: ViewBoxModalProps) {
@@ -50,6 +42,65 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
   const [boxModels, setBoxModels] = React.useState<any[]>([])
   const [modelsLoading, setModelsLoading] = React.useState(true)
   const [modelsError, setModelsError] = React.useState<string | null>(null)
+  const [boxWithImages, setBoxWithImages] = React.useState<BoxWithImages | null>(null)
+  const [showCarousel, setShowCarousel] = React.useState(box?.show_carousel || false)
+  const [originalShowCarousel, setOriginalShowCarousel] = React.useState(box?.show_carousel || false)
+  const [savingToggle, setSavingToggle] = React.useState(false)
+  const [activeTab, setActiveTab] = React.useState<'details' | 'settings'>('details')
+  const [sortBy, setSortBy] = React.useState<'date-added' | 'painted-status' | 'alphabetical'>('date-added')
+
+  const tabs = [
+    {
+      id: 'details',
+      label: 'Details',
+      icon: Info
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: Settings
+    }
+  ]
+
+  // Sorting function for models
+  const sortModels = (models: any[], sortType: 'date-added' | 'painted-status' | 'alphabetical') => {
+    return [...models].sort((a, b) => {
+      switch (sortType) {
+        case 'date-added':
+          // Sort by created_at date (newest first)
+          const dateA = new Date(a.created_at || 0).getTime()
+          const dateB = new Date(b.created_at || 0).getTime()
+          return dateB - dateA
+
+        case 'painted-status':
+          // Sort by painted status (painted models first, then by status priority)
+          const statusPriority = {
+            'Painted': 1,
+            'Base Coated': 2,
+            'Primed': 3,
+            'Part Painted': 4,
+            'None': 5,
+            '': 6
+          } as const
+
+          const priorityA = statusPriority[a.status as keyof typeof statusPriority] || 6
+          const priorityB = statusPriority[b.status as keyof typeof statusPriority] || 6
+
+          if (priorityA !== priorityB) {
+            return priorityA - priorityB
+          }
+          // If same status, sort alphabetically by name
+          return a.name.localeCompare(b.name)
+
+        case 'alphabetical':
+          // Sort alphabetically by name
+          return a.name.localeCompare(b.name)
+
+        default:
+          return 0
+      }
+    })
+  }
 
   // Prevent body scroll when modal is open
   React.useEffect(() => {
@@ -63,6 +114,14 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
       document.body.style.overflow = 'unset'
     }
   }, [isOpen])
+
+  // Update local state when box changes
+  React.useEffect(() => {
+    if (box) {
+      setShowCarousel(box.show_carousel || false)
+      setOriginalShowCarousel(box.show_carousel || false)
+    }
+  }, [box])
 
   // Fetch models when modal opens or box changes
   React.useEffect(() => {
@@ -78,9 +137,17 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
     setModelsError(null)
 
     try {
-      const boxWithModels = await getBoxWithModels(box.id)
+      const [boxWithModels, boxImagesData] = await Promise.all([
+        getBoxWithModels(box.id),
+        getBoxWithImages(box.id)
+      ])
+
       if (boxWithModels) {
         setBoxModels(boxWithModels.models || [])
+      }
+
+      if (boxImagesData) {
+        setBoxWithImages(boxImagesData)
       }
     } catch (err) {
       setModelsError(err instanceof Error ? err.message : 'Failed to fetch models')
@@ -97,11 +164,11 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
     onModelsUpdated?.()
   }
 
-  const handleAddNewModel = () => {
+  const handleAddNewModel = async () => {
     // Close all modals and signal to add new model
     setShowAddModelsModal(false)
     setShouldAddNewModel(true)
-    onClose()
+    await handleClose()
   }
 
   // Effect to trigger add model modal when shouldAddNewModel is true
@@ -151,17 +218,17 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
     }
   }
 
-  const handleViewModelFromBox = (model: any) => {
+  const handleViewModelFromBox = async (model: any) => {
     // Close this modal and open the view model modal
-    onClose()
+    await handleClose()
     onViewModel?.(model)
   }
 
-  const handleBoxUpdated = () => {
+  const handleBoxUpdated = async () => {
     setShowEditModal(false)
     // The parent component should handle refreshing the box data
     // We'll close this modal and let the parent refresh
-    onClose()
+    await handleClose()
     // Trigger a refresh of the boxes list
     if (onModelsUpdated) {
       onModelsUpdated()
@@ -177,9 +244,24 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
 
   if (!isOpen || !box) return null
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
+  const handleClose = async () => {
+    const hadChanges = showCarousel !== originalShowCarousel
+    const saveSuccessful = await saveToggleSelection()
+
+    // Only refresh if the save was successful and there were changes
+    if (saveSuccessful && onModelsUpdated) {
+      // Small delay to ensure database transaction is fully committed
+      setTimeout(() => {
+        onModelsUpdated()
+      }, 100)
+    }
+
+    onClose()
+  }
+
+  const handleBackdropClick = async (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      onClose()
+      await handleClose()
     }
   }
 
@@ -187,28 +269,97 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
     return formatAustralianDate(dateString)
   }
 
+  // Check if both collection image and model images are available
+  const hasCollectionImage = () => {
+    // Check for new multi-image system first
+    if (boxWithImages?.images && boxWithImages.images.length > 0) {
+      return true
+    }
+
+    // Fallback to legacy single image check
+    return box?.image_url &&
+           typeof box.image_url === 'string' &&
+           box.image_url.trim() !== '' &&
+           box.image_url !== 'undefined' &&
+           box.image_url !== 'null' &&
+           (box.image_url.startsWith('http') || box.image_url.startsWith('/'))
+  }
+
+  const hasModelImages = () => {
+    return boxModels.some(model => {
+      // Check if model has a valid image
+      return model.image_url &&
+             typeof model.image_url === 'string' &&
+             model.image_url.trim() !== '' &&
+             model.image_url !== 'undefined' &&
+             model.image_url !== 'null' &&
+             (model.image_url.startsWith('http') || model.image_url.startsWith('/'))
+    })
+  }
+
+  const shouldShowToggle = () => {
+    return hasCollectionImage() && hasModelImages()
+  }
+
+  const handleToggleChange = (useCarousel: boolean) => {
+    if (!box || savingToggle) return
+    setShowCarousel(useCarousel)
+  }
+
+  const saveToggleSelection = async (): Promise<boolean> => {
+    if (!box || showCarousel === originalShowCarousel) {
+      return false
+    }
+
+    setSavingToggle(true)
+    try {
+      const { error } = await supabase
+        .from('boxes')
+        .update({ show_carousel: showCarousel })
+        .eq('id', box.id)
+
+      if (error) throw error
+
+      // Update the original value to reflect the saved state
+      setOriginalShowCarousel(showCarousel)
+      return true
+    } catch (err) {
+      console.error('Error updating carousel setting:', err)
+      // Revert to original state on error
+      setShowCarousel(originalShowCarousel)
+      return false
+    } finally {
+      setSavingToggle(false)
+    }
+  }
+
   const getImageSrc = () => {
-    // Check if we have a valid box image URL
-    if (box.image_url && 
+    // Use the new multi-image utility if we have image data
+    if (boxWithImages) {
+      return getBoxImageSrc(boxWithImages).src
+    }
+
+    // Fallback to original logic if images haven't loaded yet
+    if (box?.image_url &&
         typeof box.image_url === 'string' &&
-        box.image_url.trim() !== '' && 
-        box.image_url !== 'undefined' && 
+        box.image_url.trim() !== '' &&
+        box.image_url !== 'undefined' &&
         box.image_url !== 'null' &&
         (box.image_url.startsWith('http') || box.image_url.startsWith('/'))) {
       return box.image_url
     }
-    
+
     // Try to use the game's image as fallback
-    const gameImage = box.game?.image
-    if (gameImage && 
+    const gameImage = box?.game?.image
+    if (gameImage &&
         typeof gameImage === 'string' &&
-        gameImage.trim() !== '' && 
-        gameImage !== 'undefined' && 
+        gameImage.trim() !== '' &&
+        gameImage !== 'undefined' &&
         gameImage !== 'null' &&
         gameImage.startsWith('http')) {
       return gameImage
     }
-    
+
     // Final fallback to default image
     return '/bp-unkown.svg'
   }
@@ -259,14 +410,19 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
 
   const isUserUploadedImage = (imageUrl: string | null) => {
     if (!imageUrl || typeof imageUrl !== 'string') return false
-    
+
     // Check if it's a Supabase storage URL (user-uploaded)
     return imageUrl.includes('supabase') && imageUrl.includes('storage')
   }
 
   const shouldShowScreenshotButton = () => {
-    // Show button only if the collection has a user-uploaded image
-    return isUserUploadedImage(box.image_url)
+    // Check for user-uploaded images in the multi-image system
+    if (boxWithImages?.images && boxWithImages.images.length > 0) {
+      return boxWithImages.images.some(img => isUserUploadedImage(img.image_url))
+    }
+
+    // Fallback to legacy single image check
+    return isUserUploadedImage(box?.image_url || null)
   }
 
   const handleDeleteClick = () => {
@@ -304,7 +460,7 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
       
       // Close modals and refresh data
       setShowDeleteModal(false)
-      onClose()
+      await handleClose()
       
       // Notify parent component to refresh the boxes list
       if (onBoxDeleted) {
@@ -327,7 +483,7 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
         <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-2xl w-full h-screen sm:h-auto sm:max-h-[90vh] flex flex-col modal-content">
           {/* Sticky Close Button */}
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="fixed top-4 right-4 md:absolute text-white hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full p-2 z-20"
           >
             <X className="w-6 h-6 text-icon" />
@@ -336,24 +492,48 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
           {/* Content - Scrollable area */}
           <div className="flex-1 overflow-y-auto">
             {/* Header Image - Now scrolls with content */}
-            <img
-              src={getImageSrc()}
-              alt={box.name}
-              className="w-full object-cover rounded-none sm:rounded-t-lg"
-              style={{ 
-                marginTop: 'calc(-1 * max(1rem, env(safe-area-inset-top)))', 
-                paddingTop: 'max(1rem, env(safe-area-inset-top))'
-              }}
-              loading="lazy"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement
-                const fallbackUrl = '/bp-unkown.svg'
-                if (target.src !== fallbackUrl) {
-                  console.log('Box modal image failed to load:', target.src, 'Falling back to default')
-                  target.src = fallbackUrl
-                }
-              }}
-            />
+            <div className="relative">
+              {showCarousel ? (
+                <div
+                  className="w-full"
+                  style={{
+                    height: 'max(30vh, 200px)',
+                    marginTop: 'calc(-1 * max(1rem, env(safe-area-inset-top)))',
+                    paddingTop: 'max(1rem, env(safe-area-inset-top))'
+                  }}
+                >
+                  <CollectionImage
+                    boxId={box.id}
+                    name={box.name}
+                    gameImage={box.game?.image || null}
+                    gameIcon={box.game?.icon || null}
+                    size="large"
+                    className="w-full h-full object-cover rounded-none sm:rounded-t-lg"
+                    forceCarousel={true}
+                  />
+                </div>
+              ) : (
+                <img
+                  src={getImageSrc()}
+                  alt={box.name}
+                  className="w-full object-cover rounded-none sm:rounded-t-lg"
+                  style={{
+                    height: 'max(30vh, 200px)',
+                    marginTop: 'calc(-1 * max(1rem, env(safe-area-inset-top)))',
+                    paddingTop: 'max(1rem, env(safe-area-inset-top))'
+                  }}
+                  loading="lazy"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    const fallbackUrl = '/bp-unkown.svg'
+                    if (target.src !== fallbackUrl) {
+                      console.log('Box modal image failed to load:', target.src, 'Falling back to default')
+                      target.src = fallbackUrl
+                    }
+                  }}
+                />
+              )}
+            </div>
             
             <div className="p-6">
             {/* Title Section */}
@@ -404,7 +584,18 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
               </div>
             </div>
 
-            {/* Details Cards */}
+            {/* Tab Selector */}
+            <TabSelector
+              tabs={tabs}
+              activeTab={activeTab}
+              onTabChange={(tabId) => setActiveTab(tabId as 'details' | 'settings')}
+              className="mb-6"
+            />
+
+            {/* Tab Content */}
+            {activeTab === 'details' && (
+              <>
+                {/* Details Cards */}
             <div className="space-y-3">
               {/* Purchase Date - only show if purchase date exists */}
               {box.purchase_date && (
@@ -447,7 +638,7 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {boxModels.map((model) => (
+                  {sortModels(boxModels, sortBy).map((model) => (
                     <div
                       key={model.id}
                       className="bg-bg-secondary rounded-lg p-4 flex items-center justify-between hover:bg-bg-primary transition-colors cursor-pointer"
@@ -512,6 +703,73 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
                 </div>
               )}
             </div>
+              </>
+            )}
+
+            {activeTab === 'settings' && (
+              <div className="space-y-6">
+                {/* Model Sorting Setting */}
+                <div className="bg-bg-secondary rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-title mb-4">Model Sorting</h3>
+                  <p className="text-sm text-secondary-text mb-4">
+                    Choose how models are sorted in this collection.
+                  </p>
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-secondary-text">Sort by</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as 'date-added' | 'painted-status' | 'alphabetical')}
+                      className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-brand/50 focus:border-brand bg-bg-primary text-text text-sm transition-colors"
+                    >
+                      <option value="date-added">Date Added (newest first)</option>
+                      <option value="painted-status">Painted Status (painted first)</option>
+                      <option value="alphabetical">Alphabetical (A-Z)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Image Display Setting */}
+                {shouldShowToggle() && (
+                  <div className="bg-bg-secondary rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-title mb-4">Image Display</h3>
+                    <p className="text-sm text-secondary-text mb-4">
+                      Choose how this collection's image is displayed throughout the app.
+                    </p>
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => handleToggleChange(false)}
+                        disabled={savingToggle}
+                        className={`flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-2 ${
+                          !showCarousel
+                            ? 'bg-brand text-white shadow-md'
+                            : 'bg-bg-primary text-secondary-text hover:bg-white border border-border'
+                        } ${savingToggle ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <Image className="w-4 h-4" />
+                        <span>Collection image</span>
+                      </button>
+                      <button
+                        onClick={() => handleToggleChange(true)}
+                        disabled={savingToggle}
+                        className={`flex-1 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-2 ${
+                          showCarousel
+                            ? 'bg-brand text-white shadow-md'
+                            : 'bg-bg-primary text-secondary-text hover:bg-white border border-border'
+                        } ${savingToggle ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <Package className="w-4 h-4" />
+                        <span>Model images</span>
+                      </button>
+                    </div>
+                    {showCarousel !== originalShowCarousel && (
+                      <div className="mt-3 text-xs text-orange-600 text-center">
+                        You'll need to reload the app to see this change take effect.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex justify-center pt-6 modal-actions">
@@ -604,16 +862,17 @@ export function ViewBoxModal({ isOpen, onClose, onBoxDeleted, onModelsUpdated, o
       <ShareScreenshotPreview
         isOpen={showScreenshotModal}
         onClose={() => setShowScreenshotModal(false)}
-        model={box ? {
-          id: box.id,
-          name: box.name,
-          image_url: box.image_url,
-          painted_date: box.purchase_date,
+        model={boxWithImages ? {
+          id: boxWithImages.id,
+          name: boxWithImages.name,
+          image_url: boxWithImages.image_url,
+          painted_date: boxWithImages.purchase_date,
+          images: boxWithImages.images,
           box: null, // Collections don't have a parent box
-          game: box.game ? {
+          game: boxWithImages.game ? {
             id: '', // We don't have game ID in box
-            name: box.game.name,
-            icon: box.game.icon,
+            name: boxWithImages.game.name,
+            icon: boxWithImages.game.icon,
             default_theme: null
           } : null
         } : null}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, Plus, Edit2, Save, X } from 'lucide-react'
+import { ArrowLeft, Plus, Edit2, Save, X, Eye, EyeOff } from 'lucide-react'
 import { Header } from './Header'
 import { TabBar } from './TabBar'
 import { RichTextEditor } from './RichTextEditor'
@@ -15,10 +15,11 @@ interface ReleaseManagementPageProps {
 
 interface Version {
   id: number
-  ver_number: number
+  ver_number: string
   ver_title: string
   ver_notes: string | null
   created_at: string
+  published: boolean
 }
 
 export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagementPageProps) {
@@ -34,14 +35,16 @@ export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagement
   const [newVersion, setNewVersion] = useState({
     ver_number: '',
     ver_title: '',
-    ver_notes: ''
+    ver_notes: '',
+    published: false
   })
   
   // Form state for editing
   const [editVersion, setEditVersion] = useState({
     ver_number: '',
     ver_title: '',
-    ver_notes: ''
+    ver_notes: '',
+    published: false
   })
 
   const handleAdminClick = () => {
@@ -76,9 +79,10 @@ export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagement
       const { data, error } = await supabase
         .from('version')
         .insert({
-          ver_number: parseFloat(newVersion.ver_number),
+          ver_number: newVersion.ver_number,
           ver_title: newVersion.ver_title,
           ver_notes: newVersion.ver_notes || null,
+          published: newVersion.published,
           created_at: new Date().toISOString()
         })
         .select()
@@ -87,7 +91,7 @@ export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagement
       if (error) throw error
 
       // Reset form and refresh data
-      setNewVersion({ ver_number: '', ver_title: '', ver_notes: '' })
+      setNewVersion({ ver_number: '', ver_title: '', ver_notes: '', published: false })
       setShowForm(false)
       await fetchVersions()
       await fetchCurrentVersion()
@@ -101,9 +105,10 @@ export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagement
   const handleStartEdit = (version: Version) => {
     setEditingId(version.id)
     setEditVersion({
-      ver_number: version.ver_number.toString(),
+      ver_number: version.ver_number,
       ver_title: version.ver_title,
-      ver_notes: version.ver_notes || ''
+      ver_notes: version.ver_notes || '',
+      published: version.published
     })
   }
 
@@ -115,9 +120,10 @@ export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagement
       const { error } = await supabase
         .from('version')
         .update({
-          ver_number: parseFloat(editVersion.ver_number),
+          ver_number: editVersion.ver_number,
           ver_title: editVersion.ver_title,
-          ver_notes: editVersion.ver_notes || null
+          ver_notes: editVersion.ver_notes || null,
+          published: editVersion.published
         })
         .eq('id', editingId)
 
@@ -125,7 +131,7 @@ export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagement
 
       // Reset edit state and refresh data
       setEditingId(null)
-      setEditVersion({ ver_number: '', ver_title: '', ver_notes: '' })
+      setEditVersion({ ver_number: '', ver_title: '', ver_notes: '', published: false })
       await fetchVersions()
       await fetchCurrentVersion()
     } catch (err) {
@@ -137,7 +143,26 @@ export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagement
   // Cancel editing
   const handleCancelEdit = () => {
     setEditingId(null)
-    setEditVersion({ ver_number: '', ver_title: '', ver_notes: '' })
+    setEditVersion({ ver_number: '', ver_title: '', ver_notes: '', published: false })
+  }
+
+  // Toggle publish status
+  const handleTogglePublish = async (versionId: number, currentPublished: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('version')
+        .update({ published: !currentPublished })
+        .eq('id', versionId)
+
+      if (error) throw error
+
+      // Refresh data
+      await fetchVersions()
+      await fetchCurrentVersion()
+    } catch (err) {
+      console.error('Error toggling publish status:', err)
+      alert('Failed to update publish status')
+    }
   }
 
   // Load versions on mount
@@ -177,7 +202,7 @@ export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagement
           ) : currentVersion ? (
             <div className="flex items-center space-x-4">
               <span className="text-2xl font-bold text-brand">
-                Version {currentVersion.ver_number.toFixed(2)}
+                Version {currentVersion.ver_number}
               </span>
               {currentVersion.ver_title && (
                 <span className="text-lg text-text">- {currentVersion.ver_title}</span>
@@ -209,13 +234,14 @@ export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagement
                      Version Number *
                    </label>
                    <input
-                     type="number"
-                     step="0.1"
+                     type="text"
                      value={newVersion.ver_number}
                      onChange={(e) => setNewVersion({ ...newVersion, ver_number: e.target.value })}
                      className="w-full px-3 py-2 border border-border-custom rounded-lg bg-bg-secondary text-text focus:outline-none focus:ring-2 focus:ring-brand"
-                     placeholder="1.0"
+                     placeholder="1.0.0"
+                     pattern="^\d+\.\d+\.\d+$"
                    />
+                   <p className="text-xs text-secondary-text mt-1">Format: MAJOR.MINOR.PATCH (e.g., 1.0.0)</p>
                  </div>
                  <div>
                    <label className="block text-sm font-medium text-text mb-2">
@@ -239,6 +265,20 @@ export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagement
                    label="Version Notes"
                    rows={4}
                  />
+               </div>
+               
+               <div>
+                 <label className="flex items-center space-x-3">
+                   <input
+                     type="checkbox"
+                     checked={newVersion.published}
+                     onChange={(e) => setNewVersion({ ...newVersion, published: e.target.checked })}
+                     className="w-4 h-4 text-brand bg-bg-secondary border-border-custom rounded focus:ring-brand focus:ring-2"
+                   />
+                   <span className="text-sm font-medium text-text">
+                     Publish this version (unchecked = draft)
+                   </span>
+                 </label>
                </div>
                
                <div className="flex justify-end">
@@ -275,12 +315,13 @@ export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagement
                              Version Number *
                            </label>
                            <input
-                             type="number"
-                             step="0.1"
+                             type="text"
                              value={editVersion.ver_number}
                              onChange={(e) => setEditVersion({ ...editVersion, ver_number: e.target.value })}
                              className="w-full px-3 py-2 border border-border-custom rounded-lg bg-bg-secondary text-text focus:outline-none focus:ring-2 focus:ring-brand"
+                             pattern="^\d+\.\d+\.\d+$"
                            />
+                           <p className="text-xs text-secondary-text mt-1">Format: MAJOR.MINOR.PATCH (e.g., 1.0.0)</p>
                          </div>
                          <div>
                            <label className="block text-sm font-medium text-text mb-2">
@@ -303,6 +344,20 @@ export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagement
                            label="Version Notes"
                            rows={4}
                          />
+                       </div>
+                       
+                       <div>
+                         <label className="flex items-center space-x-3">
+                           <input
+                             type="checkbox"
+                             checked={editVersion.published}
+                             onChange={(e) => setEditVersion({ ...editVersion, published: e.target.checked })}
+                             className="w-4 h-4 text-brand bg-bg-secondary border-border-custom rounded focus:ring-brand focus:ring-2"
+                           />
+                           <span className="text-sm font-medium text-text">
+                             Publish this version (unchecked = draft)
+                           </span>
+                         </label>
                        </div>
                        
                        <div className="flex justify-end space-x-2">
@@ -328,11 +383,18 @@ export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagement
                      <div>
                        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-1 sm:space-y-0 mb-3">
                          <span className="text-lg font-semibold text-brand">
-                           Version {version.ver_number.toFixed(2)}
+                           Version {version.ver_number}
                          </span>
                          <span className="text-text">{version.ver_title}</span>
                          <span className="text-secondary-text text-sm">
                            {new Date(version.created_at).toLocaleDateString('en-AU')}
+                         </span>
+                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                           version.published 
+                             ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                             : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                         }`}>
+                           {version.published ? 'Published' : 'Draft'}
                          </span>
                        </div>
                        {version.ver_notes && (
@@ -358,7 +420,27 @@ export function ReleaseManagementPage({ onBack, onLogoClick }: ReleaseManagement
                            </ReactMarkdown>
                          </div>
                        )}
-                       <div className="flex justify-end">
+                       <div className="flex justify-end space-x-2">
+                         <button
+                           onClick={() => handleTogglePublish(version.id, version.published)}
+                           className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                             version.published
+                               ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-800'
+                               : 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800'
+                           }`}
+                         >
+                           {version.published ? (
+                             <>
+                               <EyeOff className="w-4 h-4" />
+                               <span>Unpublish</span>
+                             </>
+                           ) : (
+                             <>
+                               <Eye className="w-4 h-4" />
+                               <span>Publish</span>
+                             </>
+                           )}
+                         </button>
                          <button
                            onClick={() => handleStartEdit(version)}
                            className="btn-secondary btn-with-icon"

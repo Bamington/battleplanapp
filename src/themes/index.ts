@@ -60,5 +60,15 @@ export const getThemeIds = (): ThemeId[] => {
   return Object.keys(themes) as ThemeId[]
 }
 
+export const getVisibleThemes = (): Theme[] => {
+  return Object.values(themes).filter(theme => theme.isVisible)
+}
+
+export const getVisibleThemeIds = (): ThemeId[] => {
+  return Object.entries(themes)
+    .filter(([, theme]) => theme.isVisible)
+    .map(([key]) => key as ThemeId)
+}
+
 // Export types
 export type { Theme, ThemeId, ThemeRenderContext } from './types'

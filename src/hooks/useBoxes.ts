@@ -10,6 +10,7 @@ interface Box {
   public: boolean | null
   models_count: number
   created_at: string | null
+  show_carousel: boolean | null
   game: {
     id: string
     name: string
@@ -51,6 +52,7 @@ export function useBoxes() {
           image_url,
           public,
           created_at,
+          show_carousel,
           game:games(id, name, icon, image),
           model_boxes(
             model:models(count)
@@ -75,7 +77,9 @@ export function useBoxes() {
           purchase_date: box.purchase_date,
           image_url: box.image_url,
           public: box.public,
+          show_carousel: box.show_carousel,
           models_count: totalCount,
+          created_at: box.created_at,
           game: box.game && Array.isArray(box.game) ? box.game[0] : box.game
         }
       })

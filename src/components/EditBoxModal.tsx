@@ -7,26 +7,14 @@ import { GameDropdown } from './GameDropdown'
 import { compressImage, isValidImageFile, formatFileSize } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
 import { ImageSearchResults } from './ImageSearchResults'
+import { getBoxWithImages, addBoxImage, deleteBoxImage, updateBoxImage, reorderBoxImages, type BoxWithImages } from '../utils/boxImageUtils'
 
-
-interface Box {
-  id: string
-  name: string
-  game_id?: string | null
-  game?: {
-    id: string
-    name: string
-    icon: string | null
-  } | null
-  purchase_date: string | null
-  image_url: string | null
-}
 
 interface EditBoxModalProps {
   isOpen: boolean
   onClose: () => void
   onBoxUpdated: () => void
-  box: Box | null
+  box: BoxWithImages | null
 }
 
 export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModalProps) {
@@ -38,7 +26,9 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
   })
   const { games, createGame } = useGames()
   const { addRecentGame } = useRecentGames()
-  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
+  const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([])
+  const [selectedImageUrls, setSelectedImageUrls] = useState<string[]>([])
+  const [boxWithImages, setBoxWithImages] = useState<BoxWithImages | null>(null)
   const [showImageCropper, setShowImageCropper] = useState(false)
   const [imageForCropping, setImageForCropping] = useState<File | null>(null)
   const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null)
@@ -61,20 +51,76 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
         purchase_date: box.purchase_date || '',
         image_url: box.image_url || ''
       })
+      fetchBoxImages()
     }
   }, [box])
 
+  const fetchBoxImages = async () => {
+    if (!box) return
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (!isValidImageFile(file)) {
-        alert('Please select a valid image file')
-        return
+    try {
+      const boxImagesData = await getBoxWithImages(box.id)
+      if (boxImagesData) {
+        setBoxWithImages(boxImagesData)
       }
-      setSelectedImageFile(file)
-      setImageForCropping(file)
-      setShowImageCropper(true)
+    } catch (err) {
+      console.error('Error fetching box images:', err)
+    }
+  }
+
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    const fileArray = Array.from(files)
+
+    // Validate all files
+    const invalidFiles = fileArray.filter(file => !isValidImageFile(file))
+    if (invalidFiles.length > 0) {
+      alert(`Invalid file type: ${invalidFiles[0].name}. Please select image files only.`)
+      return
+    }
+
+    // Check file sizes
+    const oversizedFiles = fileArray.filter(file => file.size > 10 * 1024 * 1024)
+    if (oversizedFiles.length > 0) {
+      alert(`File too large: ${oversizedFiles[0].name}. Maximum size is 10MB.`)
+      return
+    }
+
+    setSelectedImageFiles(prev => [...prev, ...fileArray])
+  }
+
+  const handleImageSelected = (imageUrl: string) => {
+    setSelectedImageUrls(prev => [...prev, imageUrl])
+    setShowImageSearch(false)
+  }
+
+  const removeNewImage = (index: number, type: 'file' | 'url') => {
+    if (type === 'file') {
+      setSelectedImageFiles(prev => prev.filter((_, i) => i !== index))
+    } else {
+      setSelectedImageUrls(prev => prev.filter((_, i) => i !== index))
+    }
+  }
+
+  const removeExistingImage = async (imageId: string) => {
+    if (!box) return
+
+    try {
+      setLoading(true)
+      const success = await deleteBoxImage(imageId)
+      if (success) {
+        await fetchBoxImages() // Refresh images
+      } else {
+        alert('Failed to delete image')
+      }
+    } catch (err) {
+      console.error('Error deleting image:', err)
+      alert('Failed to delete image')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -326,11 +372,6 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
     }
   }
 
-  const handleImageSelected = (imageUrl: string) => {
-    // Store the selected URL for use during submission
-    setSelectedImageUrl(imageUrl)
-    setShowImageSearch(false)
-  }
 
   const findMoreImages = async () => {
     console.log('findMoreImages called with box name:', formData.name.trim())
@@ -416,39 +457,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
     setError('')
 
     try {
-      let imageUrl: string | null = formData.image_url
-
-      // Handle image deletion
-      if (deleteImage) {
-        // Delete the image from storage if it exists and is from our storage
-        if (formData.image_url && formData.image_url.includes('supabase')) {
-          try {
-            const urlParts = formData.image_url.split('/')
-            const bucketIndex = urlParts.findIndex(part => part === 'model-images')
-            if (bucketIndex !== -1) {
-              const filePath = urlParts.slice(bucketIndex + 1).join('/')
-              await supabase.storage
-                .from('model-images')
-                .remove([filePath])
-            }
-          } catch (deleteError) {
-            console.warn('Failed to delete old image:', deleteError)
-          }
-        }
-        imageUrl = null
-      }
-      // Use selected image URL from search results
-      else if (selectedImageUrl) {
-        imageUrl = selectedImageUrl
-      }
-      // Upload new image if selected
-      else if (croppedImageBlob) {
-        setCompressing(true)
-        const compressedFile = await compressImage(croppedImageBlob as File, 1200, 1200, 0.8)
-        imageUrl = await uploadFile(compressedFile, 'model-images', 'boxes')
-      }
-
-      // Handle new game creation
+      // Handle new game creation first
       let gameIdToSave = formData.game_id || null
       if (formData.game_id && formData.game_id.startsWith('new:')) {
         const gameName = formData.game_id.replace('new:', '')
@@ -458,17 +467,64 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
         addRecentGame(newGame)
       }
 
+      // Update the box basic information (without image_url, we use junction table now)
       const { error } = await supabase
         .from('boxes')
         .update({
           name: formData.name,
           game_id: gameIdToSave,
-          purchase_date: formData.purchase_date || null,
-          image_url: imageUrl
+          purchase_date: formData.purchase_date || null
         })
         .eq('id', box.id)
 
       if (error) throw error
+
+      // Handle new image URL selections
+      const startingDisplayOrder = boxWithImages?.images?.length || 0
+      for (let i = 0; i < selectedImageUrls.length; i++) {
+        const imageUrl = selectedImageUrls[i]
+        const isPrimary = i === 0 && (!boxWithImages?.images || boxWithImages.images.length === 0)
+        const displayOrder = startingDisplayOrder + i
+        await addBoxImage(box.id, imageUrl, isPrimary, displayOrder)
+      }
+
+      // Handle new file uploads
+      setCompressing(true)
+      for (let i = 0; i < selectedImageFiles.length; i++) {
+        const file = selectedImageFiles[i]
+        const isPrimary = i === 0 && selectedImageUrls.length === 0 && (!boxWithImages?.images || boxWithImages.images.length === 0)
+        const displayOrder = startingDisplayOrder + selectedImageUrls.length + i
+
+        try {
+          // Compress the image before upload
+          const compressedFile = await compressImage(file, 1200, 1200, 0.8)
+          console.log(`Image compressed: ${formatFileSize(file.size)} → ${formatFileSize(compressedFile.size)}`)
+
+          const fileExt = compressedFile.name.split('.').pop()
+          const fileName = `${boxWithImages?.user_id || 'user'}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('model-images')
+            .upload(fileName, compressedFile)
+
+          if (uploadError) {
+            console.error('Image upload error:', uploadError)
+            throw new Error(`Failed to upload image: ${uploadError.message}`)
+          }
+
+          const { data } = supabase.storage
+            .from('model-images')
+            .getPublicUrl(uploadData.path)
+
+          // Save to junction table
+          await addBoxImage(box.id, data.publicUrl, isPrimary, displayOrder)
+          console.log('Uploaded and saved image URL:', data.publicUrl)
+        } catch (uploadError) {
+          console.error('Image upload error:', uploadError)
+          // Continue with other images even if one fails
+        }
+      }
+      setCompressing(false)
 
       onBoxUpdated()
     } catch (err) {
@@ -488,7 +544,8 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
         image_url: box.image_url || ''
       })
     }
-    setSelectedImageFile(null)
+    setSelectedImageFiles([])
+    setSelectedImageUrls([])
     setCroppedImageBlob(null)
     setDeleteImage(false)
     setSelectedImageUrl('')
@@ -553,6 +610,7 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
                 selectedGame={formData.game_id || ''}
                 onGameSelect={(gameId) => setFormData({ ...formData, game_id: gameId })}
                 placeholder="Choose a Game"
+                showAddNewButton={true}
               />
             </div>
 
@@ -574,80 +632,112 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
               </div>
             </div>
 
-            {/* Collection Image */}
+            {/* Collection Images */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-input-label font-overpass">
-                  Collection Image
+                  Collection Images
                 </label>
                 <span className="text-sm text-gray-500">Optional</span>
               </div>
-              
-              {/* Image Upload Area */}
+
+              {/* Existing Images */}
+              {boxWithImages?.images && boxWithImages.images.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium text-text mb-2">Current Images</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {boxWithImages.images.map((image, index) => (
+                      <div key={image.id} className="relative">
+                        <img
+                          src={image.image_url}
+                          alt={`Collection image ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeExistingImage(image.id)}
+                          disabled={loading}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        {image.is_primary && (
+                          <div className="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-1 rounded">
+                            Primary
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* New Images to Add */}
               <div className="border-2 border-dashed border-border-custom rounded-lg p-6 text-center hover:border-[var(--color-brand)] transition-colors">
-                {selectedImageFile ? (
+                {(selectedImageFiles.length > 0 || selectedImageUrls.length > 0) ? (
                   <div className="space-y-4">
-                    <div className="relative mx-auto w-32 h-32">
-                      <img
-                        src={URL.createObjectURL(selectedImageFile)}
-                        alt="Selected collection image"
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedImageFile(null)
-                          setCroppedImageBlob(null)
-                        }}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                    <h4 className="text-sm font-medium text-text">New Images to Add</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      {/* URL Images */}
+                      {selectedImageUrls.map((url, index) => (
+                        <div key={`url-${index}`} className="relative">
+                          <img
+                            src={url}
+                            alt={`Selected image ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeNewImage(index, 'url')}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                          {index === 0 && selectedImageFiles.length === 0 && (!boxWithImages?.images || boxWithImages.images.length === 0) && (
+                            <div className="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-1 rounded">
+                              Primary
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* File Images */}
+                      {selectedImageFiles.map((file, index) => (
+                        <div key={`file-${index}`} className="relative">
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Selected file ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeNewImage(index, 'file')}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                          {index === 0 && selectedImageUrls.length === 0 && (!boxWithImages?.images || boxWithImages.images.length === 0) && (
+                            <div className="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-1 rounded">
+                              Primary
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* Add more images button */}
+                      <label className="cursor-pointer border-2 border-dashed border-border-custom rounded-lg flex flex-col items-center justify-center h-24 hover:border-brand transition-colors">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                          disabled={loading}
+                          multiple
+                        />
+                        <ImageIcon className="w-6 h-6 text-icon mb-1" />
+                        <span className="text-xs text-secondary-text">Add More</span>
+                      </label>
                     </div>
-                    <p className="text-sm text-secondary-text">{selectedImageFile.name}</p>
-                  </div>
-                ) : formData.image_url && !deleteImage ? (
-                  <div className="space-y-4">
-                    <div className="relative mx-auto w-32 h-32">
-                      <img
-                        src={formData.image_url}
-                        alt="Current collection image"
-                        className="w-full h-full object-cover rounded-lg"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleDeleteImage}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
-                        title="Remove current image"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <p className="text-sm text-secondary-text">Current image</p>
-                  </div>
-                ) : selectedImageUrl ? (
-                  <div className="space-y-4">
-                    <div className="relative mx-auto w-32 h-32">
-                      <img
-                        src={selectedImageUrl}
-                        alt="Selected collection image"
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedImageUrl('')
-                        }}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <p className="text-sm text-secondary-text">Selected image</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -656,16 +746,17 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={handleImageSelect}
+                          onChange={handleFileSelect}
                           className="hidden"
                           disabled={loading}
+                          multiple
                         />
                         <div className="flex flex-col items-center space-y-2 p-4 rounded-lg hover:bg-bg-secondary transition-colors">
                           <ImageIcon className="w-8 h-8 text-icon" />
-                          <span className="text-sm font-medium text-text">Upload Image</span>
+                          <span className="text-sm font-medium text-text">Add Images</span>
                         </div>
                       </label>
-                      
+
                       <button
                         type="button"
                         onClick={handleCameraCapture}
@@ -677,27 +768,14 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
                       </button>
                     </div>
                     <p className="text-xs text-secondary-text">
-                      JPEG, PNG, or WebP up to 50MB
+                      Select multiple images • JPEG, PNG, or WebP up to 10MB each
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* Status Messages */}
-              {croppedImageBlob && (
-                <p className="text-green-600 text-sm mt-2">
-                  ✓ New image ready for upload
-                </p>
-              )}
-              
-              {deleteImage && (
-                <p className="text-red-600 text-sm mt-2">
-                  ✓ Image will be deleted when you save changes
-                </p>
-              )}
-              
-              {/* Image Search Button - only show if no current image and no new image selected */}
-              {!formData.image_url && !croppedImageBlob && !selectedImageUrl && formData.name.trim() && (
+              {/* Image Search Button */}
+              {selectedImageFiles.length === 0 && selectedImageUrls.length === 0 && formData.name.trim() && (
                 <div className="mt-3">
                   <button
                     type="button"

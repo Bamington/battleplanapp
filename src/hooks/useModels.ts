@@ -67,7 +67,8 @@ export function useModels() {
 
   const fetchModels = async () => {
     try {
-      const { data, error } = await supabase
+      // First, get models with their basic data and game info
+      const { data: modelsData, error: modelsError } = await supabase
         .from('models')
         .select(`
           id,
@@ -84,12 +85,6 @@ export function useModels() {
           lore_description,
           painting_notes,
           public,
-          box:boxes(
-            id,
-            name,
-            purchase_date,
-            game:games(id, name, icon, default_theme)
-          ),
           game:games(id, name, icon, default_theme),
           images:model_images(
             id,
@@ -105,12 +100,50 @@ export function useModels() {
         .order('created_at', { ascending: false })
         .limit(5000)
 
-      if (error) throw error
+      if (modelsError) throw modelsError
 
-      // Transform the data to handle array responses from Supabase
-      const transformedData = (data || []).map(model => ({
+      // Get model-box relationships with box details
+      // Split into chunks to avoid URL length limits
+      const modelIds = (modelsData || []).map(model => model.id)
+      const chunkSize = 100 // Process 100 models at a time
+      const modelBoxData: any[] = []
+
+      for (let i = 0; i < modelIds.length; i += chunkSize) {
+        const chunk = modelIds.slice(i, i + chunkSize)
+
+        const { data: chunkData, error: chunkError } = await supabase
+          .from('model_boxes')
+          .select(`
+            model_id,
+            box:boxes(
+              id,
+              name,
+              purchase_date,
+              game:games(id, name, icon, default_theme)
+            )
+          `)
+          .in('model_id', chunk)
+
+        if (chunkError) throw chunkError
+
+        if (chunkData) {
+          modelBoxData.push(...chunkData)
+        }
+      }
+
+      // Create a map of model_id to box data
+      const modelBoxMap = new Map()
+      modelBoxData?.forEach(relationship => {
+        if (relationship.box) {
+          const box = Array.isArray(relationship.box) ? relationship.box[0] : relationship.box
+          modelBoxMap.set(relationship.model_id, box)
+        }
+      })
+
+      // Transform the data to include box information
+      const transformedData = (modelsData || []).map(model => ({
         ...model,
-        box: model.box && Array.isArray(model.box) ? model.box[0] : model.box,
+        box: modelBoxMap.get(model.id) || null,
         game: model.game && Array.isArray(model.game) ? model.game[0] : model.game
       }))
 

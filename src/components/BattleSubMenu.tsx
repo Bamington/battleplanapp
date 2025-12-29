@@ -1,17 +1,32 @@
 import React from 'react'
-import { Sword, BarChart3 } from 'lucide-react'
+import { Sword, BarChart3, Calendar, ClipboardList } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
 
 interface BattleSubMenuProps {
-  activeView: 'battles' | 'statistics'
-  onViewChange: (view: 'battles' | 'statistics') => void
+  activeView: 'battles' | 'lists' | 'statistics' | 'campaigns'
+  onViewChange: (view: 'battles' | 'lists' | 'statistics' | 'campaigns') => void
 }
 
 export function BattleSubMenu({ activeView, onViewChange }: BattleSubMenuProps) {
-  const menuItems = [
+  const { user } = useAuth()
+  const isBetaTester = user?.email?.toLowerCase().includes('@battleplanapp.com') || false
+
+  const allMenuItems = [
     {
       id: 'battles' as const,
       label: 'Battles',
       icon: Sword
+    },
+    {
+      id: 'campaigns' as const,
+      label: 'Campaigns',
+      icon: Calendar
+    },
+    {
+      id: 'lists' as const,
+      label: 'Lists',
+      icon: ClipboardList,
+      betaOnly: true
     },
     {
       id: 'statistics' as const,
@@ -20,11 +35,14 @@ export function BattleSubMenu({ activeView, onViewChange }: BattleSubMenuProps) 
     }
   ]
 
+  // Filter menu items based on beta access
+  const menuItems = allMenuItems.filter(item => !item.betaOnly || isBetaTester)
+
   return (
     <div className="bg-bg-secondary shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-center items-center py-2">
-          <div className="grid gap-6 w-full grid-cols-2 max-w-xs">
+          <div className={`grid gap-6 w-full max-w-2xl ${menuItems.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
             {menuItems.map((item) => {
               const Icon = item.icon
               const isActive = activeView === item.id

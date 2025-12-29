@@ -23,7 +23,7 @@ export function Footer() {
         )}
         {!loading && currentVersion && (
           <span className="text-xs text-secondary-text">
-            Version {currentVersion.ver_number.toFixed(2)}
+            Version {currentVersion.ver_number}
           </span>
         )}
         {!loading && !currentVersion && (

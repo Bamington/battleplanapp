@@ -182,16 +182,48 @@ export function ThemeList({ themes, onEditTheme }: ThemeListProps) {
     return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`
   }
 
-  const getFontPreview = (titleFont: string) => {
-    // Extract font family from font string
-    const fontMatch = titleFont.match(/"([^"]+)"|'([^']+)'|(\w+)/g)
-    if (fontMatch && fontMatch.length > 0) {
-      let fontFamily = fontMatch[0].replace(/['"]/g, '')
-      if (fontFamily === 'bold') {
-        fontFamily = fontMatch[1]?.replace(/['"]/g, '') || 'serif'
-      }
-      return fontFamily
+  const getFontPreview = (theme: any) => {
+    // Check if theme has fonts property
+    if (!theme.fonts) {
+      return 'serif' // fallback if no fonts defined
     }
+
+    // Handle new font system with legacy fonts
+    if (theme.fonts.legacyFonts?.titleFont) {
+      const titleFont = theme.fonts.legacyFonts.titleFont
+      const fontMatch = titleFont.match(/"([^"]+)"|'([^']+)'|(\w+)/g)
+      if (fontMatch && fontMatch.length > 0) {
+        let fontFamily = fontMatch[0].replace(/['"]/g, '')
+        if (fontFamily === 'bold') {
+          fontFamily = fontMatch[1]?.replace(/['"]/g, '') || 'serif'
+        }
+        return fontFamily
+      }
+    }
+
+    // Handle old font system (direct titleFont)
+    if (theme.fonts.titleFont) {
+      const titleFont = theme.fonts.titleFont
+      const fontMatch = titleFont.match(/"([^"]+)"|'([^']+)'|(\w+)/g)
+      if (fontMatch && fontMatch.length > 0) {
+        let fontFamily = fontMatch[0].replace(/['"]/g, '')
+        if (fontFamily === 'bold') {
+          fontFamily = fontMatch[1]?.replace(/['"]/g, '') || 'serif'
+        }
+        return fontFamily
+      }
+    }
+
+    // Fallback for new font system without legacy fonts
+    if (theme.fonts.overrides?.title?.family) {
+      const familyMap = {
+        'sans': 'Arial, sans-serif',
+        'serif': 'Georgia, serif',
+        'mono': 'Monaco, monospace'
+      }
+      return familyMap[theme.fonts.overrides.title.family as keyof typeof familyMap] || 'serif'
+    }
+
     return 'serif'
   }
 
@@ -221,14 +253,14 @@ export function ThemeList({ themes, onEditTheme }: ThemeListProps) {
                     }}
                   >
                     <div className="text-center">
-                      <div 
+                      <div
                         className="text-lg font-bold text-title mb-1"
-                        style={{ fontFamily: getFontPreview(theme.fonts.titleFont) }}
+                        style={{ fontFamily: getFontPreview(theme) }}
                       >
                         {theme.name}
                       </div>
                       <div className="text-xs text-secondary-text">
-                        {getFontPreview(theme.fonts.titleFont)}
+                        {getFontPreview(theme)}
                       </div>
                     </div>
                     

@@ -18,10 +18,40 @@ export function RichTextEditor({
 }: RichTextEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Handle textarea change
+  // Handle textarea change and auto-resize
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onChange(e.target.value)
+    autoResize(e.target)
   }
+
+  // Auto-resize function
+  const autoResize = (textarea: HTMLTextAreaElement) => {
+    // Store current scroll position to prevent viewport jumping
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+
+    // Reset height to calculate scrollHeight accurately
+    textarea.style.height = 'auto'
+    // Set height to scrollHeight to fit content
+    textarea.style.height = `${textarea.scrollHeight}px`
+
+    // Restore scroll position to prevent viewport jumping
+    window.scrollTo(scrollLeft, scrollTop)
+  }
+
+  // Auto-resize on value change (external updates)
+  useEffect(() => {
+    if (textareaRef.current) {
+      autoResize(textareaRef.current)
+    }
+  }, [value])
+
+  // Initial resize on mount
+  useEffect(() => {
+    if (textareaRef.current) {
+      autoResize(textareaRef.current)
+    }
+  }, [])
 
   const insertText = (text: string) => {
     if (!textareaRef.current) return
@@ -107,13 +137,13 @@ export function RichTextEditor({
         value={value}
         onChange={handleTextareaChange}
         placeholder={placeholder}
-        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-b-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white resize-none"
-        style={{ 
+        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-b-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white resize-none overflow-hidden"
+        style={{
           minHeight: `${rows * 1.5}rem`,
           direction: 'ltr',
-          textAlign: 'left'
+          textAlign: 'left',
+          height: `${rows * 1.5}rem`
         }}
-        rows={rows}
       />
     </div>
   )

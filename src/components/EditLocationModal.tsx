@@ -1,15 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { X, MapPin, Home, Image as ImageIcon, Clock, Hash, Users } from 'lucide-react'
+import { X, MapPin, Home, Image as ImageIcon, Clock, Hash, Users, Mail } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { compressImage, isValidImageFile } from '../utils/imageCompression'
 import { ImageCropper } from './ImageCropper'
 import { ManageTimeslotsModal } from './ManageTimeslotsModal'
 import { EditLocationAdminsModal } from './EditLocationAdminsModal'
-
-interface User {
-  id: string
-  email: string
-}
 
 interface Location {
   id: string
@@ -18,6 +13,7 @@ interface Location {
   icon: string | null
   admins: string[]
   tables: number
+  store_email: string | null
 }
 
 interface EditLocationModalProps {
@@ -33,7 +29,8 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
     address: '',
     icon: '',
     tables: 1,
-    admins: [] as string[]
+    admins: [] as string[],
+    store_email: ''
   })
   const [selectedIconFile, setSelectedIconFile] = useState<File | null>(null)
   const [showIconCropper, setShowIconCropper] = useState(false)
@@ -52,7 +49,8 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
         address: location.address,
         icon: location.icon || '',
         tables: location.tables || 1,
-        admins: location.admins || []
+        admins: location.admins || [],
+        store_email: location.store_email || ''
       })
     }
   }, [location])
@@ -117,7 +115,8 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
           address: formData.address,
           icon: iconUrl,
           tables: formData.tables,
-          admins: formData.admins
+          admins: formData.admins,
+          store_email: formData.store_email || null
         })
         .eq('id', location.id)
 
@@ -139,7 +138,8 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
         address: location.address,
         icon: location.icon || '',
         tables: location.tables || 1,
-        admins: location.admins || []
+        admins: location.admins || [],
+        store_email: location.store_email || ''
       })
     }
     setSelectedIconFile(null)
@@ -236,6 +236,27 @@ export function EditLocationModal({ isOpen, onClose, onLocationUpdated, location
                   required
                 />
               </div>
+            </div>
+
+            {/* Store Email */}
+            <div>
+              <label htmlFor="store_email" className="block text-sm font-medium text-input-label font-overpass mb-2">
+                Store Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-icon w-5 h-5" />
+                <input
+                  type="email"
+                  id="store_email"
+                  value={formData.store_email}
+                  onChange={(e) => setFormData({ ...formData, store_email: e.target.value })}
+                  placeholder="Enter store email for booking notifications..."
+                  className="w-full pl-12 pr-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
+                />
+              </div>
+              <p className="text-xs text-secondary-text mt-1">
+                This email will receive notifications when bookings are made at this location.
+              </p>
             </div>
 
             {/* Location Icon */}

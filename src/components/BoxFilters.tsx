@@ -177,8 +177,8 @@ export function BoxFilters({
               </label>
               <SingleSelectDropdown
                 options={[
-                  { id: 'dateAdded', name: 'Date Added to Battleplan' },
-                  { id: 'purchasedDate', name: 'Purchased Date' }
+                  { id: 'dateAdded', name: 'Recently Added' },
+                  { id: 'purchasedDate', name: 'Recently Purchased' }
                 ]}
                 selectedOption={sortOrder}
                 onSelectionChange={onSortChange}

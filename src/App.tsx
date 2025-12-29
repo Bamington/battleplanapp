@@ -6,6 +6,7 @@ import { CollectionSubMenu } from './components/CollectionSubMenu'
 import { BattleplanPage } from './components/BattleplanPage'
 import { ModelCard } from './components/ModelCard'
 import { BoxCard } from './components/BoxCard'
+import { CollectionImage } from './components/CollectionImage'
 import { Pagination } from './components/Pagination'
 import { AuthModal } from './components/AuthModal'
 import { AddModelModal } from './components/AddModelModal'
@@ -19,6 +20,7 @@ import { BlockedDatesPage } from './components/BlockedDatesPage'
 import { BattlesPage } from './components/BattlesPage'
 import { WishlistPage } from './components/WishlistPage'
 import { ViewModelModal } from './components/ViewModelModal'
+import { PaintingTableModelModal } from './components/PaintingTableModelModal'
 import { ViewBoxModal } from './components/ViewBoxModal'
 import { PasswordResetModal } from './components/PasswordResetModal'
 import { NewBookingModal } from './components/NewBookingModal'
@@ -102,6 +104,7 @@ function App() {
   const [battleView, setBattleView] = useState<'battles' | 'statistics'>('battles')
   const [currentPage, setCurrentPage] = useState(1)
   const [boxCurrentPage, setBoxCurrentPage] = useState(1)
+  const [boxesRefreshKey, setBoxesRefreshKey] = useState(0)
 
   // Handle navigation from the header menu
   const handleTabChange = (tab: string, subView?: string) => {
@@ -195,6 +198,13 @@ function App() {
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false)
   const [preselectedBoxId, setPreselectedBoxId] = useState<string | null>(null)
   const [viewModelModal, setViewModelModal] = useState<{
+    isOpen: boolean
+    model: any | null
+  }>({
+    isOpen: false,
+    model: null
+  })
+  const [paintingTableModelModal, setPaintingTableModelModal] = useState<{
     isOpen: boolean
     model: any | null
   }>({
@@ -333,16 +343,19 @@ function App() {
         if (a.painted_date && !b.painted_date) return -1
         if (!a.painted_date && b.painted_date) return 1
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-      
+
       case 'purchasedDate':
-        // Sort by purchase date (most recent first), fallback to creation date
-        if (a.purchase_date && b.purchase_date) {
-          return new Date(b.purchase_date).getTime() - new Date(a.purchase_date).getTime()
+        // Sort by purchase date (most recent first), fallback to box purchase date, then creation date
+        const aPurchaseDate = a.purchase_date || a.box?.purchase_date
+        const bPurchaseDate = b.purchase_date || b.box?.purchase_date
+
+        if (aPurchaseDate && bPurchaseDate) {
+          return new Date(bPurchaseDate).getTime() - new Date(aPurchaseDate).getTime()
         }
-        if (a.purchase_date && !b.purchase_date) return -1
-        if (!a.purchase_date && b.purchase_date) return 1
+        if (aPurchaseDate && !bPurchaseDate) return -1
+        if (!aPurchaseDate && bPurchaseDate) return 1
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-      
+
       case 'dateAdded':
       default:
         // Sort by creation date (most recent first)
@@ -537,6 +550,12 @@ function App() {
       model
     })
   }
+  const handlePaintingTableViewModel = (model: any) => {
+    setPaintingTableModelModal({
+      isOpen: true,
+      model
+    })
+  }
 
   const handleViewBox = (box: any) => {
     setViewBoxModal({
@@ -563,6 +582,7 @@ function App() {
   const handleBoxUpdated = () => {
     refetchBoxes()
     refetchModels()
+    setBoxesRefreshKey(prev => prev + 1)
   }
 
   const handleAddModelsToBox = (boxId: string) => {
@@ -726,7 +746,14 @@ function App() {
   if (showAdminPage) {
     return (
       <div className="min-h-screen bg-bg-secondary">
-        <AdminPage onBack={() => setShowAdminPage(false)} onLogoClick={handleLogoClick} />
+        <AdminPage
+          onBack={() => setShowAdminPage(false)}
+          onLogoClick={handleLogoClick}
+          onTabChange={(tab) => {
+            setShowAdminPage(false)
+            setActiveTab(tab)
+          }}
+        />
         <Footer />
       </div>
     )
@@ -1218,21 +1245,32 @@ function App() {
       
       {/* Collection Sub-menu - only show on collection tab */}
       {activeTab === 'collection' && (
-        <CollectionSubMenu
-          activeView={collectionView}
-          onViewChange={setCollectionView}
-          isBetaTester={isBetaTester}
-        />
+        <>
+          {/* Header */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-4">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold text-title mb-4">COLLECTION</h1>
+            </div>
+          </div>
+
+          <CollectionSubMenu
+            activeView={collectionView}
+            onViewChange={setCollectionView}
+            isBetaTester={isBetaTester}
+          />
+        </>
       )}
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
 
         {/* Painting Table View - Only visible to Beta Testers */}
         {collectionView === 'painting-table' && isBetaTester && (
-          <PaintingTablePage 
+          <PaintingTablePage
             onSelectModel={() => setShowSelectModelForPaintingModal(true)}
             paintingTableModels={paintingTableModels}
             onRemoveModel={removeModelFromPaintingTable}
+            onViewModel={handlePaintingTableViewModel}
+            onViewBox={handleViewBox}
           />
         )}
 
@@ -1255,7 +1293,7 @@ function App() {
                   </div>
                 </div>
               )}
-              
+
               {modelsLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {Array.from({ length: 6 }).map((_, i) => (
@@ -1306,16 +1344,16 @@ function App() {
               )}
             </section>
 
-                         {/* Recent Collections Section */}
-             <section>
-               {boxes.length > 0 && (
-                 <div className="flex flex-col items-center mb-8">
-                   <div className="flex items-center justify-center mb-4">
-                     <h2 className="text-lg font-bold text-secondary-text">RECENT COLLECTIONS</h2>
-                   </div>
-                 </div>
-               )}
-              
+            {/* Recent Collections Section */}
+            <section>
+              {boxes.length > 0 && (
+                <div className="flex flex-col items-center mb-8">
+                  <div className="flex items-center justify-center mb-4">
+                    <h2 className="text-lg font-bold text-secondary-text">RECENT COLLECTIONS</h2>
+                  </div>
+                </div>
+              )}
+
               {boxesLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {Array.from({ length: 6 }).map((_, i) => (
@@ -1339,10 +1377,10 @@ function App() {
                     {paginatedRecentCollections.map((box) => (
                       <BoxCard
                         key={box.id}
+                        boxId={box.id}
                         name={box.name}
                         gameName={box.game?.name || 'Unknown Game'}
                         modelCount={box.models_count || 0}
-                        imageUrl={box.image_url || null}
                         gameImage={box.game?.image || null}
                         gameIcon={box.game?.icon || null}
                         onViewBox={() => handleViewBox(box)}
@@ -1363,25 +1401,25 @@ function App() {
           </>
         )}
 
-                 {/* Collections Only View */}
-         {collectionView === 'collections' && (
+        {/* Collections Only View */}
+        {collectionView === 'collections' && (
           <section>
 
             {/* Box Filters */}
             {boxes.length > 0 && (
-                           <BoxFilters
-               games={games}
-               boxes={boxes}
-               selectedGames={boxFilters.selectedGames}
-               searchQuery={boxFilters.searchQuery}
-               sortOrder={boxFilters.sortOrder}
-               onGamesChange={handleBoxGamesFilter}
-               onSearchChange={handleBoxSearchChange}
-               onSortChange={handleBoxSortChange}
-               onClearFilters={handleBoxClearFilters}
-             />
+              <BoxFilters
+                games={games}
+                boxes={boxes}
+                selectedGames={boxFilters.selectedGames}
+                searchQuery={boxFilters.searchQuery}
+                sortOrder={boxFilters.sortOrder}
+                onGamesChange={handleBoxGamesFilter}
+                onSearchChange={handleBoxSearchChange}
+                onSortChange={handleBoxSortChange}
+                onClearFilters={handleBoxClearFilters}
+              />
             )}
-            
+
             {boxesLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 6 }).map((_, i) => (
@@ -1411,38 +1449,13 @@ function App() {
                       onClick={() => handleViewBox(box)}
                     >
                       <div className="flex items-center space-x-4">
-                        <img
-                          src={(() => {
-                            if (box.image_url && 
-                                typeof box.image_url === 'string' &&
-                                box.image_url.trim() !== '' && 
-                                box.image_url !== 'undefined' && 
-                                box.image_url !== 'null' &&
-                                (box.image_url.startsWith('http') || box.image_url.startsWith('/'))) {
-                              return box.image_url
-                            }
-                            
-                            const gameImage = box.game?.image
-                            if (gameImage && 
-                                typeof gameImage === 'string' &&
-                                gameImage.trim() !== '' && 
-                                gameImage !== 'undefined' && 
-                                gameImage !== 'null' &&
-                                gameImage.startsWith('http')) {
-                              return gameImage
-                            }
-                            
-                            return '/bp-unkown.svg'
-                          })()}
-                          alt={box.name}
-                          className="w-16 h-16 object-cover rounded"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            const fallbackUrl = '/bp-unkown.svg'
-                            if (target.src !== fallbackUrl) {
-                              target.src = fallbackUrl
-                            }
-                          }}
+                        <CollectionImage
+                          boxId={box.id}
+                          name={box.name}
+                          gameImage={box.game?.image || null}
+                          gameIcon={box.game?.icon || null}
+                          size="small"
+                          refreshKey={boxesRefreshKey}
                         />
                         <div className="flex-1 min-w-0">
                           <h3 className="text-lg font-semibold text-title truncate">{box.name}</h3>
@@ -1483,51 +1496,39 @@ function App() {
                     onPageChange={setBoxCurrentPage}
                   />
                 )}
-              </>
-            )}
+                </>
+              )}
           </section>
         )}
 
         {/* Models Only View */}
         {collectionView === 'models' && (
           <section>
+            {modelsLoading ? (
+              <SkeletonList count={8} />
+            ) : (
+              <>
+                {/* Model Filters */}
+                {models.length > 0 && (
+                  <ModelFilters
+                    games={games}
+                    boxes={boxes}
+                    models={models}
+                    selectedBoxes={modelFilters.selectedBoxes}
+                    selectedGames={modelFilters.selectedGames}
+                    selectedStatuses={modelFilters.selectedStatuses}
+                    searchQuery={modelFilters.searchQuery}
+                    sortOrder={modelFilters.sortOrder}
+                    onBoxesChange={handleModelBoxesFilter}
+                    onGamesChange={handleModelGamesFilter}
+                    onStatusesChange={handleModelStatusesFilter}
+                    onSearchChange={handleModelSearchChange}
+                    onSortChange={handleModelSortChange}
+                    onClearFilters={handleModelClearFilters}
+                  />
+                )}
 
-          {/* Model Filters */}
-          {models.length > 0 && (
-                         <ModelFilters
-               games={games}
-               boxes={boxes}
-               models={models}
-               selectedBoxes={modelFilters.selectedBoxes}
-               selectedGames={modelFilters.selectedGames}
-               selectedStatuses={modelFilters.selectedStatuses}
-               searchQuery={modelFilters.searchQuery}
-               sortOrder={modelFilters.sortOrder}
-               onBoxesChange={handleModelBoxesFilter}
-               onGamesChange={handleModelGamesFilter}
-               onStatusesChange={handleModelStatusesFilter}
-               onSearchChange={handleModelSearchChange}
-               onSortChange={handleModelSortChange}
-               onClearFilters={handleModelClearFilters}
-             />
-          )}
-          
-          {modelsLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="bg-bg-card rounded-lg border border-border-custom p-4 animate-pulse">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-16 h-16 bg-secondary-text opacity-20 rounded"></div>
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-secondary-text opacity-20 rounded w-3/4"></div>
-                      <div className="h-3 bg-secondary-text opacity-20 rounded w-1/2"></div>
-                    </div>
-                    <div className="w-20 h-8 bg-secondary-text opacity-20 rounded"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : models.length === 0 ? (
+                {models.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-base text-secondary-text mb-4">No models in your collection yet.</p>
             </div>
@@ -1624,6 +1625,8 @@ function App() {
                   onPageChange={setCurrentPage}
                 />
               )}
+                </>
+              )}
             </>
           )}
           </section>
@@ -1702,6 +1705,14 @@ function App() {
         onViewBox={handleViewBox}
         model={viewModelModal.model}
       />
+      <PaintingTableModelModal
+        isOpen={paintingTableModelModal.isOpen}
+        onClose={() => setPaintingTableModelModal({ isOpen: false, model: null })}
+        onModelDeleted={handleModelDeleted}
+        onModelUpdated={handleModelUpdated}
+        onViewBox={handleViewBox}
+        model={paintingTableModelModal.model}
+      />
 
       <ViewBoxModal
         isOpen={viewBoxModal.isOpen}
@@ -1767,20 +1778,11 @@ function App() {
       <SelectModelForPaintingModal
         isOpen={showSelectModelForPaintingModal}
         onClose={() => setShowSelectModelForPaintingModal(false)}
-        onModelSelected={(model, showInspiration = false) => {
+        onModelSelected={(model) => {
           // Add model to painting table
           if (paintingTableModels.length < 3) {
             setPaintingTableModels(prev => [...prev, model])
             setShowSelectModelForPaintingModal(false)
-            
-            // Show inspiration modal if requested
-            if (showInspiration) {
-              setPaintingInspirationModal({
-                isOpen: true,
-                modelName: model.name,
-                gameName: model.game?.name || model.box?.game?.name || 'Unknown Game'
-              })
-            }
           }
         }}
         excludeModelIds={paintingTableModels.map(m => m.id)}

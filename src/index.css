@@ -64,11 +64,26 @@
   font-display: swap;
 }
 
-/* Red Fog Theme Font */
+/* Red Fog Theme Fonts */
 @font-face {
   font-family: 'WoodenBridge';
   src: url('/fonts/red-fog/WoodenBridge-ClassicTexture.woff') format('woff');
   font-weight: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Blight';
+  src: url('/fonts/red-fog/blight.otf') format('opentype'),
+       url('/fonts/red-fog/blight.woff2') format('woff2');
+  font-weight: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'lumier-bold';
+  src: url('/fonts/red-fog/lumier-bold.woff2') format('woff2');
+  font-weight: bold;
   font-display: swap;
 }
 

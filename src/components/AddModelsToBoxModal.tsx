@@ -3,7 +3,7 @@ import { X, Package, Check, Plus, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from './Button'
-import { addModelsToBox, getModelsNotInBoxes } from '../utils/modelBoxUtils'
+import { addModelsToBox, getModelsNotInBoxes, getBoxWithModels } from '../utils/modelBoxUtils'
 
 interface Model {
   id: string
@@ -43,12 +43,19 @@ interface AddModelsToBoxModalProps {
 
 export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewModel, box }: AddModelsToBoxModalProps) {
   const [models, setModels] = useState<Model[]>([])
+  const [allModels, setAllModels] = useState<Model[]>([]) // Store all available models
+  const [displayedModels, setDisplayedModels] = useState<Model[]>([]) // Models currently shown
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
   const { user } = useAuth()
+
+  const MODELS_PER_PAGE = 20
 
   useEffect(() => {
     if (isOpen && user) {
@@ -56,28 +63,37 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
     }
   }, [isOpen, user, box.id])
 
+  // Handle search with pagination reset
+  useEffect(() => {
+    if (allModels.length === 0) return
+
+    const filteredModels = searchQuery
+      ? allModels.filter(model =>
+          model.name.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : allModels
+
+    setDisplayedModels(filteredModels.slice(0, MODELS_PER_PAGE))
+    setCurrentPage(0)
+    setHasMore(filteredModels.length > MODELS_PER_PAGE)
+  }, [searchQuery, allModels])
+
   const fetchModels = async () => {
     try {
       setLoading(true)
+      setCurrentPage(0)
       if (!user?.id) return
 
       // Get all models for the user
       const availableModels = await getModelsNotInBoxes(user.id)
-      
-      // Get models that are already in this specific box
-      const { data: modelsInBox, error: boxModelsError } = await supabase
-        .from('model_boxes')
-        .select('model_id')
-        .eq('box_id', box.id)
-      
-      if (boxModelsError) throw boxModelsError
-      
-      // Create a set of model IDs that are already in this box
-      const modelsInBoxIds = new Set(modelsInBox?.map(mb => mb.model_id) || [])
-      
+
+      // Get box with its models to determine which ones are already in this box
+      const boxWithModels = await getBoxWithModels(box.id)
+      const modelsInBoxIds = new Set(boxWithModels?.models.map(m => m.id) || [])
+
       // Filter out models that are already in this specific box
       const modelsNotInThisBox = availableModels.filter(model => !modelsInBoxIds.has(model.id))
-      
+
       // Convert to the expected format and add box_id for backward compatibility
       const modelsWithBoxId = modelsNotInThisBox.map(model => ({
         ...model,
@@ -90,19 +106,50 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
         // Check if model matches the box's game
         const aIsSameGame = box.game?.id && a.game_id === box.game.id
         const bIsSameGame = box.game?.id && b.game_id === box.game.id
-        
+
         if (aIsSameGame && !bIsSameGame) return -1
         if (!aIsSameGame && bIsSameGame) return 1
-        
+
         // If both are same game or both are different, sort by name
         return a.name.localeCompare(b.name)
       })
 
-      setModels(sortedModels)
+      // Store all models and set up pagination
+      setAllModels(sortedModels)
+      setModels(sortedModels) // Keep for backward compatibility
+      setDisplayedModels(sortedModels.slice(0, MODELS_PER_PAGE))
+      setHasMore(sortedModels.length > MODELS_PER_PAGE)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch models')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadMore = async () => {
+    if (!hasMore || loadingMore) return
+
+    setLoadingMore(true)
+    try {
+      const nextPage = currentPage + 1
+      const startIndex = nextPage * MODELS_PER_PAGE
+      const endIndex = startIndex + MODELS_PER_PAGE
+
+      // Get the current filtered models (for search)
+      const filteredModels = searchQuery
+        ? allModels.filter(model =>
+            model.name.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+        : allModels
+
+      const newModels = filteredModels.slice(startIndex, endIndex)
+      setDisplayedModels(prev => [...prev, ...newModels])
+      setCurrentPage(nextPage)
+      setHasMore(endIndex < filteredModels.length)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load more models')
+    } finally {
+      setLoadingMore(false)
     }
   }
 
@@ -211,18 +258,11 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
     return { src: '/bp-unkown.svg', isGameFallback: false }
   }
 
-  // Filter models by search query (search by model name, game name, and custom game)
-  const filteredModels = models.filter(model => {
-    const searchLower = searchQuery.toLowerCase()
-    const modelNameMatch = model.name.toLowerCase().includes(searchLower)
-    const gameNameMatch = model.game?.name?.toLowerCase().includes(searchLower) || false
-    return modelNameMatch || gameNameMatch
-  })
-  
-  const sameGameModels = filteredModels.filter(model => 
+  // Separate displayed models by game type for organized display
+  const sameGameModels = displayedModels.filter(model =>
     box.game?.id && model.game_id === box.game.id
   )
-  const otherModels = filteredModels.filter(model => 
+  const otherModels = displayedModels.filter(model =>
     !(box.game?.id && model.game_id === box.game.id)
   )
 
@@ -290,7 +330,7 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
             </div>
 
             {/* No search results */}
-            {searchQuery && sameGameModels.length === 0 && otherModels.length === 0 && (
+            {searchQuery && displayedModels.length === 0 && !loading && (
               <div className="text-center py-8">
                 <Search className="w-12 h-12 text-secondary-text mx-auto mb-4" />
                 <p className="text-secondary-text mb-2">No models found matching "{searchQuery}"</p>
@@ -422,6 +462,54 @@ export function AddModelsToBoxModal({ isOpen, onClose, onModelsAdded, onAddNewMo
                 </div>
               )}
             </div>
+
+            {/* Load More Button */}
+            {hasMore && !searchQuery && (
+              <div className="text-center">
+                <Button
+                  onClick={loadMore}
+                  variant="secondary"
+                  disabled={loadingMore}
+                  className="min-w-[120px]"
+                >
+                  {loadingMore ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                      Loading...
+                    </>
+                  ) : (
+                    'Load More'
+                  )}
+                </Button>
+                <p className="text-xs text-secondary-text mt-2">
+                  Showing {displayedModels.length} of {allModels.length} models
+                </p>
+              </div>
+            )}
+
+            {/* Load More Button for Search Results */}
+            {hasMore && searchQuery && (
+              <div className="text-center">
+                <Button
+                  onClick={loadMore}
+                  variant="secondary"
+                  disabled={loadingMore}
+                  className="min-w-[120px]"
+                >
+                  {loadingMore ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                      Loading...
+                    </>
+                  ) : (
+                    'Load More'
+                  )}
+                </Button>
+                <p className="text-xs text-secondary-text mt-2">
+                  Showing {displayedModels.length} search results
+                </p>
+              </div>
+            )}
 
           </>
         )}

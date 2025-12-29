@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
-import { Heart, Plus, Trash2, AlertTriangle, Search } from 'lucide-react'
+import { Heart, Plus, Trash2, AlertTriangle } from 'lucide-react'
 import { useWishlist } from '../hooks/useWishlist'
-import { AddWishlistItemModal } from './AddWishlistItemModal'
-import { SearchResultsModal } from './SearchResultsModal'
+import { ProductSearchModal } from './ProductSearchModal'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from './Button'
 
@@ -13,9 +12,7 @@ interface WishlistPageProps {
 }
 
 export function WishlistPage({ showAddModal = false, onCloseAddModal, onAddItemSuccess }: WishlistPageProps = {}) {
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
   const [deletingItemId, setDeletingItemId] = useState<number | null>(null)
   const { wishlistItems, loading, hasInitialized, removeWishlistItem, refetch } = useWishlist()
   const { user } = useAuth()
@@ -34,8 +31,7 @@ export function WishlistPage({ showAddModal = false, onCloseAddModal, onAddItemS
     }
   }
 
-  const handleSearchItem = (itemName: string) => {
-    setSearchQuery(itemName)
+  const handleOpenSearch = () => {
     setIsSearchModalOpen(true)
   }
 
@@ -71,7 +67,7 @@ export function WishlistPage({ showAddModal = false, onCloseAddModal, onAddItemS
               <Button 
                 variant="primary" 
                 withIcon 
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={handleOpenSearch}
               >
                 <Plus className="w-5 h-5" />
                 <span>Add Your First Item</span>
@@ -79,41 +75,73 @@ export function WishlistPage({ showAddModal = false, onCloseAddModal, onAddItemS
             </div>
           </div>
         ) : (
-          <div className="max-w-2xl mx-auto">
-            <div className="space-y-3">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-title">Your Wishlist ({wishlistItems.length})</h2>
+              <Button 
+                variant="primary" 
+                withIcon 
+                onClick={handleOpenSearch}
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Product</span>
+              </Button>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
               {wishlistItems.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-bg-card rounded-lg border border-border-custom p-4 flex items-center justify-between"
+                  className="bg-bg-card rounded-lg border border-border-custom p-4 hover:border-brand transition-colors"
                 >
-                  <div className="flex-1">
-                    <h3 className="font-medium text-title">
-                      {item.item_name || 'Untitled Item'}
-                    </h3>
-                    <p className="text-sm text-secondary-text">
-                      Added {new Date(item.created_at).toLocaleDateString('en-AU')}
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => handleSearchItem(item.item_name || '')}
-                      className="p-2 text-brand hover:text-brand-hover hover:bg-bg-secondary rounded-lg transition-colors"
-                      title="Search for deals and pricing"
-                    >
-                      <Search className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteItem(item.id)}
-                      disabled={deletingItemId === item.id}
-                      className="p-2 text-button-red hover:text-button-red-hover hover:bg-bg-secondary rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Remove from wishlist"
-                    >
-                      {deletingItemId === item.id ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-button-red"></div>
+                  <div className="flex space-x-4">
+                    {/* Product Image */}
+                    <div className="flex-shrink-0">
+                      {item.image_url ? (
+                        <img
+                          src={item.image_url}
+                          alt={item.product_name}
+                          className="w-16 h-16 object-cover rounded-lg"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
                       ) : (
-                        <Trash2 className="w-4 h-4" />
+                        <div className="w-16 h-16 bg-bg-secondary rounded-lg flex items-center justify-center">
+                          <Heart className="w-6 h-6 text-secondary-text" />
+                        </div>
                       )}
-                    </button>
+                    </div>
+
+                    {/* Product Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-title truncate">
+                        {item.product_name}
+                      </h3>
+                      {item.description && (
+                        <p className="text-sm text-secondary-text mt-1 line-clamp-2">
+                          {item.description}
+                        </p>
+                      )}
+                      <p className="text-xs text-secondary-text mt-2">
+                        Added {new Date(item.created_at).toLocaleDateString('en-AU')}
+                      </p>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex-shrink-0 flex items-center">
+                      <button
+                        onClick={() => handleDeleteItem(item.id)}
+                        disabled={deletingItemId === item.id}
+                        className="p-2 text-button-red hover:text-button-red-hover hover:bg-bg-secondary rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Remove from wishlist"
+                      >
+                        {deletingItemId === item.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-button-red"></div>
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -122,30 +150,23 @@ export function WishlistPage({ showAddModal = false, onCloseAddModal, onAddItemS
         )}
       </div>
 
-      {/* Add Item Modal */}
-      <AddWishlistItemModal
-        isOpen={showAddModal || isAddModalOpen}
+      {/* Product Search Modal */}
+      <ProductSearchModal
+        isOpen={showAddModal || isSearchModalOpen}
         onClose={() => {
           if (onCloseAddModal) {
             onCloseAddModal()
           } else {
-            setIsAddModalOpen(false)
+            setIsSearchModalOpen(false)
           }
         }}
         onSuccess={() => {
           refetch()
-          setIsAddModalOpen(false) // Always clear local state
+          setIsSearchModalOpen(false) // Always clear local state
           if (onAddItemSuccess) {
             onAddItemSuccess()
           }
         }}
-      />
-
-      {/* Search Results Modal */}
-      <SearchResultsModal
-        isOpen={isSearchModalOpen}
-        onClose={() => setIsSearchModalOpen(false)}
-        searchQuery={searchQuery}
       />
     </>
   )

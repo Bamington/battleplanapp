@@ -297,7 +297,7 @@ const loadFonts = async (): Promise<void> => {
 
 export const marathon: Theme = {
   id: 'marathon',
-  name: 'Marathon',
+  name: 'Halo',
   
   colors: {
     gradientColor: '46, 70, 80', // Previous Marathon green color #2E4650
@@ -305,10 +305,42 @@ export const marathon: Theme = {
   },
   
   fonts: {
-    titleFont: 'bold 42px "AUTOMATA", Arial, sans-serif', // For model name (unchanged)
-    bodyFont: '28px "Audiowide", Arial, sans-serif',      // For game name (increased from 24px)
-    smallFont: '24px "Audiowide", Arial, sans-serif',     // For collection name (increased from 20px)
-    tinyFont: '20px "Audiowide", Arial, sans-serif'       // For user name (increased from 16px)
+    overrides: {
+      title: {
+        family: 'sans',
+        weight: 'bold',
+        size: '4xl',
+        transform: 'uppercase',
+        letterSpacing: 'wide'
+      },
+      header: {
+        family: 'sans',
+        weight: 'bold',
+        size: '2xl',
+        transform: 'uppercase'
+      },
+      body: {
+        family: 'sans',
+        weight: 'normal',
+        size: 'lg'
+      },
+      small: {
+        family: 'sans',
+        weight: 'normal',
+        size: 'base'
+      },
+      tiny: {
+        family: 'sans',
+        weight: 'normal',
+        size: 'sm'
+      }
+    },
+    legacyFonts: {
+      titleFont: 'bold 42px "AUTOMATA", Arial, sans-serif',
+      bodyFont: '28px "Audiowide", Arial, sans-serif',
+      smallFont: '24px "Audiowide", Arial, sans-serif',
+      tinyFont: '20px "Audiowide", Arial, sans-serif'
+    }
   },
   
   renderOptions: {

@@ -3,11 +3,73 @@ export interface ThemeColors {
   borderColor: string   // RGBA values as string "rgba(r, g, b, a)"
 }
 
+// Tailwind font family options
+export type FontFamily = 'sans' | 'serif' | 'mono'
+
+// Tailwind font weight options
+export type FontWeight = 'thin' | 'extralight' | 'light' | 'normal' | 'medium' | 'semibold' | 'bold' | 'extrabold' | 'black'
+
+// Tailwind font size options
+export type FontSize = 'xs' | 'sm' | 'base' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | '8xl' | '9xl'
+
+// Tailwind font style options
+export type FontStyle = 'italic' | 'not-italic'
+
+// Tailwind text decoration options
+export type TextDecoration = 'underline' | 'overline' | 'line-through' | 'no-underline'
+
+// Tailwind text transform options
+export type TextTransform = 'uppercase' | 'lowercase' | 'capitalize' | 'normal-case'
+
+// Tailwind letter spacing options
+export type LetterSpacing = 'tighter' | 'tight' | 'normal' | 'wide' | 'wider' | 'widest'
+
+// Tailwind line height options
+export type LineHeight = 'none' | 'tight' | 'snug' | 'normal' | 'relaxed' | 'loose'
+
+// Complete font style configuration
+export interface FontStyleConfig {
+  family?: FontFamily
+  weight?: FontWeight
+  size?: FontSize
+  style?: FontStyle
+  decoration?: TextDecoration
+  transform?: TextTransform
+  letterSpacing?: LetterSpacing
+  lineHeight?: LineHeight
+}
+
+// Font context types for different use cases
+export type FontContext = 'title' | 'subtitle' | 'body' | 'caption' | 'small' | 'tiny' | 'header' | 'subheader' | 'meta'
+
+// Default font configurations for each context
+export interface DefaultFontConfigs {
+  title: FontStyleConfig
+  subtitle: FontStyleConfig
+  body: FontStyleConfig
+  caption: FontStyleConfig
+  small: FontStyleConfig
+  tiny: FontStyleConfig
+  header: FontStyleConfig
+  subheader: FontStyleConfig
+  meta: FontStyleConfig
+}
+
+// Theme-specific font overrides
 export interface ThemeFonts {
-  titleFont: string
-  bodyFont: string
-  smallFont: string
-  tinyFont: string
+  // Default configurations for all contexts
+  defaults?: DefaultFontConfigs
+
+  // Theme-specific overrides for any context
+  overrides?: Partial<Record<FontContext, Partial<FontStyleConfig>>>
+
+  // Legacy font strings for backwards compatibility during transition
+  legacyFonts?: {
+    titleFont?: string
+    bodyFont?: string
+    smallFont?: string
+    tinyFont?: string
+  }
 }
 
 export interface ThemeRenderContext {
@@ -17,7 +79,7 @@ export interface ThemeRenderContext {
   user?: any
   userPublicName?: string | null
   shadowOpacity: number
-  textPosition: 'bottom-right' | 'bottom-left'
+  textPosition: 'bottom-right' | 'bottom-left' | 'bottom-center'
   showPaintedDate: boolean
   showCollectionName: boolean
   showGameDetails: boolean
@@ -27,6 +89,7 @@ export interface ThemeRenderContext {
   customGradientColor?: string
   customBorderColor?: string
   gradientOpacity?: number
+  customBannerColor?: string
 }
 
 export interface ThemeVisualOverlay {
@@ -84,6 +147,27 @@ export interface Theme {
   // Theme editor properties
   isDefault: boolean
   isVisible: boolean
+
+  // Theme-specific default settings
+  defaultSettings?: {
+    showCollectionName?: boolean
+    textPosition?: 'bottom-right' | 'bottom-left' | 'bottom-center'
+    isDarkText?: boolean
+    showPaintedDate?: boolean
+    showGameDetails?: boolean
+  }
+
+  // Custom controls for this theme
+  customControls?: {
+    hideDarkTextToggle?: boolean
+    hideTextShadow?: boolean
+    hideGradientColor?: boolean
+    hideBorderColor?: boolean
+    hideGradientOpacity?: boolean
+    hideVisualOverlays?: boolean
+    textPositionOptions?: Array<{ value: string, label: string }>
+    bannerColorOptions?: Array<{ name: string, value: string }>
+  }
 
   // Future extensibility
   metadata?: {
