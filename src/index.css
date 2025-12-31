@@ -712,6 +712,23 @@
   }
 }
 
+/* Footer spacing so content clears the fixed tab bar + floating action button */
+.footer-tabbar-gap {
+  padding-bottom: 7rem;
+}
+
+@supports (padding: max(0px)) {
+  .footer-tabbar-gap {
+    padding-bottom: max(7rem, calc(6rem + env(safe-area-inset-bottom)));
+  }
+}
+
+@media (max-height: 700px) {
+  .footer-tabbar-gap {
+    padding-bottom: max(6rem, calc(5rem + env(safe-area-inset-bottom)));
+  }
+}
+
 /* Floating action button enhancements */
 .floating-action-button {
   /* Ensure the button appears above tab bar content */

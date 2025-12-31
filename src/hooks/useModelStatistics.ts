@@ -25,6 +25,27 @@ interface MonthlyStats {
   modelsPainted: number
 }
 
+interface YearlyStats {
+  year: number
+  modelsPurchased: number
+  modelsPainted: number
+}
+
+interface YearlyGamePainted {
+  [year: number]: {
+    game_id: string
+    game_name: string
+    paintedModels: number
+  }[]
+}
+
+interface YearlyPaintSummary {
+  [year: number]: {
+    firstPainted?: { name: string; gameName: string; date: string }
+    lastPainted?: { name: string; gameName: string; date: string }
+  }
+}
+
 interface ModelStatistics {
   totalModels: number
   totalPainted: number
@@ -36,6 +57,9 @@ interface ModelStatistics {
   statusBreakdown: StatusStats[]
   mostPlayedGames: GameStats[]
   modelsByMonth: MonthlyStats[]
+  yearlyStats: YearlyStats[]
+  yearlyPaintedByGame: YearlyGamePainted
+  yearlyPaintSummary: YearlyPaintSummary
   averageModelsPerGame: number
   mostProductiveMonth: { month: string; modelsPainted: number }
   longestPaintingStreak: number
@@ -60,6 +84,9 @@ export function useModelStatistics() {
         statusBreakdown: [],
         mostPlayedGames: [],
         modelsByMonth: [],
+        yearlyStats: [],
+        yearlyPaintedByGame: {},
+        yearlyPaintSummary: {},
         averageModelsPerGame: 0,
         mostProductiveMonth: { month: '', modelsPainted: 0 },
         longestPaintingStreak: 0,
@@ -79,6 +106,9 @@ export function useModelStatistics() {
         statusBreakdown: [],
         mostPlayedGames: [],
         modelsByMonth: [],
+        yearlyStats: [],
+        yearlyPaintedByGame: {},
+        yearlyPaintSummary: {},
         averageModelsPerGame: 0,
         mostProductiveMonth: { month: '', modelsPainted: 0 },
         longestPaintingStreak: 0,
@@ -99,6 +129,21 @@ export function useModelStatistics() {
     const statusStats: { [key: string]: number } = {}
     // Group models by month for trend analysis
     const monthlyStats: { [key: string]: { added: number; painted: number } } = {}
+    // Group models by year for year-over-year view (purchases + painted)
+    const yearlyStats: { [key: string]: { purchased: number; painted: number } } = {}
+    // Track painted models per game per year
+    const yearlyPaintedGameStats: { 
+      [year: string]: { 
+        [gameId: string]: { game_id: string; game_name: string; paintedModels: number } 
+      } 
+    } = {}
+    // Track first/last painted model per year
+    const yearlyPaintSummary: { 
+      [year: string]: { 
+        firstPainted?: { name: string; date: string }
+        lastPainted?: { name: string; date: string }
+      } 
+    } = {}
 
     // Process each model
     models.forEach(model => {
@@ -149,24 +194,73 @@ export function useModelStatistics() {
       const status = model.status || 'Unknown'
       statusStats[status] = (statusStats[status] || 0) + modelCount
 
-      // Track monthly activity
+      // Track monthly activity (creation date) and yearly purchases
       const createdDate = new Date(model.created_at)
       const monthKey = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}`
+      const purchaseDate = model.purchase_date || model.box?.purchase_date || model.created_at
+      const purchaseYear = new Date(purchaseDate).getFullYear()
+      const purchaseYearKey = `${purchaseYear}`
       
       if (!monthlyStats[monthKey]) {
         monthlyStats[monthKey] = { added: 0, painted: 0 }
       }
       monthlyStats[monthKey].added += modelCount
 
+      if (!yearlyStats[purchaseYearKey]) {
+        yearlyStats[purchaseYearKey] = { purchased: 0, painted: 0 }
+      }
+      yearlyStats[purchaseYearKey].purchased += modelCount
+
       // Track painting activity by month
       if (isPainted && model.painted_date) {
         const paintedDate = new Date(model.painted_date)
         const paintedMonthKey = `${paintedDate.getFullYear()}-${String(paintedDate.getMonth() + 1).padStart(2, '0')}`
+        const paintedYearKey = `${paintedDate.getFullYear()}`
         
         if (!monthlyStats[paintedMonthKey]) {
           monthlyStats[paintedMonthKey] = { added: 0, painted: 0 }
         }
         monthlyStats[paintedMonthKey].painted += modelCount
+
+        if (!yearlyStats[paintedYearKey]) {
+          yearlyStats[paintedYearKey] = { purchased: 0, painted: 0 }
+        }
+        yearlyStats[paintedYearKey].painted += modelCount
+
+        if (!yearlyPaintedGameStats[paintedYearKey]) {
+          yearlyPaintedGameStats[paintedYearKey] = {}
+        }
+        if (!yearlyPaintedGameStats[paintedYearKey][gameKey]) {
+          yearlyPaintedGameStats[paintedYearKey][gameKey] = {
+            game_id: gameKey,
+            game_name: gameName,
+            paintedModels: 0
+          }
+        }
+        yearlyPaintedGameStats[paintedYearKey][gameKey].paintedModels += modelCount
+
+        if (!yearlyPaintSummary[paintedYearKey]) {
+          yearlyPaintSummary[paintedYearKey] = {}
+        }
+        const summary = yearlyPaintSummary[paintedYearKey]
+        const paintedDateIso = new Date(model.painted_date).toISOString()
+        const paintedGameName = model.game?.name || model.box?.game?.name || 'Unknown Game'
+        // first painted (earliest date)
+        if (!summary.firstPainted || paintedDateIso < summary.firstPainted.date) {
+          summary.firstPainted = { 
+            name: model.name || 'Unknown Model', 
+            gameName: paintedGameName,
+            date: paintedDateIso 
+          }
+        }
+        // last painted (latest date)
+        if (!summary.lastPainted || paintedDateIso > summary.lastPainted.date) {
+          summary.lastPainted = { 
+            name: model.name || 'Unknown Model', 
+            gameName: paintedGameName,
+            date: paintedDateIso 
+          }
+        }
       }
     })
 
@@ -203,6 +297,29 @@ export function useModelStatistics() {
         modelsPainted: stats.painted
       }))
       .sort((a, b) => a.month.localeCompare(b.month))
+
+    // Calculate yearly trends
+    const modelsByYear = Object.entries(yearlyStats)
+      .map(([year, stats]) => ({
+        year: parseInt(year, 10),
+        modelsPurchased: stats.purchased,
+        modelsPainted: stats.painted
+      }))
+      .sort((a, b) => b.year - a.year)
+
+    // Calculate yearly painted per game (convert nested map to arrays)
+    const yearlyPaintedByGame: YearlyGamePainted = Object.entries(yearlyPaintedGameStats).reduce((acc, [year, games]) => {
+      const yearNum = parseInt(year, 10)
+      acc[yearNum] = Object.values(games)
+        .filter(game => game.paintedModels > 0)
+        .sort((a, b) => b.paintedModels - a.paintedModels || a.game_name.localeCompare(b.game_name))
+      return acc
+    }, {} as YearlyGamePainted)
+
+    const yearlyPaintSummaryFinal: YearlyPaintSummary = Object.entries(yearlyPaintSummary).reduce((acc, [year, summary]) => {
+      acc[parseInt(year, 10)] = summary
+      return acc
+    }, {} as YearlyPaintSummary)
 
     // Calculate overall rates
     const overallPaintingRate = totalModels > 0 ? (totalPainted / totalModels) * 100 : 0
@@ -255,6 +372,9 @@ export function useModelStatistics() {
       statusBreakdown,
       mostPlayedGames,
       modelsByMonth,
+      yearlyStats: modelsByYear,
+      yearlyPaintedByGame,
+      yearlyPaintSummary: yearlyPaintSummaryFinal,
       averageModelsPerGame,
       mostProductiveMonth,
       longestPaintingStreak: longestStreak,
