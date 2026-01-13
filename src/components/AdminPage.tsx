@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
-import { ChevronRight, Users, Gamepad2, MapPin, ArrowLeft, GitBranch, Package, Palette, FolderOpen, Mail, Activity } from 'lucide-react'
+import { ChevronRight, Users, Gamepad2, MapPin, ArrowLeft, GitBranch, Package, Palette, FolderOpen, Mail, Activity, Paintbrush } from 'lucide-react'
 import { ManageUsersPage } from './ManageUsersPage'
 import { ManageGamesPage } from './ManageGamesPage'
 import { ManageModelsPage } from './ManageModelsPage'
 import { ManageLocationsPage } from './ManageLocationsPage'
 import { ManageCollectionsPage } from './ManageCollectionsPage'
+import { ManageHobbyItemsPage } from './ManageHobbyItemsPage'
 import { ReleaseManagementPage } from './ReleaseManagementPage'
 import { ThemeEditor } from './ThemeEditor'
 import { StoreEmailManagement } from './StoreEmailManagement'
@@ -21,7 +22,7 @@ interface AdminPageProps {
 
 export function AdminPage({ onBack, onLogoClick, onTabChange }: AdminPageProps) {
   console.log('=== AdminPage rendering ===')
-  const [currentView, setCurrentView] = useState<'main' | 'users' | 'games' | 'models' | 'collections' | 'locations' | 'release-management' | 'theme-editor' | 'store-emails' | 'activity'>('main')
+  const [currentView, setCurrentView] = useState<'main' | 'users' | 'games' | 'models' | 'collections' | 'locations' | 'hobby-items' | 'release-management' | 'theme-editor' | 'store-emails' | 'activity'>('main')
   const { user } = useAuth()
   
   console.log('AdminPage user:', user)
@@ -53,6 +54,10 @@ export function AdminPage({ onBack, onLogoClick, onTabChange }: AdminPageProps) 
 
   if (currentView === 'collections') {
     return <ManageCollectionsPage onBack={() => setCurrentView('main')} />
+  }
+
+  if (currentView === 'hobby-items') {
+    return <ManageHobbyItemsPage onBack={() => setCurrentView('main')} />
   }
 
   if (currentView === 'locations') {
@@ -207,6 +212,17 @@ export function AdminPage({ onBack, onLogoClick, onTabChange }: AdminPageProps) 
             <div className="flex items-center space-x-4">
               <Package className="w-6 h-6 text-secondary-text" />
               <span className="text-lg font-semibold text-text">Manage Models</span>
+            </div>
+            <ChevronRight className="w-5 h-5 text-icon" />
+          </button>
+
+          <button
+            onClick={() => setCurrentView('hobby-items')}
+            className="w-full bg-bg-card border border-border-custom rounded-lg p-6 hover:bg-bg-secondary transition-colors flex items-center justify-between"
+          >
+            <div className="flex items-center space-x-4">
+              <Paintbrush className="w-6 h-6 text-secondary-text" />
+              <span className="text-lg font-semibold text-text">Manage Hobby Items</span>
             </div>
             <ChevronRight className="w-5 h-5 text-icon" />
           </button>

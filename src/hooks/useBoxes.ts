@@ -7,6 +7,7 @@ interface Box {
   name: string
   purchase_date: string | null
   image_url: string | null
+  type: string | null
   public: boolean | null
   models_count: number
   created_at: string | null
@@ -22,6 +23,7 @@ interface Box {
 export function useBoxes() {
   const [boxes, setBoxes] = useState<Box[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingProgress, setLoadingProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
 
@@ -37,10 +39,16 @@ export function useBoxes() {
 
   const fetchBoxes = async () => {
     try {
+      setLoadingProgress(0)
+      console.log('🔄 Collections loading progress: 0%')
+
       if (!user?.id) {
         setBoxes([])
         return
       }
+
+      setLoadingProgress(20)
+      console.log('🔄 Collections loading progress: 20% (starting fetch)')
 
       // Fetch boxes with aggregated model counts using the new junction table
       const { data: boxesData, error: boxesError } = await supabase
@@ -50,6 +58,7 @@ export function useBoxes() {
           name,
           purchase_date,
           image_url,
+          type,
           public,
           created_at,
           show_carousel,
@@ -63,6 +72,9 @@ export function useBoxes() {
 
       if (boxesError) throw boxesError
 
+      setLoadingProgress(60)
+      console.log('🔄 Collections loading progress: 60% (data received)')
+
       // Transform the boxes data and calculate model counts from junction table
       const transformedBoxes = (boxesData || []).map(box => {
         const modelBoxes = Array.isArray(box.model_boxes) ? box.model_boxes : []
@@ -70,12 +82,13 @@ export function useBoxes() {
           const modelCount = modelBox.model?.count || 0
           return sum + modelCount
         }, 0)
-        
+
         return {
           id: box.id,
           name: box.name,
           purchase_date: box.purchase_date,
           image_url: box.image_url,
+          type: box.type,
           public: box.public,
           show_carousel: box.show_carousel,
           models_count: totalCount,
@@ -85,6 +98,8 @@ export function useBoxes() {
       })
 
       setBoxes(transformedBoxes)
+      setLoadingProgress(100)
+      console.log('✅ Collections loading progress: 100% (complete)')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch boxes')
     } finally {
@@ -92,5 +107,5 @@ export function useBoxes() {
     }
   }
 
-  return { boxes, loading, error, refetch: fetchBoxes }
+  return { boxes, loading, loadingProgress, error, refetch: fetchBoxes }
 }

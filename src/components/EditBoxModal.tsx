@@ -22,7 +22,8 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
     name: '',
     game_id: '',
     purchase_date: '',
-    image_url: ''
+    image_url: '',
+    type: 'Collection'
   })
   const { games, createGame } = useGames()
   const { addRecentGame } = useRecentGames()
@@ -49,7 +50,8 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
         name: box.name,
         game_id: box.game_id || box.game?.id || '',
         purchase_date: box.purchase_date || '',
-        image_url: box.image_url || ''
+        image_url: box.image_url || '',
+        type: box.type || 'Collection'
       })
       fetchBoxImages()
     }
@@ -473,7 +475,8 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
         .update({
           name: formData.name,
           game_id: gameIdToSave,
-          purchase_date: formData.purchase_date || null
+          purchase_date: formData.purchase_date || null,
+          type: formData.type || 'Collection'
         })
         .eq('id', box.id)
 
@@ -541,7 +544,8 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
         name: box.name,
         game_id: box.game_id || box.game?.id || '',
         purchase_date: box.purchase_date || '',
-        image_url: box.image_url || ''
+        image_url: box.image_url || '',
+        type: box.type || 'Collection'
       })
     }
     setSelectedImageFiles([])
@@ -598,6 +602,22 @@ export function EditBoxModal({ isOpen, onClose, onBoxUpdated, box }: EditBoxModa
                   required
                 />
               </div>
+            </div>
+
+            {/* Collection Type */}
+            <div>
+              <label htmlFor="collectionType" className="block text-sm font-medium text-input-label font-overpass mb-2">
+                Collection Type
+              </label>
+              <select
+                id="collectionType"
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring---color-brand focus:border---color-brand bg-bg-primary text-text"
+              >
+                <option value="Collection">Collection</option>
+                <option value="Box">Box</option>
+              </select>
             </div>
 
             {/* Game */}

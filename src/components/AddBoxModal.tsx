@@ -22,6 +22,7 @@ interface AddBoxModalProps {
 export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
   const [boxName, setBoxName] = useState('')
   const [selectedGame, setSelectedGame] = useState('')
+  const [collectionType, setCollectionType] = useState('Collection')
   const [purchaseDate, setPurchaseDate] = useState('')
   const [purchasePrice, setPurchasePrice] = useState('')
   const [displayPrice, setDisplayPrice] = useState('')
@@ -552,6 +553,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
         .from('boxes')
         .insert({
           name: boxName.trim(),
+          type: collectionType,
           game_id: gameIdToSave,
           purchase_date: purchaseDate || null,
           user_id: user.id
@@ -621,6 +623,7 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
       setSelectedImageUrl('')
       setShowImageSearch(false)
       setSuggestedImages([])
+      setCollectionType('Collection')
       
       onSuccess()
       
@@ -702,6 +705,22 @@ export function AddBoxModal({ isOpen, onClose, onSuccess }: AddBoxModalProps) {
               placeholder='eg. "Kill Team Collection", "Space Marine Heroes", "Warhammer 40k Elite Edition", etc.'
               className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] placeholder-secondary-text bg-bg-primary text-text"
             />
+          </div>
+
+          {/* Collection Type */}
+          <div>
+            <label htmlFor="collectionType" className="block text-sm font-medium text-input-label font-overpass mb-2">
+              Collection Type
+            </label>
+            <select
+              id="collectionType"
+              value={collectionType}
+              onChange={(e) => setCollectionType(e.target.value)}
+              className="w-full px-4 py-3 border border-border-custom rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-bg-primary text-text"
+            >
+              <option value="Collection">Collection</option>
+              <option value="Box">Box</option>
+            </select>
           </div>
 
           {/* Game */}

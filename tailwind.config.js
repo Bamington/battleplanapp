@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}', './src/ui/**/*.{tsx,ts,js,jsx}'],
   darkMode: 'class',
   theme: {
     extend: {
@@ -17,7 +17,7 @@ export default {
         'bg-primary': 'var(--color-bg-primary)',
         'bg-secondary': 'var(--color-bg-secondary)',
         'bg-card': 'var(--color-bg-card)',
-        'bg-card-secondary':  'var(--color-bg-card-secondary)',
+        'bg-card-secondary': 'var(--color-bg-card-secondary)',
         'border-custom': 'var(--color-border)',
         'modal-bg': 'var(--color-modal-bg)',
         'white': 'var(--color-white)',
@@ -32,4 +32,5 @@ export default {
     },
   },
   plugins: [],
+  presets: [require("./src/ui/tailwind.config.js")]
 };

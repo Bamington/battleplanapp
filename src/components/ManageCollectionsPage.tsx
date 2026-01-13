@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, Package, Edit, Search, Save, X, Users, Filter, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Package, Edit, Search, Save, X, Users, Filter, ChevronDown, CheckSquare, Square } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { MultiSelectDropdown } from './MultiSelectDropdown'
 import { SingleSelectDropdown } from './SingleSelectDropdown'
@@ -17,6 +17,7 @@ interface Collection {
   user_id: string
   created_at: string
   public: boolean
+  type: string
   models_count: number
   user: {
     email: string
@@ -49,9 +50,17 @@ export function ManageCollectionsPage({ onBack }: ManageCollectionsPageProps) {
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
   const [publicFilter, setPublicFilter] = useState<'all' | 'public' | 'private'>('all')
 
+  // Selection and bulk actions
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<Set<string>>(new Set())
+  const [bulkTypeChange, setBulkTypeChange] = useState<string>('')
+  const [bulkGameChange, setBulkGameChange] = useState<string>('')
+  const [games, setGames] = useState<Array<{ id: string; name: string }>>([])
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false)
+
   useEffect(() => {
     fetchCollections()
     fetchUsers()
+    fetchGames()
   }, [])
 
   const fetchCollections = async () => {
@@ -79,6 +88,8 @@ export function ManageCollectionsPage({ onBack }: ManageCollectionsPageProps) {
           user_id,
           created_at,
           public,
+          type,
+          game_id,
           game:games(name),
           model_boxes(
             model:models(count)
@@ -152,6 +163,20 @@ export function ManageCollectionsPage({ onBack }: ManageCollectionsPageProps) {
     }
   }
 
+  const fetchGames = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .select('id, name')
+        .order('name', { ascending: true })
+
+      if (error) throw error
+      setGames(data || [])
+    } catch (err) {
+      console.error('Error fetching games:', err)
+    }
+  }
+
   const handleReassignCollection = async (collectionId: string, newOwnerId: string) => {
     try {
       setSaving(true)
@@ -174,6 +199,81 @@ export function ManageCollectionsPage({ onBack }: ManageCollectionsPageProps) {
     }
   }
 
+  const handleToggleSelection = (collectionId: string) => {
+    const newSelection = new Set(selectedCollectionIds)
+    if (newSelection.has(collectionId)) {
+      newSelection.delete(collectionId)
+    } else {
+      newSelection.add(collectionId)
+    }
+    setSelectedCollectionIds(newSelection)
+  }
+
+  const handleSelectAll = () => {
+    if (selectedCollectionIds.size === filteredCollections.length) {
+      setSelectedCollectionIds(new Set())
+    } else {
+      setSelectedCollectionIds(new Set(filteredCollections.map(c => c.id)))
+    }
+  }
+
+  const handleBulkTypeChange = async () => {
+    if (!bulkTypeChange || selectedCollectionIds.size === 0) return
+
+    try {
+      setIsBulkUpdating(true)
+      setError(null)
+
+      const { error } = await supabase
+        .from('boxes')
+        .update({ type: bulkTypeChange })
+        .in('id', Array.from(selectedCollectionIds))
+
+      if (error) throw error
+
+      // Refresh collections and clear selection
+      await fetchCollections()
+      setSelectedCollectionIds(new Set())
+      setBulkTypeChange('')
+    } catch (err) {
+      console.error('Error updating collection types:', err)
+      setError('Failed to update collection types')
+    } finally {
+      setIsBulkUpdating(false)
+    }
+  }
+
+  const handleBulkGameChange = async () => {
+    if (!bulkGameChange || selectedCollectionIds.size === 0) return
+
+    try {
+      setIsBulkUpdating(true)
+      setError(null)
+
+      // If "None" is selected, set game_id to null, otherwise use the selected game_id
+      const updateData = bulkGameChange === 'none' 
+        ? { game_id: null }
+        : { game_id: bulkGameChange }
+
+      const { error } = await supabase
+        .from('boxes')
+        .update(updateData)
+        .in('id', Array.from(selectedCollectionIds))
+
+      if (error) throw error
+
+      // Refresh collections and clear selection
+      await fetchCollections()
+      setSelectedCollectionIds(new Set())
+      setBulkGameChange('')
+    } catch (err) {
+      console.error('Error updating collection games:', err)
+      setError('Failed to update collection games')
+    } finally {
+      setIsBulkUpdating(false)
+    }
+  }
+
   const getUserDisplayName = (user: User) => {
     return user.user_name_public || user.email
   }
@@ -181,6 +281,14 @@ export function ManageCollectionsPage({ onBack }: ManageCollectionsPageProps) {
   // Get unique games from collections for filtering
   const getAvailableGames = () => {
     const gameMap = new Map()
+    // Add "No Game" option if there are any collections without a game
+    const hasNoGameCollections = collections.some(collection => !collection.game)
+    if (hasNoGameCollections) {
+      gameMap.set('__no_game__', {
+        id: '__no_game__',
+        name: 'No Game / Unknown'
+      })
+    }
     collections.forEach(collection => {
       if (collection.game) {
         gameMap.set(collection.game.name, {
@@ -230,6 +338,7 @@ export function ManageCollectionsPage({ onBack }: ManageCollectionsPageProps) {
 
       // Game filter
       const gameMatch = selectedGames.length === 0 ||
+        (selectedGames.includes('__no_game__') && !collection.game) ||
         (collection.game && selectedGames.includes(collection.game.name))
 
       // Public filter
@@ -416,6 +525,72 @@ export function ManageCollectionsPage({ onBack }: ManageCollectionsPageProps) {
           </div>
         </div>
 
+        {/* Bulk Actions */}
+        {!loading && selectedCollectionIds.size > 0 && (
+          <div className="bg-bg-card border border-border-custom rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <span className="text-sm font-medium text-text">
+                  {selectedCollectionIds.size} collection{selectedCollectionIds.size !== 1 ? 's' : ''} selected
+                </span>
+                <div className="flex items-center space-x-2 flex-wrap gap-2">
+                  <label className="text-sm text-secondary-text">Change type to:</label>
+                  <select
+                    value={bulkTypeChange}
+                    onChange={(e) => setBulkTypeChange(e.target.value)}
+                    className="px-3 py-2 border border-border-custom rounded-lg text-sm bg-bg-primary text-text focus:ring-2 focus:ring-brand focus:border-transparent"
+                    disabled={isBulkUpdating}
+                  >
+                    <option value="">Select type...</option>
+                    <option value="Collection">Collection</option>
+                    <option value="Box">Box</option>
+                  </select>
+                  <button
+                    onClick={handleBulkTypeChange}
+                    disabled={!bulkTypeChange || isBulkUpdating}
+                    className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    {isBulkUpdating ? 'Updating...' : 'Update Type'}
+                  </button>
+                  <label className="text-sm text-secondary-text ml-2">Change game to:</label>
+                  <select
+                    value={bulkGameChange}
+                    onChange={(e) => setBulkGameChange(e.target.value)}
+                    className="px-3 py-2 border border-border-custom rounded-lg text-sm bg-bg-primary text-text focus:ring-2 focus:ring-brand focus:border-transparent"
+                    disabled={isBulkUpdating}
+                  >
+                    <option value="">Select game...</option>
+                    <option value="none">None</option>
+                    {games.map((game) => (
+                      <option key={game.id} value={game.id}>
+                        {game.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleBulkGameChange}
+                    disabled={!bulkGameChange || isBulkUpdating}
+                    className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    {isBulkUpdating ? 'Updating...' : 'Update Game'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedCollectionIds(new Set())
+                      setBulkTypeChange('')
+                      setBulkGameChange('')
+                    }}
+                    disabled={isBulkUpdating}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 transition-colors text-sm"
+                  >
+                    Clear Selection
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats */}
         {!loading && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -489,38 +664,78 @@ export function ManageCollectionsPage({ onBack }: ManageCollectionsPageProps) {
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Select All Checkbox */}
+            {filteredCollections.length > 0 && (
+              <div className="bg-bg-card rounded-lg border border-border-custom p-4">
+                <button
+                  onClick={handleSelectAll}
+                  className="flex items-center space-x-2 text-sm text-secondary-text hover:text-text transition-colors"
+                >
+                  {selectedCollectionIds.size === filteredCollections.length ? (
+                    <CheckSquare className="w-5 h-5 text-brand" />
+                  ) : (
+                    <Square className="w-5 h-5" />
+                  )}
+                  <span>
+                    {selectedCollectionIds.size === filteredCollections.length
+                      ? 'Deselect All'
+                      : 'Select All'}
+                  </span>
+                </button>
+              </div>
+            )}
+
             {filteredCollections.map((collection) => (
               <div key={collection.id} className="bg-bg-card rounded-lg border border-border-custom p-6">
                 <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <Package className="w-5 h-5 text-secondary-text flex-shrink-0" />
-                      <h3 className="text-lg font-semibold text-title truncate">{collection.name}</h3>
-                      {collection.public && (
-                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Public</span>
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <button
+                      onClick={() => handleToggleSelection(collection.id)}
+                      className="flex-shrink-0 text-secondary-text hover:text-text transition-colors"
+                    >
+                      {selectedCollectionIds.has(collection.id) ? (
+                        <CheckSquare className="w-5 h-5 text-brand" />
+                      ) : (
+                        <Square className="w-5 h-5" />
                       )}
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-secondary-text">
-                      <div>
-                        <span className="font-medium">Owner: </span>
-                        <span className="text-text">{getUserDisplayName(collection.user)}</span>
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <Package className="w-5 h-5 text-secondary-text flex-shrink-0" />
+                        <h3 className="text-lg font-semibold text-title truncate">{collection.name}</h3>
+                        {collection.public && (
+                          <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Public</span>
+                        )}
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                          {collection.type || 'Collection'}
+                        </span>
                       </div>
-                      <div>
-                        <span className="font-medium">Email: </span>
-                        <span className="text-text">{collection.user.email}</span>
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm text-secondary-text">
+                        <div>
+                          <span className="font-medium">Type: </span>
+                          <span className="text-text">{collection.type || 'Collection'}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Owner: </span>
+                          <span className="text-text">{getUserDisplayName(collection.user)}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Email: </span>
+                          <span className="text-text">{collection.user.email}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Game: </span>
+                          <span className="text-text">{collection.game?.name || 'No Game'}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Models: </span>
+                          <span className="text-text">{collection.models_count}</span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="font-medium">Game: </span>
-                        <span className="text-text">{collection.game?.name || 'No Game'}</span>
+                      <div className="mt-3 flex items-center justify-between text-xs text-secondary-text">
+                        <span>Created: {new Date(collection.created_at).toLocaleDateString()}</span>
+                        <span>ID: {collection.id}</span>
                       </div>
-                      <div>
-                        <span className="font-medium">Models: </span>
-                        <span className="text-text">{collection.models_count}</span>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-xs text-secondary-text">
-                      <span>Created: {new Date(collection.created_at).toLocaleDateString()}</span>
-                      <span>ID: {collection.id}</span>
                     </div>
                   </div>
 

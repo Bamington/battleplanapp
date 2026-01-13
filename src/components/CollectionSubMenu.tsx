@@ -1,9 +1,9 @@
 import React from 'react'
-import { Package, Layers, Clock, Heart, Brush, BarChart3 } from 'lucide-react'
+import { Package, Layers, Clock, Heart, Brush, BarChart3, Palette } from 'lucide-react'
 
 interface CollectionSubMenuProps {
-  activeView: 'painting-table' | 'recent' | 'collections' | 'models' | 'wishlist' | 'statistics'
-  onViewChange: (view: 'painting-table' | 'recent' | 'collections' | 'models' | 'wishlist' | 'statistics') => void
+  activeView: 'painting-table' | 'recent' | 'collections' | 'models' | 'hobby' | 'wishlist' | 'statistics'
+  onViewChange: (view: 'painting-table' | 'recent' | 'collections' | 'models' | 'hobby' | 'wishlist' | 'statistics') => void
   isBetaTester?: boolean
 }
 
@@ -23,6 +23,11 @@ export function CollectionSubMenu({ activeView, onViewChange, isBetaTester = fal
       id: 'collections' as const,
       label: 'Collections',
       icon: Package
+    },
+    {
+      id: 'hobby' as const,
+      label: 'Hobby',
+      icon: Palette
     },
     {
       id: 'statistics' as const,
@@ -88,7 +93,7 @@ export function CollectionSubMenu({ activeView, onViewChange, isBetaTester = fal
           
           {/* Desktop: Grid layout */}
           <div className={`hidden md:flex justify-center items-center`}>
-            <div className={`grid gap-6 w-full ${isBetaTester ? 'grid-cols-6 max-w-4xl' : 'grid-cols-4 max-w-2xl'}`}>
+            <div className={`grid gap-6 w-full ${isBetaTester ? 'grid-cols-7 max-w-5xl' : 'grid-cols-5 max-w-3xl'}`}>
               {menuItems.map((item) => {
                 const Icon = item.icon
                 const isActive = activeView === item.id

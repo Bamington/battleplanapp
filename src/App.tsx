@@ -27,6 +27,7 @@ import { NewBookingModal } from './components/NewBookingModal'
 import { NewBattleModal } from './components/NewBattleModal'
 import { RecentViewSettingsModal, RecentViewSettings } from './components/RecentViewSettingsModal'
 import { AuthCallback } from './components/AuthCallback'
+import { LoadingProgressBar } from './components/LoadingProgressBar'
 
 import { useAuth } from './hooks/useAuth'
 import { useModels } from './hooks/useModels'
@@ -46,6 +47,7 @@ import { PaintingTablePage } from './components/PaintingTablePage'
 import { SelectModelForPaintingModal } from './components/SelectModelForPaintingModal'
 import { PaintingInspirationModal } from './components/PaintingInspirationModal'
 import { CustomGamesPage } from './components/CustomGamesPage'
+import { HobbyTab } from './components/HobbyTab'
 
 function App() {
   
@@ -100,7 +102,7 @@ function App() {
   }
 
   const [activeTab, setActiveTab] = useState('collection')
-  const [collectionView, setCollectionView] = useState<'painting-table' | 'recent' | 'models' | 'collections' | 'wishlist' | 'statistics'>('recent')
+  const [collectionView, setCollectionView] = useState<'painting-table' | 'recent' | 'models' | 'collections' | 'hobby' | 'wishlist' | 'statistics'>('recent')
   const [battleView, setBattleView] = useState<'battles' | 'statistics'>('battles')
   const [currentPage, setCurrentPage] = useState(1)
   const [boxCurrentPage, setBoxCurrentPage] = useState(1)
@@ -231,8 +233,8 @@ function App() {
   
   // Initialize game icons cache on app startup
   useGameIcons()
-  const { models, loading: modelsLoading, refetch: refetchModels } = useModels()
-  const { boxes, loading: boxesLoading, refetch: refetchBoxes } = useBoxes()
+  const { models, loading: modelsLoading, loadingProgress: modelsProgress, refetch: refetchModels } = useModels()
+  const { boxes, loading: boxesLoading, loadingProgress: boxesProgress, refetch: refetchBoxes } = useBoxes()
 
 
 
@@ -1279,9 +1281,9 @@ function App() {
           <>
             {/* Recent Models Section */}
             <section className="mb-16">
-              {models.length > 0 && (
-                <div className="flex flex-col items-center mb-8">
-                  <div className="flex items-center justify-center space-x-3 mb-4">
+              <div className="flex flex-col items-center mb-8">
+                <div className="flex items-center justify-center space-x-3 mb-4">
+                  {models.length > 0 && (
                     <button
                       onClick={() => setShowRecentViewSettingsModal(true)}
                       className="p-1.5 text-secondary-text hover:text-text hover:bg-bg-secondary rounded-lg transition-colors"
@@ -1289,23 +1291,32 @@ function App() {
                     >
                       <Settings className="w-4 h-4" />
                     </button>
-                    <h2 className="text-lg font-bold text-secondary-text">RECENT MODELS</h2>
-                  </div>
+                  )}
+                  <h2 className="text-lg font-bold text-secondary-text">RECENT MODELS</h2>
                 </div>
-              )}
+
+                {/* Progress bar shown right below title */}
+                {modelsLoading && (
+                  <div className="w-full max-w-md">
+                    <LoadingProgressBar
+                      progress={modelsProgress}
+                      message="Loading models..."
+                    />
+                  </div>
+                )}
+              </div>
 
               {modelsLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden animate-pulse">
-                      <div className="h-48 bg-secondary-text opacity-20"></div>
-                      <div className="p-4 space-y-3">
-                        <div className="h-4 bg-secondary-text opacity-20 rounded"></div>
-                        <div className="h-3 bg-secondary-text opacity-20 rounded w-2/3"></div>
-                        <div className="h-8 bg-secondary-text opacity-20 rounded"></div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="text-center py-8">
+                  <p className="text-sm text-secondary-text">Please wait...</p>
+                </div>
+              ) : recentModels.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <LoadingProgressBar
+                    progress={modelsProgress}
+                    message="Loading models..."
+                    className="max-w-md"
+                  />
                 </div>
               ) : recentModels.length === 0 ? (
                 <div className="text-center py-12">
@@ -1346,26 +1357,25 @@ function App() {
 
             {/* Recent Collections Section */}
             <section>
-              {boxes.length > 0 && (
-                <div className="flex flex-col items-center mb-8">
-                  <div className="flex items-center justify-center mb-4">
-                    <h2 className="text-lg font-bold text-secondary-text">RECENT COLLECTIONS</h2>
-                  </div>
+              <div className="flex flex-col items-center mb-8">
+                <div className="flex items-center justify-center mb-4">
+                  <h2 className="text-lg font-bold text-secondary-text">RECENT COLLECTIONS</h2>
                 </div>
-              )}
+
+                {/* Progress bar shown right below title */}
+                {boxesLoading && (
+                  <div className="w-full max-w-md">
+                    <LoadingProgressBar
+                      progress={boxesProgress}
+                      message="Loading collections..."
+                    />
+                  </div>
+                )}
+              </div>
 
               {boxesLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="bg-bg-card rounded-lg shadow-sm border border-border-custom overflow-hidden animate-pulse">
-                      <div className="h-48 bg-secondary-text opacity-20"></div>
-                      <div className="p-4 space-y-3">
-                        <div className="h-4 bg-secondary-text opacity-20 rounded"></div>
-                        <div className="h-3 bg-secondary-text opacity-20 rounded w-2/3"></div>
-                        <div className="h-8 bg-secondary-text opacity-20 rounded"></div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="text-center py-8">
+                  <p className="text-sm text-secondary-text">Please wait...</p>
                 </div>
               ) : recentCollections.length === 0 ? (
                 <div className="text-center py-12">
@@ -1632,9 +1642,14 @@ function App() {
           </section>
         )}
 
+        {/* Hobby View - Visible to all users */}
+        {collectionView === 'hobby' && (
+          <HobbyTab />
+        )}
+
         {/* Wishlist View */}
         {collectionView === 'wishlist' && isBetaTester && (
-          <WishlistPage 
+          <WishlistPage
             showAddModal={showAddWishlistModal}
             onCloseAddModal={() => setShowAddWishlistModal(false)}
             onAddItemSuccess={() => setShowAddWishlistModal(false)}

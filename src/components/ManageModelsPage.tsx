@@ -83,7 +83,7 @@ export function ManageModelsPage({ onBack }: ManageModelsPageProps) {
 
   useEffect(() => {
     fetchModelsWithDetails()
-  }, [basicModels])
+  }, [basicModels, basicLoading, basicError])
 
   // Apply filters whenever models or filter states change
   useEffect(() => {
@@ -91,21 +91,25 @@ export function ManageModelsPage({ onBack }: ManageModelsPageProps) {
   }, [models, selectedGames, selectedCollectionStatus, searchQuery])
 
   const fetchModelsWithDetails = async () => {
-    if (!basicModels.length && basicLoading) {
+    // If still loading, keep loading state
+    if (basicLoading) {
       setLoading(true)
       return
     }
     
+    // If there's an error, show it
     if (basicError) {
       setError(basicError)
       setLoading(false)
       return
     }
     
+    // Loading is complete, process the data
     try {
       // Get full model details with game and box info since the basic hook already includes it
       // We can use the basic models directly as they already have all the needed data
       setModels(basicModels)
+      setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch models')
     } finally {

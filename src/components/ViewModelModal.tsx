@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { X, Share2, Edit, Trash2, Calendar, Hash, Palette, FileText, Package, Gamepad2, Info, BookOpen, Brush, ChevronLeft, ChevronRight, Camera } from 'lucide-react'
+import { X, Share2, Edit, Edit2, Trash2, Calendar, Hash, Palette, FileText, Package, Gamepad2, Info, BookOpen, Brush, ChevronLeft, ChevronRight, Camera, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { DeleteModelModal } from './DeleteModelModal'
 import { EditModelModal } from './EditModelModal'
@@ -9,10 +9,19 @@ import { Toast } from './Toast'
 import { TabSelector } from './TabSelector'
 import { RichTextEditor } from './RichTextEditor'
 import { DatePicker } from './DatePicker'
+import { AddHobbyItemModal } from './AddHobbyItemModal'
+import { CopyPaintingProcessModal } from './CopyPaintingProcessModal'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { formatLocalDate } from '../utils/timezone'
 import { getModelBoxes } from '../utils/modelBoxUtils'
+import { useHobbyItems } from '../hooks/useHobbyItems'
+import { useRecipes } from '../hooks/useRecipes'
+import { useAuth } from '../hooks/useAuth'
+import { toTitleCase } from '../utils/textUtils'
+import { AddRecipeToModelModal } from './AddRecipeToModelModal'
+import { EditRecipeModal } from './EditRecipeModal'
+import { RecipeWithItems } from '../types/recipe.types'
 
 
 interface ViewModelModalProps {
@@ -67,10 +76,71 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
   const [showEditModal, setShowEditModal] = React.useState(false)
   const [showShareModal, setShowShareModal] = React.useState(false)
   const [showScreenshotModal, setShowScreenshotModal] = React.useState(false)
+  const [showAddHobbyItemModal, setShowAddHobbyItemModal] = React.useState(false)
+  const [showCopyPaintingModal, setShowCopyPaintingModal] = React.useState(false)
+  const [showAddRecipeModal, setShowAddRecipeModal] = React.useState(false)
+  const [showEditRecipeModal, setShowEditRecipeModal] = React.useState(false)
+  const [recipeToEdit, setRecipeToEdit] = React.useState<RecipeWithItems | null>(null)
+  const [showUnsavedChangesModal, setShowUnsavedChangesModal] = React.useState(false)
   const [deleting, setDeleting] = React.useState(false)
   const [showToast, setShowToast] = React.useState(false)
   const [currentModel, setCurrentModel] = React.useState(model)
   const [activeTab, setActiveTab] = React.useState<'details' | 'lore' | 'painting'>('details')
+  const [collapsedSections, setCollapsedSections] = React.useState<Set<string>>(new Set())
+  const [expandedRecipes, setExpandedRecipes] = React.useState<Set<string>>(new Set())
+
+  const { user } = useAuth()
+
+  // Hobby items hook
+  const {
+    allHobbyItems,
+    modelHobbyItems,
+    loading: hobbyItemsLoading,
+    addHobbyItemToModel,
+    removeHobbyItemFromModel,
+    createHobbyItem,
+    refetch: refetchHobbyItems
+  } = useHobbyItems(model?.id)
+
+  // Recipes hook
+  const {
+    recipes,
+    modelRecipes,
+    loading: recipesLoading,
+    createRecipe,
+    addRecipeToModel,
+    removeRecipeFromModel,
+    updateModelRecipeDescription,
+    updateRecipe,
+    addItemToRecipe,
+    removeItemFromRecipe,
+    reorderRecipeItems,
+    refetch: refetchRecipes
+  } = useRecipes(model?.id)
+
+  // Initialize collapsed sections based on item count (>6 items = collapsed by default)
+  React.useEffect(() => {
+    if (modelHobbyItems.length > 0) {
+      // Group items by section
+      const groupedItems = modelHobbyItems.reduce((acc, item) => {
+        const section = item.section || 'General'
+        if (!acc[section]) {
+          acc[section] = []
+        }
+        acc[section].push(item)
+        return acc
+      }, {} as Record<string, typeof modelHobbyItems>)
+
+      // Find sections with more than 6 items
+      const initialCollapsed = new Set<string>()
+      Object.keys(groupedItems).forEach(section => {
+        if (groupedItems[section].length > 6) {
+          initialCollapsed.add(section)
+        }
+      })
+      setCollapsedSections(initialCollapsed)
+    }
+  }, [modelHobbyItems.length])
   const [loreData, setLoreData] = React.useState({
     lore_name: '',
     lore_description: ''
@@ -89,7 +159,6 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
     status: '',
     painted_date: ''
   })
-  const [isEditingPaintingNotes, setIsEditingPaintingNotes] = React.useState(false)
   const [modelCollections, setModelCollections] = React.useState<Array<{ id: string; name: string; added_at: string; purchase_date: string | null }>>([])
   const [collectionsLoading, setCollectionsLoading] = React.useState(false)
   const [modelImages, setModelImages] = React.useState<{
@@ -231,6 +300,51 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
     onModelUpdated?.()
   }
 
+  const handleUpdateRecipe = async (
+    recipeId: string,
+    name: string,
+    description: string | null,
+    itemIdsToAdd: number[],
+    itemIdsToRemove: number[],
+    itemOrders: { recipeItemId: string; displayOrder: number }[]
+  ) => {
+    try {
+      // Update recipe name and description (this doesn't auto-refresh)
+      await updateRecipe(recipeId, { name, description })
+
+      // Add new items (skip auto-refresh)
+      for (const itemId of itemIdsToAdd) {
+        await addItemToRecipe(recipeId, itemId, true)
+      }
+
+      // Remove items (skip auto-refresh)
+      for (const itemId of itemIdsToRemove) {
+        await removeItemFromRecipe(recipeId, itemId, true)
+      }
+
+      // Update item order (skip auto-refresh)
+      if (itemOrders.length > 0) {
+        await reorderRecipeItems(recipeId, itemOrders, true)
+      }
+
+      // Now refresh once at the end
+      await refetchRecipes()
+    } catch (error) {
+      console.error('Error updating recipe:', error)
+      throw error
+    }
+  }
+
+  const handleCreateRecipe = async (name: string, description: string | null, hobbyItemIds: number[]): Promise<string> => {
+    try {
+      const recipe = await createRecipe(name, description, hobbyItemIds)
+      return recipe.id
+    } catch (error) {
+      console.error('Error creating recipe:', error)
+      throw error
+    }
+  }
+
   // Handle clicking on a collection to view it
   const handleViewCollection = (collection: { id: string; name: string; purchase_date: string | null }) => {
     // Close this modal and open the collection view
@@ -280,14 +394,52 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
     }
   }, [isOpen, modelImages.length])
 
+  // Check if lore data has changed
+  const hasLoreChanges = loreData.lore_name !== originalLoreData.lore_name ||
+                        loreData.lore_description !== originalLoreData.lore_description
+
+  // Check if painting data has changed
+  const hasPaintingChanges = paintingData.painting_notes !== originalPaintingData.painting_notes ||
+                            paintingData.status !== originalPaintingData.status ||
+                            paintingData.painted_date !== originalPaintingData.painted_date
+
   if (!isOpen || !model) return null
+
+  const handleClose = () => {
+    // Check for unsaved changes
+    if (hasLoreChanges || hasPaintingChanges) {
+      setShowUnsavedChangesModal(true)
+    } else {
+      onClose()
+    }
+  }
+
+  const handleForceClose = () => {
+    // Discard changes and close
+    setLoreData(originalLoreData)
+    setPaintingData(originalPaintingData)
+    setShowUnsavedChangesModal(false)
+    onClose()
+  }
+
+  const handleSaveAndClose = async () => {
+    // Save changes then close
+    if (hasLoreChanges) {
+      await handleSaveLore()
+    }
+    if (hasPaintingChanges) {
+      await handleSavePainting()
+    }
+    setShowUnsavedChangesModal(false)
+    onClose()
+  }
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     // Don't close if edit modal is open
     if (showEditModal) return
-    
+
     if (e.target === e.currentTarget) {
-      onClose()
+      handleClose()
     }
   }
 
@@ -433,8 +585,7 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
         painted_date: paintingData.painted_date
       } : null)
       setOriginalPaintingData(paintingData)
-      setIsEditingPaintingNotes(false)
-      
+
       // Notify parent component to refresh data
       if (onModelUpdated) {
         await onModelUpdated()
@@ -444,19 +595,20 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
 
   const handleCancelPaintingEdit = () => {
     setPaintingData(originalPaintingData)
-    setIsEditingPaintingNotes(false)
   }
 
-  // Check if lore data has changed
-  const hasLoreChanges = loreData.lore_name !== originalLoreData.lore_name || 
-                        loreData.lore_description !== originalLoreData.lore_description
-
-  // Check if painting data has changed
-  const hasPaintingChanges = paintingData.painting_notes !== originalPaintingData.painting_notes ||
-                            paintingData.status !== originalPaintingData.status ||
-                            paintingData.painted_date !== originalPaintingData.painted_date
-
-  if (!isOpen || !currentModel) return null
+  // Toggle section collapse/expand
+  const toggleSection = (section: string) => {
+    setCollapsedSections(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(section)) {
+        newSet.delete(section)
+      } else {
+        newSet.add(section)
+      }
+      return newSet
+    })
+  }
 
   return (
     <>
@@ -469,7 +621,7 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
         <div className="bg-modal-bg rounded-none sm:rounded-lg max-w-2xl w-full h-screen sm:h-auto sm:max-h-[90vh] flex flex-col modal-content">
           {/* Sticky Close Button */}
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="fixed top-4 right-4 md:absolute text-white hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full p-2 z-20"
           >
             <X className="w-6 h-6 text-icon" />
@@ -780,145 +932,301 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
 
             {activeTab === 'painting' && (
               <div className="space-y-3">
-                {/* Painted Status */}
+                {/* Painting Process - Combined Recipes and Items */}
                 <div className="bg-bg-secondary rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-medium text-text">
-                      Painted Status
-                    </label>
-                    {!isEditingPaintingNotes && (
-                      <button
-                        onClick={() => setIsEditingPaintingNotes(true)}
-                        className="p-1 text-secondary-text hover:text-text transition-colors rounded"
-                        title="Edit painting status"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                    )}
+                  <div className="mb-3">
+                    <h3 className="text-sm font-medium text-text mb-1">Painting Process</h3>
+                    <p className="text-xs text-secondary-text">Recipes and supplies used when painting this model.</p>
                   </div>
 
-                  {isEditingPaintingNotes ? (
-                    <select
-                      value={paintingData.status}
-                      onChange={(e) => setPaintingData({ ...paintingData, status: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white"
-                    >
-                      <option value="">Select Status</option>
-                      <option value="Assembled">Assembled</option>
-                      <option value="Primed">Primed</option>
-                      <option value="Partially Painted">Partially Painted</option>
-                      <option value="Painted">Painted</option>
-                    </select>
+                  {(hobbyItemsLoading || recipesLoading) ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[var(--color-brand)]"></div>
+                      <span className="ml-2 text-sm text-secondary-text">Loading supplies...</span>
+                    </div>
+                  ) : (modelRecipes.length > 0 || modelHobbyItems.length > 0) ? (
+                    <div className="space-y-3 mb-3">
+                      {/* Recipes first */}
+                      {modelRecipes.map((modelRecipe) => {
+                        const isExpanded = expandedRecipes.has(modelRecipe.id)
+                        const items = modelRecipe.recipe.items
+
+                        return (
+                          <div
+                            key={modelRecipe.id}
+                            className="border border-border-custom rounded-md bg-bg-primary"
+                          >
+                            <div className="p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <button
+                                  onClick={() => {
+                                    setExpandedRecipes(prev => {
+                                      const newSet = new Set(prev)
+                                      if (newSet.has(modelRecipe.id)) {
+                                        newSet.delete(modelRecipe.id)
+                                      } else {
+                                        newSet.add(modelRecipe.id)
+                                      }
+                                      return newSet
+                                    })
+                                  }}
+                                  className="flex items-center space-x-2 flex-1 text-left hover:opacity-80 transition-opacity"
+                                >
+                                  <div className="flex items-center space-x-2 flex-1">
+                                    <h4 className="text-sm font-semibold text-text">
+                                      {modelRecipe.recipe.name}
+                                    </h4>
+                                  </div>
+                                  {isExpanded ? (
+                                    <ChevronUp className="w-4 h-4 text-secondary-text flex-shrink-0" />
+                                  ) : (
+                                    <ChevronDown className="w-4 h-4 text-secondary-text flex-shrink-0" />
+                                  )}
+                                </button>
+                                <div className="flex items-center space-x-1">
+                                  <button
+                                    onClick={() => {
+                                      setRecipeToEdit(modelRecipe.recipe)
+                                      setShowEditRecipeModal(true)
+                                    }}
+                                    className="p-1 text-secondary-text hover:text-text transition-colors"
+                                    title="Edit recipe"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (confirm(`Remove recipe "${modelRecipe.recipe.name}"?`)) {
+                                        try {
+                                          await removeRecipeFromModel(modelRecipe.id)
+                                        } catch (error) {
+                                          console.error('Error removing recipe:', error)
+                                          alert('Failed to remove recipe. Please try again.')
+                                        }
+                                      }
+                                    }}
+                                    className="p-1 text-secondary-text hover:text-red-500 transition-colors"
+                                    title="Remove recipe from model"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Items summary when collapsed */}
+                              {!isExpanded && items.length > 0 && (
+                                <div className="text-xs text-secondary-text">
+                                  {items.map((item, index) => (
+                                    <span key={item.id}>
+                                      {item.name}
+                                      {index < items.length - 1 && ', '}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              {modelRecipe.description && (
+                                <div className="text-xs text-text bg-bg-secondary rounded p-2 mt-2">
+                                  <span className="font-medium">Note:</span> {modelRecipe.description}
+                                </div>
+                              )}
+
+                              {/* Expanded items list */}
+                              {isExpanded && (
+                                <div className="mt-2">
+                                  {/* Recipe Description */}
+                                  {modelRecipe.recipe.description && (
+                                    <div className="mb-3 p-2 bg-bg-secondary rounded border border-border-custom">
+                                      <p className="text-xs text-text whitespace-pre-wrap">{modelRecipe.recipe.description}</p>
+                                    </div>
+                                  )}
+
+                                  {/* Items */}
+                                  {items.length > 0 && (
+                                    <div className="space-y-2">
+                                      {items.map((item) => (
+                                    <div
+                                      key={item.id}
+                                      className="flex items-center space-x-3 p-2 bg-bg-secondary rounded-md"
+                                    >
+                                      {item.swatch && (
+                                        <div
+                                          className="w-5 h-5 rounded border border-border-custom flex-shrink-0"
+                                          style={{ backgroundColor: item.swatch }}
+                                        />
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <div className="font-medium text-text text-sm truncate">
+                                          {item.name || 'Unnamed Item'}
+                                        </div>
+                                        <div className="flex items-center space-x-2 text-xs text-secondary-text">
+                                          <span className="font-medium">
+                                            {toTitleCase(item.type) || 'No Type'}
+                                          </span>
+                                          {item.brand && (
+                                            <>
+                                              <span>•</span>
+                                              <span>
+                                                {toTitleCase(item.brand)}
+                                                {item.sub_brand && ` (${toTitleCase(item.sub_brand)})`}
+                                              </span>
+                                            </>
+                                          )}
+                                        </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+
+                      {/* Individual items (non-recipe) */}
+                      {modelHobbyItems.map((item) => (
+                        <div
+                          key={item.model_hobby_item_id}
+                          className="border border-border-custom rounded-md bg-bg-primary p-3"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3 flex-1 min-w-0">
+                              {item.swatch && (
+                                <div
+                                  className="w-5 h-5 rounded border border-border-custom flex-shrink-0"
+                                  style={{ backgroundColor: item.swatch }}
+                                />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-text text-sm truncate">
+                                  {item.name || 'Unnamed Item'}
+                                </div>
+                                <div className="flex items-center space-x-2 text-xs text-secondary-text">
+                                  <span className="font-medium">{item.type || 'No Type'}</span>
+                                  {item.brand && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{item.brand}</span>
+                                    </>
+                                  )}
+                                </div>
+                                {item.section && item.section !== 'General' && (
+                                  <div className="text-xs text-secondary-text mt-1">
+                                    Section: {item.section}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await removeHobbyItemFromModel(item.model_hobby_item_id)
+                                } catch (error) {
+                                  console.error('Error removing hobby item:', error)
+                                  alert('Failed to remove item. Please try again.')
+                                }
+                              }}
+                              className="ml-2 p-1 text-secondary-text hover:text-red-500 transition-colors flex-shrink-0"
+                              title="Remove item"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   ) : (
-                    <div className="text-base text-text font-medium">
-                      {paintingData.status || 'No status selected'}
+                    <div className="py-4 text-center mb-3">
+                      <Palette className="w-8 h-8 text-secondary-text mx-auto mb-2 opacity-50" />
+                      <p className="text-sm text-secondary-text">No supplies added yet</p>
                     </div>
                   )}
+
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setShowAddRecipeModal(true)}
+                        className="btn-primary btn-full w-full"
+                      >
+                        Add Recipe
+                      </button>
+                      <button
+                        onClick={() => setShowAddHobbyItemModal(true)}
+                        className="btn-primary btn-full w-full"
+                      >
+                        Add Item
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setShowCopyPaintingModal(true)}
+                      className="btn-secondary btn-full w-full text-sm"
+                    >
+                      Copy from Another Model
+                    </button>
+                  </div>
                 </div>
 
-                {/* Painted Date - Only show if status is Painted */}
-                {(paintingData.status === 'Painted' || (!isEditingPaintingNotes && getPaintedDate())) && (
-                  <div className="bg-bg-secondary rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <label className="text-sm font-medium text-text">
-                        Painted Date
-                      </label>
-                      {!isEditingPaintingNotes && (
-                        <button
-                          onClick={() => setIsEditingPaintingNotes(true)}
-                          className="p-1 text-secondary-text hover:text-text transition-colors rounded"
-                          title="Edit painted date"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
+                {/* Painted Status */}
+                <div className="bg-bg-secondary rounded-lg p-4">
+                  <label className="block text-sm font-medium text-text mb-3">
+                    Painted Status
+                  </label>
+                  <select
+                    value={paintingData.status}
+                    onChange={(e) => setPaintingData({ ...paintingData, status: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">Select Status</option>
+                    <option value="Assembled">Assembled</option>
+                    <option value="Primed">Primed</option>
+                    <option value="Partially Painted">Partially Painted</option>
+                    <option value="Painted">Painted</option>
+                  </select>
+                </div>
 
-                    {isEditingPaintingNotes ? (
-                      <DatePicker
-                        value={paintingData.painted_date}
-                        onChange={(date) => setPaintingData({ ...paintingData, painted_date: date })}
-                        placeholder="Select painted date"
-                        minDate=""
-                      />
-                    ) : (
-                      <div className="flex items-center space-x-3">
-                        <Calendar className="w-5 h-5 text-secondary-text" />
-                        <span className="text-base text-text font-medium">
-                          {paintingData.painted_date ? `Painted ${formatDate(paintingData.painted_date)}` : 'No painted date selected'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Painted Date */}
+                <div className="bg-bg-secondary rounded-lg p-4">
+                  <label className="block text-sm font-medium text-text mb-3">
+                    Painted Date
+                  </label>
+                  <DatePicker
+                    value={paintingData.painted_date}
+                    onChange={(date) => setPaintingData({ ...paintingData, painted_date: date })}
+                    placeholder="Select painted date"
+                    minDate=""
+                  />
+                </div>
 
-                {/* Painting Information - only show if there's content or if editing */}
-                {(paintingData.painting_notes || isEditingPaintingNotes) && (
-                  <div className="bg-bg-secondary rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <label className="text-sm font-medium text-text">
-                        Painting Information
-                      </label>
-                      {!isEditingPaintingNotes && (
-                        <button
-                          onClick={() => setIsEditingPaintingNotes(true)}
-                          className="p-1 text-secondary-text hover:text-text transition-colors rounded"
-                          title="Edit painting information"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
+                {/* Painting Notes */}
+                <div className="bg-bg-secondary rounded-lg p-4">
+                  <label className="block text-sm font-medium text-text mb-3">
+                    Painting Notes
+                  </label>
+                  <RichTextEditor
+                    value={paintingData.painting_notes}
+                    onChange={(value) => setPaintingData({ ...paintingData, painting_notes: value })}
+                    placeholder="Enter painting notes..."
+                    rows={6}
+                  />
+                </div>
 
-                    {isEditingPaintingNotes ? (
-                      <>
-                        <RichTextEditor
-                          value={paintingData.painting_notes}
-                          onChange={(value) => setPaintingData({ ...paintingData, painting_notes: value })}
-                          placeholder="Enter painting information..."
-                          rows={6}
-                        />
-                        <div className="flex space-x-3 mt-4">
-                          <button
-                            onClick={handleCancelPaintingEdit}
-                            className="btn-danger-outline flex-1"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={handleSavePainting}
-                            disabled={!hasPaintingChanges}
-                            className="btn-secondary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Save
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="min-h-[6rem]">
-                        <div className="prose prose-sm max-w-none">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              p: ({ children }) => <p className="mb-2 last:mb-0 text-base text-text">{children}</p>,
-                              h1: ({ children }) => <h1 className="text-base font-bold mb-2 text-text">{children}</h1>,
-                              h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-text">{children}</h2>,
-                              h3: ({ children }) => <h3 className="text-base font-bold mb-1 text-text">{children}</h3>,
-                              ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
-                              ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
-                              li: ({ children }) => <li className="text-base text-text">{children}</li>,
-                              strong: ({ children }) => <strong className="font-semibold text-text">{children}</strong>,
-                              em: ({ children }) => <em className="italic text-text">{children}</em>,
-                              code: ({ children }) => <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
-                              pre: ({ children }) => <pre className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs font-mono overflow-x-auto mb-2">{children}</pre>,
-                              blockquote: ({ children }) => <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-3 italic mb-2 text-text">{children}</blockquote>,
-                            }}
-                          >
-                            {paintingData.painting_notes}
-                          </ReactMarkdown>
-                        </div>
-                      </div>
-                    )}
+                {/* Save/Cancel Buttons */}
+                {hasPaintingChanges && (
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={handleCancelPaintingEdit}
+                      className="btn-danger-outline flex-1"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSavePainting}
+                      className="btn-secondary flex-1"
+                    >
+                      Save Changes
+                    </button>
                   </div>
                 )}
 
@@ -927,7 +1235,7 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
                   <div className="bg-bg-secondary rounded-lg p-4 flex items-start space-x-3">
                     <FileText className="w-5 h-5 text-secondary-text mt-0.5" />
                     <div className="flex-1">
-                      <ReactMarkdown 
+                      <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
                           p: ({ children }) => <p className="mb-2 last:mb-0 text-base text-text">{children}</p>,
@@ -946,15 +1254,6 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
                       >
                         {getPaintNotes()}
                       </ReactMarkdown>
-                    </div>
-                  </div>
-                )}
-
-                {!getPaintedDate() && !getPaintNotes() && !paintingData.painting_notes && (
-                  <div className="bg-bg-secondary rounded-lg p-4">
-                    <div className="text-center text-secondary-text">
-                      <Brush className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p>No painting information available</p>
                     </div>
                   </div>
                 )}
@@ -1030,6 +1329,78 @@ export function ViewModelModal({ isOpen, onClose, onModelDeleted, onModelUpdated
           images: modelImages
         } : null}
       />
+
+      <AddHobbyItemModal
+        isOpen={showAddHobbyItemModal}
+        onClose={() => setShowAddHobbyItemModal(false)}
+        hobbyItems={allHobbyItems}
+        onAddExisting={addHobbyItemToModel}
+        onCreateNew={createHobbyItem}
+      />
+
+      <CopyPaintingProcessModal
+        isOpen={showCopyPaintingModal}
+        onClose={() => setShowCopyPaintingModal(false)}
+        currentModelId={model?.id || ''}
+        currentModelGameId={model?.game_id || null}
+        currentModelBoxGameId={null}
+        onCopyComplete={() => {
+          refetchHobbyItems()
+          refetchRecipes()
+        }}
+      />
+
+      <AddRecipeToModelModal
+        isOpen={showAddRecipeModal}
+        onClose={() => setShowAddRecipeModal(false)}
+        recipes={recipes}
+        hobbyItems={allHobbyItems}
+        onAddRecipe={addRecipeToModel}
+        onCreateRecipe={handleCreateRecipe}
+      />
+
+      <EditRecipeModal
+        isOpen={showEditRecipeModal}
+        onClose={() => {
+          setShowEditRecipeModal(false)
+          setRecipeToEdit(null)
+        }}
+        recipe={recipeToEdit}
+        hobbyItems={allHobbyItems}
+        onUpdate={handleUpdateRecipe}
+      />
+
+      {/* Unsaved Changes Confirmation Modal */}
+      {showUnsavedChangesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-modal-bg rounded-lg max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-title mb-4">Unsaved Changes</h3>
+            <p className="text-base text-text mb-6">
+              You have unsaved changes. What would you like to do?
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={handleSaveAndClose}
+                className="btn-secondary btn-full w-full"
+              >
+                Save and Close
+              </button>
+              <button
+                onClick={handleForceClose}
+                className="btn-danger-outline w-full"
+              >
+                Discard Changes
+              </button>
+              <button
+                onClick={() => setShowUnsavedChangesModal(false)}
+                className="btn-secondary btn-full w-full"
+              >
+                Continue Editing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

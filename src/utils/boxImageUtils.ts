@@ -10,6 +10,7 @@ export interface BoxWithImages {
   name: string
   purchase_date: string | null
   image_url: string | null
+  type?: string
   public: boolean
   show_carousel?: boolean
   created_at: string | null

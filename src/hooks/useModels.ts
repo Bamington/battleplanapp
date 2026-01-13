@@ -52,6 +52,7 @@ interface Model {
 export function useModels() {
   const [models, setModels] = useState<Model[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingProgress, setLoadingProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
 
@@ -67,6 +68,9 @@ export function useModels() {
 
   const fetchModels = async () => {
     try {
+      setLoadingProgress(0)
+      console.log('🔄 Models loading progress: 0%')
+
       // First, get models with their basic data and game info
       const { data: modelsData, error: modelsError } = await supabase
         .from('models')
@@ -102,14 +106,20 @@ export function useModels() {
 
       if (modelsError) throw modelsError
 
+      // Models fetched - 30% progress
+      setLoadingProgress(30)
+      console.log('🔄 Models loading progress: 30% (models fetched)')
+
       // Get model-box relationships with box details
       // Split into chunks to avoid URL length limits
       const modelIds = (modelsData || []).map(model => model.id)
       const chunkSize = 100 // Process 100 models at a time
       const modelBoxData: any[] = []
+      const totalChunks = Math.ceil(modelIds.length / chunkSize)
 
       for (let i = 0; i < modelIds.length; i += chunkSize) {
         const chunk = modelIds.slice(i, i + chunkSize)
+        const chunkIndex = Math.floor(i / chunkSize)
 
         const { data: chunkData, error: chunkError } = await supabase
           .from('model_boxes')
@@ -129,6 +139,12 @@ export function useModels() {
         if (chunkData) {
           modelBoxData.push(...chunkData)
         }
+
+        // Update progress: 30% to 90% based on chunks processed
+        const chunkProgress = ((chunkIndex + 1) / totalChunks) * 60
+        const totalProgress = 30 + chunkProgress
+        setLoadingProgress(totalProgress)
+        console.log(`🔄 Models loading progress: ${Math.round(totalProgress)}% (chunk ${chunkIndex + 1}/${totalChunks})`)
       }
 
       // Create a map of model_id to box data
@@ -167,6 +183,8 @@ export function useModels() {
       })
 
       setModels(sortedData)
+      setLoadingProgress(100)
+      console.log('✅ Models loading progress: 100% (complete)')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch models')
     } finally {
@@ -179,5 +197,5 @@ export function useModels() {
     // but we provide it for consistency with the interface
   }
 
-  return { models, loading, error, refetch: fetchModels, clearCache }
+  return { models, loading, loadingProgress, error, refetch: fetchModels, clearCache }
 }
